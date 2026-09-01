@@ -1,0 +1,12 @@
+{
+  "name": "@masterlms/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "dependencies": {
+    "clsx": "^2.1.0",
+    "lucide-react": "^1.38.0",
+    "tailwind-merge": "^2.0.0"
+  }
+}

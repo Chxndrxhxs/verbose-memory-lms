@@ -1,0 +1,13 @@
+{
+  "name": "masterlms",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev:learner": "pnpm --filter frontend-learner dev",
+    "dev:instructor": "pnpm --filter frontend-instructor dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "tsc": "pnpm -r exec tsc --noEmit"
+  }
+}

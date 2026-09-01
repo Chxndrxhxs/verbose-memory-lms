@@ -1,0 +1,3 @@
+# Generated migrations — excluded from lint per AGENTS.md.
+[tool.ruff]
+extend-exclude = ["migrations", ".venv"]

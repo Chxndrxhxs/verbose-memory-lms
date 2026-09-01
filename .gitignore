@@ -1,0 +1,55 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+.next/
+build/
+*.tsbuildinfo
+*.tsbuildinfo.cache
+
+# python
+*.pyc
+__pycache__/
+*.egg-info/
+*.egg
+*.whl/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# env / secrets (never commit)
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# playwright
+frontend-learner/playwright-report/
+frontend-learner/test-results/
+frontend-instructor/playwright-report/
+frontend-instructor/test-results/
+
+# playwright mcp cache
+.playwright-mcp/
+
+# misc
+learn-error.txt
+learn-text-lesson.jpeg
