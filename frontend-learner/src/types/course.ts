@@ -8,6 +8,7 @@ export type Course = {
   instructor: string;
   instructorAvatar?: string;
   price: string;
+  rating?: string;
   img: string;
   icon: LucideIcon;
   accent: string;

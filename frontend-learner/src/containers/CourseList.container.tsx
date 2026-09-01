@@ -44,25 +44,19 @@ function mapApi(c: ApiCourse, idx: number): Course {
     instructor: c.instructor_name,
     instructorAvatar: c.instructor_avatar,
     price: priceNum === 0 ? "Free" : `$${priceNum}`,
-    img: c.cover_image || "https://images.unsplash.com/photo-1558655146-d09347e92766?w=600&auto=format&fit=crop&q=80",
+    img: c.cover_image || "",
     accent: accentMap[c.category] ?? "bg-zinc-900",
     icon: iconMap[c.category] ?? Target,
+    rating: c.average_rating ? Number(c.average_rating).toFixed(1) : undefined,
     featured: idx === 1,
     category: c.category,
   };
 }
 
 async function fetchCourses(): Promise<Course[]> {
-  try {
-    const data = await api<{ results: ApiCourse[] } | ApiCourse[]>("/courses/", { auth: false });
-    const list = Array.isArray(data) ? data : data.results ?? [];
-    if (list.length > 0) return list.map(mapApi);
-  } catch {}
-  // fallback mock if API down
-  return [
-    { id: "ux-fundamentals", title: "UX/UI Design Fundamentals", meta: "4.9 • Beginner • 3h 20m", instructor: "Dr. Ayse Sharma", price: "Free", accent: "bg-[#3478ff]", icon: Diamond, img: "https://images.unsplash.com/photo-1558655146-d09347e92766?w=600&auto=format&fit=crop&q=80" },
-    { id: "business-leadership", title: "Strategic Business Leadership", meta: "4.8 • Intermediate • 5h 10m", instructor: "Mark Chen", price: "$29", accent: "bg-[#3478ff]", icon: Hexagon, featured: true, img: "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=600&auto=format&fit=crop&q=80" },
-  ];
+  const data = await api<{ results: ApiCourse[] } | ApiCourse[]>("/courses/", { auth: false });
+  const list = Array.isArray(data) ? data : data.results ?? [];
+  return list.map(mapApi);
 }
 
 export function CourseListContainer() {

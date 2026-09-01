@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { User, ArrowRight } from "@masterlms/shared";
+import { Link, useNavigate } from "react-router-dom";
+import { User, ArrowRight, Trash2, AlertTriangle } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 import { api } from "../lib/api";
 
@@ -35,13 +35,17 @@ function Heatmap({ weeks = 26 }: { weeks?: number }) {
 }
 
 export default function Profile() {
-  const { user, setUser } = useAuth();
+  const { user, setUser, logout } = useAuth();
+  const nav = useNavigate();
   const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [age, setAge] = useState<string>(user?.age?.toString() ?? "");
   const [avatar, setAvatar] = useState<string | null>(user?.avatar ?? null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [courses, setCourses] = useState<ApiCourse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +57,7 @@ export default function Profile() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  const save = async () => {
+const save = async () => {
     setSaving(true);
     try {
       const updated = await api<{ name: string; email: string; mobile: string; age: number; avatar: string }>("/auth/complete-profile", { method: "PATCH", body: JSON.stringify({ name, email, age: age ? Number(age) : undefined, avatar: avatar || "" }) });
@@ -61,8 +65,21 @@ export default function Profile() {
       setToast("Profile updated");
       setEditing(false);
       setTimeout(() => setToast(null), 1800);
-    } catch (e) { setToast(String(e)); setTimeout(() => setToast(null), 2200); }
+    } catch (e) { setToast(String(e)); setTimeout(()=>setToast(null),2200); }
     finally { setSaving(false); }
+  };
+
+  const deleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await api<{ message: string }>("/users/me", { method: "DELETE" });
+      await logout();
+      nav("/login");
+    } catch (e) {
+      setToast(String(e));
+      setTimeout(() => setToast(null), 2200);
+      setDeleting(false);
+    }
   };
 
   if (!user) return null;
@@ -153,6 +170,33 @@ export default function Profile() {
                 <div className="rounded-xl bg-zinc-50 p-3"><p className="text-[11px] font-semibold uppercase text-zinc-500">Mobile</p><p className="text-sm">{user.mobile}</p></div>
                 <div className="rounded-xl bg-zinc-50 p-3"><p className="text-[11px] font-semibold uppercase text-zinc-500">Role</p><p className="text-sm capitalize">{user.role ?? "Instructor"}</p></div>
                 <div className="rounded-xl bg-zinc-50 p-3"><p className="text-[11px] font-semibold uppercase text-zinc-500">Drafts</p><p className="text-sm">{draft} course{draft === 1 ? "" : "s"}</p></div>
+              </div>
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-red-700"><AlertTriangle size={15} /> Danger zone</div>
+                <p className="mt-1 text-xs text-red-600">Deleting your account permanently removes your profile, courses, and data from Knoova.</p>
+                {confirmDelete ? (
+                  <div className="mt-3 rounded-lg bg-white p-3">
+                    <p className="text-xs font-semibold text-zinc-700">Type <span className="font-mono font-bold">delete</span> to confirm:</p>
+                    <div className="mt-2 flex gap-2">
+                      <input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder="delete" className="flex-1 rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:bg-white" />
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        onClick={() => { setConfirmDelete(false); setDeleteConfirmText(""); }}
+                        className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-zinc-50"
+                      >Cancel</button>
+                      <button
+                        onClick={deleteAccount}
+                        disabled={deleteConfirmText !== "delete" || deleting}
+                        className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                      >
+                        {deleting ? "Deleting…" : "Delete permanently"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDelete(true)} className="mt-2 flex items-center gap-1.5 rounded-full border border-red-300 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100"><Trash2 size={13} /> Delete account</button>
+                )}
               </div>
             </div>
           </div>

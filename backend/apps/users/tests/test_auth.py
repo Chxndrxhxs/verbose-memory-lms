@@ -34,3 +34,16 @@ def test_complete_profile_updates_name():
     )
     assert r.status_code == 200
     assert r.json()["data"]["name"] == "Maya Chen"
+
+
+@pytest.mark.django_db
+def test_delete_account_removes_user():
+    c = APIClient()
+    r = c.post("/api/v1/auth/send-otp", {"mobile": "9111111111"}, format="json")
+    code = r.json()["data"]["mock_code"]
+    r = c.post("/api/v1/auth/verify-otp", {"mobile": "9111111111", "code": code}, format="json")
+    access = r.json()["data"]["tokens"]["access"]
+    c.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+    r = c.delete("/api/v1/users/me")
+    assert r.status_code == 200
+    assert not User.objects.filter(mobile="9111111111").exists()

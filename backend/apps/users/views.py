@@ -65,6 +65,13 @@ class MeView(APIView):
     def get(self, request):
         return Response({"data": UserSerializer(request.user).data, "error": None})
 
+    def delete(self, request):
+        request.user.delete()
+        res = Response({"data": {"message": "Account deleted"}, "error": None})
+        res.delete_cookie("access_token", path="/")
+        res.delete_cookie("refresh_token", path="/")
+        return res
+
 
 class LogoutView(APIView):
     def post(self, request):

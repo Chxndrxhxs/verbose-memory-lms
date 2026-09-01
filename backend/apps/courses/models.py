@@ -65,7 +65,7 @@ class Lesson(models.Model):
     kind = models.CharField(max_length=10, choices=Kind.choices, default=Kind.VIDEO)
     duration = models.CharField(max_length=10, blank=True)
     video_url = models.URLField(blank=True)
-    resource_url = models.URLField(blank=True)
+    resource_url = models.TextField(blank=True)
     quiz_data = models.JSONField(default=list, blank=True)
     order = models.PositiveSmallIntegerField(default=0)
 

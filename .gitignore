@@ -50,6 +50,7 @@ frontend-instructor/test-results/
 # playwright mcp cache
 .playwright-mcp/
 
-# misc
-learn-error.txt
-learn-text-lesson.jpeg
+# database
+db.sqlite3
+*.sqlite3
+*.sqlite

@@ -7,6 +7,7 @@ export {
   Search,
   Menu,
   X,
+  AlertTriangle,
   ArrowRight,
   ArrowLeft,
   ArrowUpRight,

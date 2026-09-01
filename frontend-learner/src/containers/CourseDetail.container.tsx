@@ -14,7 +14,7 @@ type Detail = {
   instructorRole: string;
   avatar: string;
   price: string;
-  originalPrice?: string;
+  level: string;
   rating: string;
   students: string;
   img: string;
@@ -25,41 +25,30 @@ type Detail = {
   includes: string[];
 };
 
-const fallbackDB: Record<string, Detail> = {
-  "ux-fundamentals": { id: "ux-fundamentals", title: "UX/UI Design Fundamentals", subtitle: "Design intuitive interfaces and delightful experiences with hands-on projects.", instructor: "Dr. Ayse Sharma", instructorRole: "Senior Product Designer, Figma", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&auto=format&fit=crop&q=80", price: "Free", rating: "4.9", students: "12,438 students", img: "https://images.unsplash.com/photo-1558655146-d09347e92766?w=1200&auto=format&fit=crop&q=80", preview: "https://images.unsplash.com/photo-1558655146-d09347e92766?w=800&auto=format&fit=crop&q=80", description: "Master the basics of user experience and interface design with real-world projects.", learn: ["Wireframing & prototyping in Figma", "User research & personas", "Design systems & tokens", "Usability testing & iteration", "Portfolio-ready case study", "Feedback from mentors"], curriculum: [{ title: "Getting started", meta: "4 lectures • 42 min", lessons: ["What is UX?", "Design thinking process", "Tools setup", "Your first brief"] }, { title: "Wireframing & prototyping", meta: "5 lectures • 1h 20m", lessons: ["Low-fi wireframes", "High-fi mockups", "Interactive prototype", "Design handoff"] }], includes: ["3h 20m on-demand video", "6 downloadable resources", "1 practice project", "Certificate of completion", "Lifetime access"] },
-};
-
 type ApiCourse = { id: number; title: string; subtitle: string; description: string; category: string; price: string; cover_image: string; level: string; average_rating: string; what_you_will_learn: string[]; instructor_name: string; instructor_avatar: string; instructor_role: string; student_count: number; sections: { id: number; title: string; lessons: { id: number; title: string; duration: string; kind: string; resource_url: string }[] }[] };
 
-async function fetchCourse(id: string): Promise<Detail | null> {
-  // try real API first (numeric id)
-  if (/^\d+$/.test(id)) {
-    try {
-      const c = await api<ApiCourse>(`/courses/${id}/`);
-      const priceNum = Number(c.price);
-      const sections = c.sections ?? [];
-      return {
-        id: String(c.id),
-        title: c.title,
-        subtitle: c.subtitle || (c.category === "Engineering" ? "Build complete web apps — from landing page to deployment." : "Learn with clarity and confidence."),
-        instructor: c.instructor_name || "Knoova Instructor",
-        instructorRole: c.instructor_role || (c.category === "Engineering" ? "Senior Engineer, Knoova" : "Senior Product Designer, Figma"),
-        avatar: c.instructor_avatar || "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&auto=format&fit=crop&q=80",
-        price: priceNum === 0 ? "Free" : `$${priceNum}`,
-        rating: c.average_rating ? Number(c.average_rating).toFixed(1) : "4.8",
-        students: `${c.student_count ?? 0} students`,
-        img: c.cover_image || "https://images.unsplash.com/photo-1558655146-d09347e92766?w=1200&auto=format&fit=crop&q=80",
-        preview: c.cover_image || "https://images.unsplash.com/photo-1558655146-d09347e92766?w=800&auto=format&fit=crop&q=80",
-        description: c.description || "No description yet.",
-        learn: (c.what_you_will_learn && c.what_you_will_learn.length > 0) ? c.what_you_will_learn : (c.category === "Engineering"
-          ? ["Build frontends with HTML/CSS/Tailwind & React", "Create backends with Python & Django REST", "Design & query MySQL databases", "Implement OTP auth & roles", "Add course CRUD, enroll & progress", "Deploy with Docker & Nginx"]
-          : ["Wireframing & prototyping in Figma", "User research & personas", "Design systems & tokens", "Usability testing & iteration", "Portfolio-ready case study", "Feedback from mentors"]),
-        curriculum: sections.map((s) => ({ title: s.title, meta: `${s.lessons.length} lectures • 30 min`, lessons: s.lessons.map((l) => l.title) })),
-        includes: ["3h 20m on-demand video", "6 downloadable resources", "1 practice project", "Certificate of completion", "Lifetime access"],
-      };
-    } catch { /* fallback to mock below */ }
-  }
-  return new Promise((res) => setTimeout(() => res(fallbackDB[id] ?? null), 200));
+async function fetchCourse(id: string): Promise<Detail> {
+  const c = await api<ApiCourse>(`/courses/${id}/`);
+  const priceNum = Number(c.price);
+  const sections = c.sections ?? [];
+  return {
+    id: String(c.id),
+    title: c.title,
+    subtitle: c.subtitle ?? "",
+    instructor: c.instructor_name ?? "Instructor",
+    instructorRole: c.instructor_role ?? "",
+    avatar: c.instructor_avatar ?? "",
+    price: priceNum === 0 ? "Free" : `$${priceNum}`,
+    level: c.level ?? "",
+    rating: c.average_rating ? Number(c.average_rating).toFixed(1) : "",
+    students: c.student_count != null ? `${c.student_count} students` : "",
+    img: c.cover_image || "",
+    preview: c.cover_image || "",
+    description: c.description ?? "",
+    learn: c.what_you_will_learn ?? [],
+    curriculum: sections.map((s) => ({ title: s.title, meta: `${s.lessons.length} lecture${s.lessons.length === 1 ? "" : "s"}`, lessons: s.lessons.map((l) => l.title) })),
+    includes: [],
+  };
 }
 
 export function CourseDetailContainer() {
@@ -186,38 +175,43 @@ export function CourseDetailContainer() {
       {/* LEFT */}
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
-          <span className="rounded-full bg-[#3478ff] px-2.5 py-1 text-white">Bestseller</span>
-          <span className="rounded-full bg-yellow-400 px-2.5 py-1 text-zinc-900">Updated May 2026</span>
-          <span className="rounded-full border bg-white px-2.5 py-1 text-zinc-700">Beginner • 3h 20m</span>
+          {data.level && <span className="rounded-full border bg-white px-2.5 py-1 text-zinc-700 capitalize">{data.level}</span>}
+          <span className="rounded-full border bg-white px-2.5 py-1 text-zinc-700">{data.curriculum.reduce((a, c) => a + c.lessons.length, 0)} lecture{data.curriculum.reduce((a, c) => a + c.lessons.length, 0) === 1 ? "" : "s"}</span>
         </div>
 
         <h1 className="mt-4 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[32px]">{data.title}</h1>
-        <p className="mt-2 text-sm leading-relaxed text-zinc-600">{data.subtitle}</p>
+        {data.subtitle && <p className="mt-2 text-sm leading-relaxed text-zinc-600">{data.subtitle}</p>}
 
         <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
-          <span className="inline-flex items-center gap-1 font-semibold"><span className="text-amber-400">★★★★★</span> {data.rating}</span>
-          <span className="text-zinc-500">({data.students})</span>
-          <span className="h-3 w-px bg-zinc-200" />
-          <span className="flex items-center gap-1.5"><img src={data.avatar} alt="" className="h-6 w-6 rounded-full object-cover" /> <span className="font-medium text-zinc-700">{data.instructor}</span></span>
+          {data.rating && <span className="inline-flex items-center gap-1 font-semibold"><span className="text-amber-400">★ {data.rating}</span></span>}
+          {data.students && <span className="text-zinc-500">({data.students})</span>}
+          {(data.instructor || data.avatar) && (
+            <span className="flex items-center gap-1.5 text-zinc-500">
+              {data.avatar && <img src={data.avatar} alt="" className="h-6 w-6 rounded-full object-cover" />}
+              <span className="font-medium text-zinc-700">{data.instructor}</span>
+            </span>
+          )}
         </div>
 
         {/* Mobile preview card */}
+        {data.img && (
         <div className="mt-6 overflow-hidden rounded-2xl border bg-white shadow-sm lg:hidden">
-          <div className="relative"><img src={data.preview} alt="" className="h-48 w-full object-cover" /><button className="absolute inset-0 m-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-zinc-900 shadow"><Play size={20} strokeWidth={2.5} className="ml-0.5" /></button></div>
+          <div className="relative"><img src={data.img} alt="" className="h-48 w-full object-cover" /><button className="absolute inset-0 m-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-zinc-900 shadow"><Play size={20} strokeWidth={2.5} className="ml-0.5" /></button></div>
           <div className="p-4">
-            <div className="flex items-baseline gap-2"><span className="text-2xl font-black">{data.price}</span>{data.originalPrice && <span className="text-sm text-zinc-400 line-through">{data.originalPrice}</span>}{data.originalPrice && <span className="text-xs font-semibold text-emerald-600">50% off</span>}</div>
+            <div className="flex items-baseline gap-2"><span className="text-2xl font-black">{data.price}</span></div>
             {enrolled ? (
               <Link to={`/learn/${data.id}`} className="mt-3 block w-full rounded-full bg-emerald-600 py-3 text-center text-sm font-bold text-white">Start learning →</Link>
             ) : (
               <button onClick={handleEnroll} disabled={processing} className="mt-3 w-full rounded-full bg-[#0f172a] py-3 text-sm font-bold text-white disabled:opacity-60">
-                {processing ? "Processing…" : `Enroll now — ${data.price === "Free" ? "Free" : "Get access"}`}
+                {processing ? "Processing…" : data.price === "Free" ? "Enroll now — Free" : "Enroll now"}
               </button>
             )}
-            <p className="mt-2 text-center text-[11px] text-zinc-500">30-day money-back guarantee</p>
           </div>
         </div>
+        )}
 
-        {/* What you'll learn — Udemy style but soft */}
+        {/* What you'll learn */}
+        {data.learn.length > 0 && (
         <div className="mt-6 rounded-2xl border bg-[#fdfdfc] p-5">
           <h3 className="text-sm font-bold">What you’ll learn</h3>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -226,8 +220,10 @@ export function CourseDetailContainer() {
             ))}
           </div>
         </div>
+        )}
 
         {/* Curriculum */}
+        {data.curriculum.length > 0 && (
         <div className="mt-6">
           <div className="flex items-center justify-between"><h3 className="text-sm font-bold">Course content</h3><span className="text-xs text-zinc-500">{data.curriculum.length} sections • {data.curriculum.reduce((a, c) => a + c.lessons.length, 0)} lectures</span></div>
           <div className="mt-3 overflow-hidden rounded-2xl border bg-white">
@@ -236,29 +232,35 @@ export function CourseDetailContainer() {
                 <button onClick={() => setOpen(open === i ? -1 : i)} className="flex w-full items-center justify-between bg-zinc-50 px-4 py-3 text-left hover:bg-zinc-100">
                   <span className="text-sm font-semibold">{sec.title}</span><span className="flex items-center gap-2 text-xs text-zinc-500">{sec.meta}<span className={`flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs ${open === i ? "bg-[#3478ff] text-white" : ""}`}>{open === i ? "−" : "+"}</span></span>
                 </button>
-                {open === i && <ul className="px-4 py-2">{sec.lessons.map((l) => (<li key={l} className="flex items-center gap-2 py-2 text-xs text-zinc-700"><span className="text-zinc-400">▶</span> {l}<span className="ml-auto text-[11px] text-zinc-400">06:20</span></li>))}</ul>}
+                {open === i && <ul className="px-4 py-2">{sec.lessons.map((l) => (<li key={l} className="flex items-center gap-2 py-2 text-xs text-zinc-700"><span className="text-zinc-400">▶</span> {l}</li>))}</ul>}
               </div>
             ))}
           </div>
         </div>
+        )}
 
         {/* Description + instructor */}
+        {data.description && (
         <div className="mt-6 rounded-2xl bg-white p-5 shadow-sm">
           <h3 className="text-sm font-bold">Description</h3><p className="mt-2 text-sm leading-relaxed text-zinc-600">{data.description}</p>
+          {(data.instructor || data.avatar) && (
           <div className="mt-5 flex gap-3 rounded-xl bg-zinc-50 p-4">
-            <img src={data.avatar} alt="" className="h-12 w-12 rounded-full object-cover" />
-            <div><p className="text-sm font-bold">{data.instructor}</p><p className="text-xs text-zinc-500">{data.instructorRole}</p><p className="mt-1 flex items-center gap-1 text-xs text-amber-400">★★★★★ <span className="text-zinc-500">4.9 Instructor rating</span></p></div>
+            {data.avatar && <img src={data.avatar} alt="" className="h-12 w-12 rounded-full object-cover" />}
+            <div><p className="text-sm font-bold">{data.instructor}</p>{data.instructorRole && <p className="text-xs text-zinc-500">{data.instructorRole}</p>}</div>
           </div>
+          )}
         </div>
+        )}
       </div>
 
-      {/* RIGHT — sticky enroll card (Udemy pattern) */}
+      {/* RIGHT — sticky enroll card */}
       <div className="hidden lg:block">
         <div className="sticky top-[88px] overflow-hidden rounded-[20px] border bg-white shadow-sm">
-          <div className="relative"><img src={data.preview} alt="" className="h-44 w-full object-cover" /><button className="absolute inset-0 m-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-zinc-900 shadow-lg"><Play size={20} strokeWidth={2.5} className="ml-0.5" /></button><span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-semibold text-white">Preview this course</span></div>
+          {data.img && (
+          <div className="relative"><img src={data.img} alt="" className="h-44 w-full object-cover" /><button className="absolute inset-0 m-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-zinc-900 shadow-lg"><Play size={20} strokeWidth={2.5} className="ml-0.5" /></button><span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-semibold text-white">Preview this course</span></div>
+          )}
           <div className="p-5">
-            <div className="flex items-baseline gap-2"><span className="text-[28px] font-black tracking-tight">{data.price}</span>{data.originalPrice && <span className="text-sm text-zinc-400 line-through">{data.originalPrice}</span>}{data.originalPrice && <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-xs font-bold text-zinc-900">50% off</span>}</div>
-            <p className="text-xs text-emerald-600 font-medium">3 days left at this price!</p>
+            <div className="flex items-baseline gap-2"><span className="text-[28px] font-black tracking-tight">{data.price}</span></div>
             {enrolled ? (
               <Link to={`/learn/${data.id}`} className="mt-4 block w-full rounded-full bg-emerald-600 py-3 text-center text-sm font-bold text-white hover:bg-emerald-700">Start learning →</Link>
             ) : (
@@ -272,7 +274,11 @@ export function CourseDetailContainer() {
             <div className="mt-5 rounded-xl bg-zinc-50 p-4">
               <p className="text-xs font-bold">This course includes:</p>
               <ul className="mt-2 space-y-1.5 text-xs text-zinc-600">
-                {data.includes.map((it) => (<li key={it} className="flex gap-2"><span>●</span> {it}</li>))}
+                <li className="flex gap-2"><span>●</span> On-demand videos</li>
+                <li className="flex gap-2"><span>●</span> {data.curriculum.length} section{data.curriculum.length === 1 ? "" : "s"} • {data.curriculum.reduce((a, c) => a + c.lessons.length, 0)} lecture{data.curriculum.reduce((a, c) => a + c.lessons.length, 0) === 1 ? "" : "s"}</li>
+                <li className="flex gap-2"><span>●</span> Interactive quizzes</li>
+                <li className="flex gap-2"><span>●</span> Certificate of completion</li>
+                <li className="flex gap-2"><span>●</span> Full lifetime access</li>
               </ul>
             </div>
 

@@ -1,18 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2, Hexagon, Sparkles, CircleDot, AlignLeft, Play, Edit3, Diamond, Code, Target, Plus, Minus } from "@masterlms/shared";
+import { ArrowRight, CheckCircle2, Hexagon, Sparkles, CircleDot, AlignLeft, Play, Edit3, Plus, Minus } from "@masterlms/shared";
 import { CourseCard } from "./CourseCard";
 import { Header } from "./Header";
+import type { Course } from "../types/course";
 
 const HERO = "https://images.pexels.com/photos/31206089/pexels-photo-31206089.jpeg";
 const TESTIMONIAL_BG = "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=1600&auto=format&fit=crop&q=80";
-
-const courses = [
-  { id: "ux-fundamentals", title: "UX/UI Design Fundamentals", meta: "4.9 • Beginner • 3h 20m", instructor: "Dr. Ayse Sharma", price: "Free", accent: "bg-[#3478ff]", icon: Diamond, img: "https://images.unsplash.com/photo-1558655146-d09347e92766?w=600&auto=format&fit=crop&q=80" },
-  { id: "business-leadership", title: "Strategic Business Leadership", meta: "4.8 • Intermediate • 5h 10m", instructor: "Mark Chen", price: "$29", accent: "bg-[#3478ff]", icon: Hexagon, featured: true, img: "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=600&auto=format&fit=crop&q=80" },
-  { id: "python-basics", title: "Python Programming Basics", meta: "4.7 • Beginner • 6h 00m", instructor: "J. Doe", price: "$19", accent: "bg-[#111827]", icon: Code, img: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=600&auto=format&fit=crop&q=80" },
-  { id: "marketing-analytics", title: "Digital Marketing Analytics", meta: "4.6 • Advanced • 4h 45m", instructor: "Sara Kim", price: "$35", accent: "bg-emerald-500", icon: Target, img: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80" },
-];
 
 function Pill({ children, color }: { children: string; color: string }) {
   return (
@@ -23,8 +17,9 @@ function Pill({ children, color }: { children: string; color: string }) {
   );
 }
 
-export function LandingView() {
+export function LandingView({ courses }: { courses: Course[] }) {
   const [faq, setFaq] = useState<number | null>(0);
+  const featured = courses.slice(0, 4);
   return (
     <>
       {/* HERO */}
@@ -79,7 +74,7 @@ export function LandingView() {
           <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">Explore our most<br/>loved classes</h2>
           <p className="mx-auto mt-2 max-w-md text-center text-xs text-zinc-500">Curated choices chosen by learners to help you grow faster.</p>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {courses.map((c) => (<CourseCard key={c.id} {...c} />))}
+            {featured.map((c) => (<CourseCard key={c.id} {...c} />))}
           </div>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
             <Link to="/courses" className="rounded-full bg-[#0f172a] px-4 py-1.5 text-xs font-semibold text-white">All</Link>

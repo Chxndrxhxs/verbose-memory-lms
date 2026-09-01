@@ -8,13 +8,14 @@ type Props = {
   instructor: string;
   instructorAvatar?: string;
   price: string;
+  rating?: string;
   img: string;
   icon: LucideIcon;
   accent: string;
   featured?: boolean;
 };
 
-export function CourseCard({ id, title, meta, instructor, instructorAvatar, price, img, icon: Icon, accent, featured }: Props) {
+export function CourseCard({ id, title, meta, instructor, instructorAvatar, price, rating, img, icon: Icon, accent, featured }: Props) {
   return (
     <div
       className={`relative rounded-2xl border bg-white p-3 shadow-sm ${featured ? "scale-[1.03] shadow-lg -rotate-[1deg] z-10" : ""}`}
@@ -36,9 +37,11 @@ export function CourseCard({ id, title, meta, instructor, instructorAvatar, pric
         {instructorAvatar ? <img src={instructorAvatar} alt="" className="h-5 w-5 rounded-full object-cover" /> : <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 text-[10px]">{instructor[0]}</span>}
         <p className="text-xs text-zinc-500">{instructor}</p>
       </div>
-      <div className="mt-2 flex items-center gap-1 text-xs text-amber-400">
-        ★★★★★ <span className="text-[10px] text-zinc-400">(4.9)</span>
-      </div>
+      {rating && (
+        <div className="mt-2 flex items-center gap-1 text-xs text-amber-400">
+          ★ {rating}
+        </div>
+      )}
       {featured && (
         <Link to={`/courses/${id}`} className="mt-3 block w-full rounded-full bg-[#3478ff] py-1.5 text-center text-xs font-semibold text-white">
           View course

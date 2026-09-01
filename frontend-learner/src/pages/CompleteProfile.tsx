@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
 import { User, ArrowRight } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
-import { api } from "../lib/api";
+import { api, absoluteMediaUrl, uploadFile } from "../lib/api";
 
 const schema = z.object({
   name: z.string().min(2, "Required"),
@@ -18,6 +18,7 @@ type Form = z.infer<typeof schema>;
 export default function CompleteProfile() {
   const nav = useNavigate();
   const { user, setUser } = useAuth();
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatar, setAvatar] = useState<string | null>(user?.avatar ?? null);
   const [toast, setToast] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Form>({
@@ -35,10 +36,24 @@ export default function CompleteProfile() {
     }
   }, []);
 
+  const onAvatarPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setAvatarFile(f);
+    const r = new FileReader();
+    r.onload = () => setAvatar(r.result as string);
+    r.readAsDataURL(f);
+  };
+
   const onSubmit = async (data: Form) => {
     try {
-      const updated = await api<{ name: string; email: string; mobile: string; age: number; avatar: string }>("/auth/complete-profile", { method: "PATCH", body: JSON.stringify({ name: data.name, email: data.email, age: data.age, avatar: avatar || "" }) });
-      setUser({ name: updated.name || data.name, email: updated.email, mobile: updated.mobile, age: updated.age, avatar: updated.avatar || avatar || undefined });
+      let avatarUrl = avatar || "";
+      if (avatarFile) {
+        const uploaded = await uploadFile(avatarFile);
+        avatarUrl = absoluteMediaUrl(uploaded.url) ?? "";
+      }
+      const updated = await api<{ name: string; email: string; mobile: string; age: number; avatar: string }>("/auth/complete-profile", { method: "PATCH", body: JSON.stringify({ name: data.name, email: data.email, age: data.age, avatar: avatarUrl }) });
+      setUser({ name: updated.name || data.name, email: updated.email, mobile: updated.mobile, age: updated.age, avatar: avatarUrl || undefined });
       setToast("Profile saved! Welcome to Knoova");
       setTimeout(() => nav("/"), 800);
     } catch (e) { setToast(String(e)); setTimeout(()=>setToast(null),2200); }
@@ -56,7 +71,7 @@ export default function CompleteProfile() {
               <div className="h-16 w-16 overflow-hidden rounded-full bg-zinc-100 flex items-center justify-center">
                 {avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : <User size={24} className="text-zinc-400" />}
               </div>
-              <label className="rounded-full border px-4 py-1.5 text-xs font-semibold cursor-pointer hover:bg-zinc-50">Upload photo<input type="file" accept="image/*" className="hidden" onChange={(e)=>{ const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>setAvatar(r.result as string); r.readAsDataURL(f); }} /></label>
+              <label className="rounded-full border px-4 py-1.5 text-xs font-semibold cursor-pointer hover:bg-zinc-50">Upload photo<input type="file" accept="image/*" className="hidden" onChange={onAvatarPicked} /></label>
               <span className="text-xs text-zinc-400">PNG/JPG, max 2MB</span>
             </div>
             <div><label className="text-xs font-semibold">Full name</label><input {...register("name")} placeholder="Ayse Sharma" className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2.5 text-sm outline-none focus:bg-white" />{errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}</div>
