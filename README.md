@@ -54,7 +54,14 @@ pnpm install
 pnpm --filter frontend-learner dev      # http://localhost:5173
 pnpm --filter frontend-instructor dev   # http://localhost:5174
 
+# Backend setup (Requires Python 3.11+)
 cd backend
+
+# If you don't have 'uv' installed, install it first:
+# macOS/Linux: curl -LsSf https://astral.sh/uv/install.sh | sh
+# Windows (PowerShell): irm https://astral.sh/uv/install.ps1 | iex
+# Or standard pip: pip install uv
+
 uv sync
 uv run python manage.py migrate
 uv run python scripts/seed.py        # 4 sample courses
