@@ -14,6 +14,7 @@ class User(AbstractUser):
     mobile = models.CharField(max_length=15, unique=True)
     role = models.CharField(max_length=12, choices=Role.choices, default=Role.LEARNER)
     age = models.PositiveSmallIntegerField(null=True, blank=True)
+    city = models.CharField(max_length=64, blank=True, default="")
     avatar = models.URLField(blank=True, default="")
     is_mobile_verified = models.BooleanField(default=False)
     email = models.EmailField(blank=True)

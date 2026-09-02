@@ -20,6 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
             "mobile",
             "role",
             "age",
+            "city",
             "avatar",
             "is_mobile_verified",
         )
@@ -72,7 +73,7 @@ class CompleteProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("name", "email", "age", "avatar")
+        fields = ("name", "email", "age", "city", "avatar")
         extra_kwargs = {"email": {"required": True}}
 
     def update(self, instance, validated_data):

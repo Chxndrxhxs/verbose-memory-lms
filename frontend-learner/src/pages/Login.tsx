@@ -37,48 +37,80 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f5f1] flex items-center justify-center p-3 sm:p-4">
-      <div className="grid w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-sm lg:grid-cols-2">
-        <div className="relative hidden lg:block">
-          <img src="https://images.pexels.com/photos/3182812/pexels-photo-3182812.jpeg?auto=compress&cs=tinysrgb&w=900" alt="" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-          <div className="absolute bottom-6 left-6 right-6 rounded-2xl bg-white p-4 shadow-xl">
-            <p className="text-sm font-bold">Learn without pressure</p><p className="text-xs text-zinc-500">Join 12k+ learners finishing what they start.</p>
-          </div>
+    <div className="min-h-screen w-full bg-[#f6f5f1] lg:grid lg:grid-cols-2">
+      <div className="relative hidden h-screen lg:block">
+        <img src="https://images.pexels.com/photos/3182812/pexels-photo-3182812.jpeg?auto=compress&cs=tinysrgb&w=1400" alt="" className="h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <div className="absolute left-10 top-10 flex items-center gap-2 text-white">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-bold text-[#0f172a]">K</span>
+          <span className="text-sm font-bold tracking-wide">QTNXT</span>
         </div>
-        <div className="flex flex-col p-8 sm:p-10">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f172a] text-xs font-bold text-white">K</span><span className="text-sm font-bold">Knoova</span></Link>
-            <Link to="/" className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 hover:text-zinc-900">
-              <Home size={12} strokeWidth={2.5} />
-              Home
-            </Link>
-          </div>
-          <h1 className="mt-8 text-2xl font-extrabold tracking-tight">Welcome back</h1>
-          <p className="text-sm text-zinc-500">{step === "phone" ? "Enter your mobile to get OTP" : `OTP sent to +91 ${phone}`}</p>
-
-          {step === "phone" ? (
-            <div className="mt-6 space-y-4">
-              <div><label className="text-xs font-semibold">Mobile number</label><div className="mt-1 flex rounded-xl border bg-zinc-50 focus-within:bg-white focus-within:border-zinc-300"><span className="px-3 py-2.5 text-sm font-medium text-zinc-500">+91</span><input value={phone} onChange={(e)=>setPhone(e.target.value.replace(/\D/g,"").slice(0,10))} placeholder="98765 43210" className="w-full bg-transparent px-2 py-2.5 text-sm outline-none" /></div></div>
-              <button onClick={sendOtp} disabled={loading} className="w-full rounded-full bg-[#0f172a] py-3 text-sm font-bold text-white disabled:opacity-60">{loading ? "Sending…" : "Send OTP"}</button>
-              <p className="text-center text-xs text-zinc-400">Demo: OTP will appear in toast</p>
-            </div>
-          ) : (
-            <div className="mt-6 space-y-4">
-              <div><label className="text-xs font-semibold">Enter OTP</label><input value={otp} onChange={(e)=>setOtp(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="1 2 3 4" className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-3 text-center text-lg tracking-[0.6em] outline-none focus:bg-white" /></div>
-              <button onClick={verify} disabled={loading} className="w-full rounded-full bg-[#0f172a] py-3 text-sm font-bold text-white disabled:opacity-60">{loading ? "Verifying…" : "Verify OTP"}</button>
-              <button onClick={()=>setStep("phone")} className="w-full rounded-full border py-2.5 text-sm font-medium">Change number</button>
-            </div>
-          )}
-          <div className="mt-auto pt-8 space-y-3">
-            <p className="text-center text-xs text-zinc-500">By continuing you agree to our Terms • Privacy</p>
-            <Link to="/" className="flex items-center justify-center gap-2 rounded-full bg-zinc-100 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-200">
-              <Home size={14} strokeWidth={2.5} />
-              Skip — go to Home
-            </Link>
+        <div className="absolute bottom-10 left-10 right-10 text-white">
+          <p className="text-3xl font-extrabold leading-tight tracking-tight">Learn without<br/>pressure.</p>
+          <p className="mt-3 max-w-sm text-sm text-white/80">Join 12k+ learners finishing what they start — calm, focused, on their own terms.</p>
+          <div className="mt-6 flex items-center gap-3 text-xs text-white/70">
+            <span className="h-px w-8 bg-white/40" />
+            <span>Trusted by learners across 40+ cities</span>
           </div>
         </div>
       </div>
+
+      <div className="flex min-h-screen flex-col bg-white px-6 py-8 sm:px-10 lg:px-16 lg:py-12">
+        <div className="flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 lg:hidden">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f172a] text-xs font-bold text-white">K</span>
+            <span className="text-sm font-bold">QTNXT</span>
+          </Link>
+          <span className="hidden lg:block" />
+          <Link to="/" className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 hover:text-zinc-900">
+            <Home size={12} strokeWidth={2.5} />
+            Home
+          </Link>
+        </div>
+
+        <div className="flex flex-1 items-center">
+          <div className="mx-auto w-full max-w-sm">
+            <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">Welcome back</h1>
+            <p className="mt-2 text-sm text-zinc-500">{step === "phone" ? "Enter your mobile to get an OTP" : `OTP sent to +91 ${phone}`}</p>
+
+            {step === "phone" ? (
+              <div className="mt-8 space-y-5">
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700">Mobile number</label>
+                  <div className="mt-1.5 flex rounded-xl border border-zinc-200 bg-zinc-50 transition focus-within:border-zinc-900 focus-within:bg-white">
+                    <span className="flex items-center px-3 text-sm font-semibold text-zinc-700">+91</span>
+                    <input value={phone} onChange={(e)=>setPhone(e.target.value.replace(/\D/g,"").slice(0,10))} placeholder="98765 43210" className="w-full bg-transparent px-2 py-3 text-sm outline-none" />
+                  </div>
+                </div>
+                <button onClick={sendOtp} disabled={loading} className="w-full rounded-full bg-[#0f172a] py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-60">
+                  {loading ? "Sending…" : "Send OTP"}
+                </button>
+                <p className="text-center text-xs text-zinc-400">Demo: OTP will appear in the toast below</p>
+              </div>
+            ) : (
+              <div className="mt-8 space-y-5">
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700">Enter OTP</label>
+                  <input value={otp} onChange={(e)=>setOtp(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="1 2 3 4" className="mt-1.5 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3.5 text-center text-xl tracking-[0.7em] outline-none transition focus:border-zinc-900 focus:bg-white" />
+                </div>
+                <button onClick={verify} disabled={loading} className="w-full rounded-full bg-[#0f172a] py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-60">
+                  {loading ? "Verifying…" : "Verify OTP"}
+                </button>
+                <button onClick={()=>setStep("phone")} className="w-full rounded-full border border-zinc-200 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">Change number</button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-3 pt-8">
+          <p className="text-center text-xs text-zinc-400">By continuing you agree to our Terms • Privacy</p>
+          <Link to="/" className="flex items-center justify-center gap-2 rounded-full bg-zinc-100 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-200">
+            <Home size={14} strokeWidth={2.5} />
+            Skip — go to Home
+          </Link>
+        </div>
+      </div>
+
       {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white shadow-xl">{toast}</div>}
     </div>
   );
