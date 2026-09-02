@@ -9,6 +9,7 @@ from apps.courses.models import Course
 from apps.enrollments.services import enroll
 
 from .models import Payment
+from .serializers import PaymentSerializer
 from .services import create_razorpay_order, get_razorpay_client, verify_signature
 
 logger = logging.getLogger(__name__)
@@ -134,3 +135,12 @@ def verify_payment(request):
 
     enrollment = enroll(request.user, course)
     return Response({"data": {"verified": True, "enrollment_id": enrollment.id}, "error": None})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def my_payments(request):
+    qs = Payment.objects.filter(
+        user=request.user, status=Payment.Status.PAID
+    ).select_related("course", "course__instructor").order_by("-created_at")
+    return Response({"data": PaymentSerializer(qs, many=True).data, "error": None})

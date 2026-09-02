@@ -3,7 +3,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
-from .models import Course
+from .models import Course, Review
 from .serializers import CourseDetailSerializer, CourseListSerializer
 from .services import create_course, publish_course, save_uploaded_file
 
@@ -122,6 +122,39 @@ class CourseViewSet(viewsets.ModelViewSet):
                     order=li,
                 )
         return Response({"data": CourseDetailSerializer(course).data, "error": None})
+
+    @action(detail=True, methods=["get", "post"], permission_classes=[IsAuthenticated], url_path="rate")
+    def rate(self, request, id=None):
+        course = self.get_object()
+        if request.method == "GET":
+            try:
+                review = Review.objects.get(course=course, user=request.user)
+                rating = review.rating
+            except Review.DoesNotExist:
+                rating = None
+            return Response(
+                {"data": {"rating": rating, "average_rating": str(course.average_rating), "rating_count": course.reviews.count()}, "error": None}
+            )
+        rating = request.data.get("rating")
+        try:
+            rating_int = int(rating)
+        except (TypeError, ValueError):
+            return Response({"data": None, "error": "rating must be 1-5"}, status=status.HTTP_400_BAD_REQUEST)
+        if not 1 <= rating_int <= 5:
+            return Response({"data": None, "error": "rating must be 1-5"}, status=status.HTTP_400_BAD_REQUEST)
+        from apps.enrollments.models import Enrollment
+
+        if not Enrollment.objects.filter(learner=request.user, course=course).exists():
+            return Response({"data": None, "error": "Enroll first"}, status=status.HTTP_403_FORBIDDEN)
+        Review.objects.update_or_create(course=course, user=request.user, defaults={"rating": rating_int})
+        from django.db.models import Avg
+
+        agg = Review.objects.filter(course=course).aggregate(avg=Avg("rating"))
+        course.average_rating = round(agg["avg"] or 0, 1)
+        course.save(update_fields=["average_rating", "updated_at"])
+        return Response(
+            {"data": {"rating": rating_int, "average_rating": str(course.average_rating), "rating_count": course.reviews.count()}, "error": None}
+        )
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def mine(self, request):

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Course, Lesson, Section
+from .models import Course, Lesson, Review, Section
 
 
 class LessonSerializer(serializers.ModelSerializer):
@@ -32,6 +32,8 @@ class CourseListSerializer(serializers.ModelSerializer):
     instructor_role = serializers.SerializerMethodField()
     student_count = serializers.SerializerMethodField()
     meta = serializers.SerializerMethodField()
+    section_count = serializers.SerializerMethodField()
+    lesson_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
@@ -40,7 +42,11 @@ class CourseListSerializer(serializers.ModelSerializer):
             "title",
             "subtitle",
             "category",
+            "description",
             "price",
+            "pricing_type",
+            "original_price",
+            "pg_fees_to_learner",
             "cover_image",
             "status",
             "level",
@@ -50,8 +56,12 @@ class CourseListSerializer(serializers.ModelSerializer):
             "instructor_avatar",
             "instructor_role",
             "student_count",
+            "section_count",
+            "lesson_count",
             "slug",
             "meta",
+            "created_at",
+            "updated_at",
         )
 
     def get_instructor_name(self, obj: Course) -> str:
@@ -62,19 +72,40 @@ class CourseListSerializer(serializers.ModelSerializer):
 
     def get_instructor_role(self, obj: Course) -> str:
         role = getattr(obj.instructor, "role", "")
-        return "Senior Instructor" if role == "instructor" else "Knoova Instructor"
+        return "Senior Instructor" if role == "instructor" else "QTNXT Instructor"
 
     def get_student_count(self, obj: Course) -> int:
         return obj.enrollments.count()
+
+    def get_section_count(self, obj: Course) -> int:
+        return obj.sections.count()
+
+    def get_lesson_count(self, obj: Course) -> int:
+        return Lesson.objects.filter(section__course=obj).count()
 
     def get_meta(self, obj: Course) -> str:
         rating = f"{obj.average_rating:.1f}" if obj.average_rating else "New"
         level = obj.get_level_display()
         return f"{rating} • {level}"
 
+    def validate(self, attrs):
+        pricing_type = attrs.get(
+            "pricing_type", getattr(self.instance, "pricing_type", Course.PricingType.FREE)
+        )
+        price = attrs.get("price", getattr(self.instance, "price", 0))
+        if pricing_type == Course.PricingType.FREE:
+            attrs["price"] = 0
+            attrs["original_price"] = 0
+        elif price <= 0:
+            raise serializers.ValidationError(
+                {"price": "Price must be greater than 0 for paid courses."}
+            )
+        return attrs
+
 
 class CourseDetailSerializer(CourseListSerializer):
     sections = SectionSerializer(many=True, read_only=True)
+    rating_count = serializers.SerializerMethodField()
 
     class Meta(CourseListSerializer.Meta):
         fields = CourseListSerializer.Meta.fields + (
@@ -82,4 +113,15 @@ class CourseDetailSerializer(CourseListSerializer):
             "created_at",
             "updated_at",
             "sections",
+            "rating_count",
         )
+
+    def get_rating_count(self, obj: Course) -> int:
+        return obj.reviews.count()
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ("id", "rating", "created_at")
+        read_only_fields = ("id", "created_at")

@@ -5,7 +5,8 @@ import { CourseCard } from "./CourseCard";
 import { Header } from "./Header";
 import type { Course } from "../types/course";
 
-const HERO = "https://images.pexels.com/photos/31206089/pexels-photo-31206089.jpeg";
+// HERO image commented out — soft gradient blur used instead
+// const HERO = "https://images.pexels.com/photos/31206089/pexels-photo-31206089.jpeg";
 const TESTIMONIAL_BG = "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=1600&auto=format&fit=crop&q=80";
 
 function Pill({ children, color }: { children: string; color: string }) {
@@ -22,43 +23,34 @@ export function LandingView({ courses }: { courses: Course[] }) {
   const featured = courses.slice(0, 4);
   return (
     <>
+      <Header />
       {/* HERO */}
       <div className="px-3 pt-3 sm:px-4">
-        <div className="relative overflow-hidden rounded-[28px]">
-          <img src={HERO} alt="" className="h-[620px] w-full object-cover sm:h-[700px] lg:h-[760px]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/10" />
-          <Header />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-black/10" />
-          <div className="absolute inset-0 bg-gradient-to-tr from-[#3478ff]/20 via-transparent to-amber-200/20 mix-blend-overlay" />
-          <div className="absolute left-6 top-[38%] hidden -rotate-3 rounded-2xl bg-white p-3 shadow-xl lg:flex items-center gap-3">
-            <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=80&auto=format&fit=crop&q=80" alt="" className="h-10 w-10 rounded-xl object-cover" />
-            <div><p className="text-xs font-bold">4.9/5 learners love us</p><p className="text-[10px] text-zinc-500">12k+ active learners</p></div>
-            <span className="ml-2 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white"><CheckCircle2 size={14} strokeWidth={2.5} /></span>
-          </div>
-          <div className="absolute right-6 top-[42%] hidden rotate-2 rounded-2xl bg-white p-3 shadow-xl lg:flex items-center gap-2">
-            <div className="flex -space-x-2">
-              <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&auto=format&fit=crop&q=80" className="h-8 w-8 rounded-full border-2 border-white object-cover" alt="" />
-              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80" className="h-8 w-8 rounded-full border-2 border-white object-cover" alt="" />
-              <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=80" className="h-8 w-8 rounded-full border-2 border-white object-cover" alt="" />
-            </div>
-            <div className="ml-1"><p className="text-xs font-bold leading-none">Join 2,400+ today</p><p className="text-[10px] font-medium text-emerald-600"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1" />Live now</p></div>
-          </div>
-          <div className="absolute inset-0 flex flex-col items-center justify-center px-4 pt-12 text-center">
-            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-md border border-white/20">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" /> New courses every week • Free to start
+        <div className="relative overflow-hidden rounded-[28px] bg-[#f8f7ff]">
+          {/* HERO image commented out — replaced with soft gradient blur */}
+          {/* <img src={HERO} alt="" className="h-[620px] w-full object-cover sm:h-[700px] lg:h-[760px]" /> */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#eef2ff] via-[#fdf2ff] to-[#fff7ed]" />
+          <div className="absolute -left-24 -top-24 h-[520px] w-[520px] rounded-full bg-[#c7d2fe]/50 blur-[90px]" />
+          <div className="absolute -bottom-32 -right-24 h-[560px] w-[560px] rounded-full bg-[#fbcfe8]/40 blur-[100px]" />
+          <div className="absolute left-1/2 top-1/2 h-[700px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#dbeafe]/30 blur-[100px]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(52,120,255,0.08),transparent_60%)]" />
+
+          <div className="relative flex min-h-[620px] flex-col items-center justify-center px-4 py-20 text-center sm:min-h-[700px] lg:min-h-[760px]">
+            <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border bg-white px-3 py-1 text-[11px] font-semibold text-zinc-700 shadow-sm">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> New courses every week • Free to start
             </span>
-            <h1 className="max-w-[640px] leading-[0.88] tracking-[-0.04em] text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.3)]">
-              <span className="block font-news text-[30px] font-light tracking-[-0.03em] sm:text-[46px]">Learn skills that</span>
-              <span className="block font-serif text-[36px] font-normal italic tracking-[-0.03em] sm:text-[56px]"><span className="relative inline-block px-1.5"><span className="relative z-10">actually</span><span className="absolute inset-x-0 bottom-1.5 h-[10px] bg-yellow-400 -rotate-1 sm:h-[14px]" /></span></span>
-              <span className="block font-sans text-[32px] font-black tracking-[-0.05em] sm:text-[50px]">move you forward.</span>
+            <h1 className="max-w-[760px] leading-[0.88] tracking-[-0.04em]">
+              <span className="block font-news text-[34px] font-light tracking-[-0.03em] text-zinc-900 sm:text-[54px] lg:text-[62px]">Learn skills that</span>
+              <span className="block font-serif text-[42px] font-normal italic tracking-[-0.03em] text-zinc-900 sm:text-[66px] lg:text-[74px]"><span className="relative inline-block px-1.5"><span className="relative z-10">actually</span><span className="absolute inset-x-0 bottom-1.5 h-[10px] bg-yellow-400 -rotate-1 sm:h-[14px] lg:h-[16px]" /></span></span>
+              <span className="block font-sans text-[36px] font-black tracking-[-0.05em] text-zinc-900 sm:text-[58px] lg:text-[64px]">move you forward.</span>
             </h1>
-            <p className="mt-3 max-w-[520px] text-[12px] font-light leading-relaxed tracking-wide text-white/80 sm:text-[13px]">Practical skills <span className="font-semibold text-white">•</span> calm focus sessions <span className="font-semibold text-white">•</span> follow your own rhythm and finish what you start.</p>
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-              <Link to="/courses" className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold text-zinc-900 shadow-lg transition hover:translate-y-[-1px]">Get Started <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white"><ArrowRight size={12} strokeWidth={3} /></span></Link>
-              <a href="#explore" className="inline-flex items-center gap-2 rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur border border-white/30 hover:bg-white/20"><Play size={12} strokeWidth={2.5} className="fill-white" /> Watch 30s tour</a>
+            <p className="mt-4 max-w-[640px] text-[13px] font-light leading-relaxed tracking-wide text-zinc-600 sm:text-[15px]">Practical skills <span className="font-semibold text-zinc-900">•</span> calm focus sessions <span className="font-semibold text-zinc-900">•</span> follow your own rhythm and finish what you start.</p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Link to="/courses" className="inline-flex items-center gap-2 rounded-full bg-[#0f172a] px-6 py-2.5 text-sm font-bold text-white shadow-lg transition hover:translate-y-[-1px] hover:bg-black">Get Started <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-zinc-900"><ArrowRight size={12} strokeWidth={3} /></span></Link>
+              <a href="#explore" className="inline-flex items-center gap-2 rounded-full border bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50"><Play size={12} strokeWidth={2.5} className="fill-zinc-700" /> Watch 30s tour</a>
             </div>
-            <div className="mt-5 flex items-center gap-3 text-[11px] font-medium text-white/80">
-              <span className="flex items-center gap-1.5"><span className="text-yellow-300">★★★★★</span> 4.9/5</span><span className="h-3 w-px bg-white/30" /><span>No credit card needed</span><span className="h-3 w-px bg-white/30" /><span>Cancel anytime</span>
+            <div className="mt-5 flex items-center gap-3 text-[11px] font-medium text-zinc-500">
+              <span className="flex items-center gap-1.5"><span className="text-amber-400">★★★★★</span> 4.9/5</span><span className="h-3 w-px bg-zinc-200" /><span>No credit card needed</span><span className="h-3 w-px bg-zinc-200" /><span>Cancel anytime</span>
             </div>
           </div>
         </div>
@@ -126,7 +118,7 @@ export function LandingView({ courses }: { courses: Course[] }) {
           <div className="absolute inset-0 bg-black/10" />
           <div className="absolute bottom-6 left-1/2 w-[92%] max-w-[520px] -translate-x-1/2 rounded-2xl bg-white p-5 shadow-xl sm:left-8 sm:translate-x-0">
             <div className="text-amber-400 text-xs">★★★★★</div>
-            <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-800">“Knoova completely changed how I approach learning. I feel more focused, less pressured, and I actually finish the courses I start.”</p>
+            <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-800">“QTNXT completely changed how I approach learning. I feel more focused, less pressured, and I actually finish the courses I start.”</p>
             <div className="mt-3 flex items-center gap-2"><img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&auto=format&fit=crop&q=80" alt="" className="h-7 w-7 rounded-full object-cover" /><div><p className="text-xs font-semibold">Maya Chen</p><p className="text-[10px] text-zinc-500">Product Designer • Self taught learner</p></div></div>
           </div>
         </div>
@@ -136,7 +128,7 @@ export function LandingView({ courses }: { courses: Course[] }) {
         <div className="mx-auto max-w-3xl">
         <h2 className="text-center text-2xl font-bold tracking-tight">Frequently asked<br/>questions</h2>
         <div className="mt-6 space-y-3">
-          {[{q:"Who is Knoova for?",a:"Knoova is for curious, self-driven learners who want to build practical skills at their own pace without pressure or rigid systems."},{q:"How is Knoova different from other learning platforms?",a:"We focus on calm, focused learning with real-world projects and mentor support instead of endless video playlists."},{q:"Can I learn at my own pace?",a:"Yes — all courses are self-paced. Learn anytime, anywhere."},{q:"Do I get a certificate after completing a course?",a:"Yes, you receive a verified certificate you can share on LinkedIn."}].map((item,i)=>(
+          {[{q:"Who is QTNXT for?",a:"QTNXT is for curious, self-driven learners who want to build practical skills at their own pace without pressure or rigid systems."},{q:"How is QTNXT different from other learning platforms?",a:"We focus on calm, focused learning with real-world projects and mentor support instead of endless video playlists."},{q:"Can I learn at my own pace?",a:"Yes — all courses are self-paced. Learn anytime, anywhere."},{q:"Do I get a certificate after completing a course?",a:"Yes, you receive a verified certificate you can share on LinkedIn."}].map((item,i)=>(
             <div key={item.q} className="rounded-2xl bg-white px-5 py-4 shadow-sm">
               <button onClick={()=>setFaq(faq===i?null:i)} className="flex w-full items-center justify-between text-left"><span className="text-sm font-semibold">{item.q}</span><span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${faq===i?"bg-[#3478ff] text-white":"bg-zinc-100"}`}>{faq===i?<Minus size={12} strokeWidth={2.5}/>:<Plus size={12} strokeWidth={2.5}/>}</span></button>
               {faq===i&&<p className="mt-2 text-xs leading-relaxed text-zinc-500">{item.a}</p>}
@@ -158,11 +150,11 @@ export function LandingView({ courses }: { courses: Course[] }) {
       <footer className="w-full px-6 py-12 text-sm text-zinc-500 sm:px-8 sm:py-16">
         <div className="grid gap-8 sm:grid-cols-4">
           <div><div className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-900 text-xs font-bold text-white">K</div><p className="mt-3 text-xs leading-relaxed text-zinc-500">Learn practical skills with calm, focused sessions.</p></div>
-          {[{title:"Explore",links:["Courses","Learning Paths","Instructors","Categories","Certificates"]},{title:"Resources",links:["FAQ","Help Center","Learning Guide","Community"]},{title:"Company",links:["About Knoova","Careers","Blog","Press","Privacy Policy","Terms of Service"]}].map((col)=>(
+          {[{title:"Explore",links:["Courses","Learning Paths","Instructors","Categories","Certificates"]},{title:"Resources",links:["FAQ","Help Center","Learning Guide","Community"]},{title:"Company",links:["About QTNXT","Careers","Blog","Press","Privacy Policy","Terms of Service"]}].map((col)=>(
             <div key={col.title}><p className="font-semibold text-zinc-900">{col.title}</p><ul className="mt-2 space-y-1 text-xs">{col.links.map((l)=>(<li key={l}><a href="#" className="hover:text-zinc-900">{l}</a></li>))}</ul></div>
           ))}
         </div>
-        <p className="mt-8 border-t pt-6 text-center text-xs text-zinc-400">© 2026 Knoova. All rights reserved.</p>
+        <p className="mt-8 border-t pt-6 text-center text-xs text-zinc-400">© 2026 QTNXT. All rights reserved.</p>
       </footer>
     </>
   );

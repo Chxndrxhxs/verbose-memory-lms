@@ -4,7 +4,7 @@ export default function Assignments() {
   return (
     <div className="min-h-screen bg-[#f6f5f1]">
       <InstructorHeader />
-      <div className="mx-auto max-w-[1080px] px-3 py-6 sm:px-4">
+      <div className="w-full px-4 py-6 sm:px-6">
         <div className="rounded-[20px] bg-white p-6 shadow-sm">
           <h1 className="text-xl font-bold">Assignments — review</h1>
           <p className="text-sm text-zinc-500">Mock queue — grade and give feedback.</p>

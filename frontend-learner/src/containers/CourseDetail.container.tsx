@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { Play } from "@masterlms/shared";
+import { LESSON_KIND_BADGE, Minus, Play, Plus } from "@masterlms/shared";
+import type { LessonKind } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 import { api } from "../lib/api";
 import { loadRazorpayScript } from "../lib/razorpay";
@@ -21,11 +22,11 @@ type Detail = {
   preview: string;
   description: string;
   learn: string[];
-  curriculum: { title: string; meta: string; lessons: string[] }[];
+  curriculum: { title: string; meta: string; lessons: { id: number; title: string; kind: LessonKind; duration: string }[] }[];
   includes: string[];
 };
 
-type ApiCourse = { id: number; title: string; subtitle: string; description: string; category: string; price: string; cover_image: string; level: string; average_rating: string; what_you_will_learn: string[]; instructor_name: string; instructor_avatar: string; instructor_role: string; student_count: number; sections: { id: number; title: string; lessons: { id: number; title: string; duration: string; kind: string; resource_url: string }[] }[] };
+type ApiCourse = { id: number; title: string; subtitle: string; description: string; category: string; price: string; cover_image: string; level: string; average_rating: string; what_you_will_learn: string[]; instructor_name: string; instructor_avatar: string; instructor_role: string; student_count: number; sections: { id: number; title: string; lessons: { id: number; title: string; duration: string; kind: LessonKind; resource_url: string }[] }[] };
 
 async function fetchCourse(id: string): Promise<Detail> {
   const c = await api<ApiCourse>(`/courses/${id}/`);
@@ -38,7 +39,7 @@ async function fetchCourse(id: string): Promise<Detail> {
     instructor: c.instructor_name ?? "Instructor",
     instructorRole: c.instructor_role ?? "",
     avatar: c.instructor_avatar ?? "",
-    price: priceNum === 0 ? "Free" : `$${priceNum}`,
+    price: priceNum === 0 ? "Free" : `₹${priceNum.toLocaleString("en-IN")}`,
     level: c.level ?? "",
     rating: c.average_rating ? Number(c.average_rating).toFixed(1) : "",
     students: c.student_count != null ? `${c.student_count} students` : "",
@@ -46,7 +47,7 @@ async function fetchCourse(id: string): Promise<Detail> {
     preview: c.cover_image || "",
     description: c.description ?? "",
     learn: c.what_you_will_learn ?? [],
-    curriculum: sections.map((s) => ({ title: s.title, meta: `${s.lessons.length} lecture${s.lessons.length === 1 ? "" : "s"}`, lessons: s.lessons.map((l) => l.title) })),
+    curriculum: sections.map((s) => ({ title: s.title, meta: `${s.lessons.length} lecture${s.lessons.length === 1 ? "" : "s"}`, lessons: s.lessons.map((l) => ({ id: l.id, title: l.title, kind: l.kind, duration: l.duration })) })),
     includes: [],
   };
 }
@@ -127,7 +128,7 @@ export function CourseDetailContainer() {
           key: orderRes.key_id,
           amount: orderRes.amount,
           currency: orderRes.currency,
-          name: "Knoova",
+          name: "QTNXT",
           description: data.title,
           order_id: orderRes.order_id,
           handler: async (res: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
@@ -230,9 +231,16 @@ export function CourseDetailContainer() {
             {data.curriculum.map((sec, i) => (
               <div key={sec.title} className="border-b last:border-0">
                 <button onClick={() => setOpen(open === i ? -1 : i)} className="flex w-full items-center justify-between bg-zinc-50 px-4 py-3 text-left hover:bg-zinc-100">
-                  <span className="text-sm font-semibold">{sec.title}</span><span className="flex items-center gap-2 text-xs text-zinc-500">{sec.meta}<span className={`flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs ${open === i ? "bg-[#3478ff] text-white" : ""}`}>{open === i ? "−" : "+"}</span></span>
+                  <span className="text-sm font-semibold">{sec.title}</span><span className="flex items-center gap-2 text-xs text-zinc-500">{sec.meta}<span className={`flex h-6 w-6 items-center justify-center rounded-full ${open === i ? "bg-[#3478ff] text-white" : "bg-white text-zinc-700"}`}>{open === i ? <Minus size={12} strokeWidth={2.5} /> : <Plus size={12} strokeWidth={2.5} />}</span></span>
                 </button>
-                {open === i && <ul className="px-4 py-2">{sec.lessons.map((l) => (<li key={l} className="flex items-center gap-2 py-2 text-xs text-zinc-700"><span className="text-zinc-400">▶</span> {l}</li>))}</ul>}
+                {open === i && <ul className="px-4 py-2">{sec.lessons.map((l) => { const badge = LESSON_KIND_BADGE[l.kind]; const Icon = badge.Icon; return (
+                  <li key={l.id} className="flex items-center gap-2 py-2 text-xs text-zinc-700">
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${badge.badge}`}><Icon size={11} strokeWidth={2.5} /></span>
+                    <span className="min-w-0 flex-1 truncate">{l.title}</span>
+                    {l.kind === "quiz" && <span className="rounded-full bg-yellow-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900">Quiz</span>}
+                    <span className="text-zinc-400">{l.duration}</span>
+                  </li>
+                ); })}</ul>}
               </div>
             ))}
           </div>

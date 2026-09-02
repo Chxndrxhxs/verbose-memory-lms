@@ -13,6 +13,10 @@ class Course(models.Model):
         INTERMEDIATE = "intermediate", "Intermediate"
         ADVANCED = "advanced", "Advanced"
 
+    class PricingType(models.TextChoices):
+        FREE = "free", "Free"
+        ONE_TIME = "one_time", "One-time"
+
     instructor = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="courses"
     )
@@ -22,6 +26,13 @@ class Course(models.Model):
     description = models.TextField(blank=True)
     category = models.CharField(max_length=50, db_index=True)
     price = models.DecimalField(max_digits=7, decimal_places=2, default=0)
+    pricing_type = models.CharField(
+        max_length=10, choices=PricingType.choices, default=PricingType.FREE
+    )
+    original_price = models.DecimalField(
+        max_digits=7, decimal_places=2, default=0, blank=True
+    )
+    pg_fees_to_learner = models.BooleanField(default=False)
     cover_image = models.URLField(blank=True)
     level = models.CharField(max_length=12, choices=Level.choices, default=Level.BEGINNER)
     average_rating = models.DecimalField(max_digits=2, decimal_places=1, default=0)
@@ -71,3 +82,15 @@ class Lesson(models.Model):
 
     class Meta:
         ordering = ["order"]
+
+
+class Review(models.Model):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="reviews")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="course_reviews")
+    rating = models.PositiveSmallIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("course", "user")
+        ordering = ["-created_at"]

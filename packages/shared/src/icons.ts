@@ -95,5 +95,8 @@ export {
   CircleDot,
   Pencil,
   LayoutGrid,
+  Info,
+  Wrench,
+  Receipt,
   type LucideIcon,
 } from "lucide-react";

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { User, ArrowRight, Trash2, AlertTriangle } from "@masterlms/shared";
+import { InstructorHeader } from "../components/InstructorHeader";
 import { useAuth } from "../hooks/useAuth";
-import { api } from "../lib/api";
+import { absoluteMediaUrl, api, uploadFile } from "../lib/api";
 
 type ApiCourse = { id: number; title: string; status: string; student_count: number; price: string; cover_image: string; updated_at: string; average_rating: string };
 
@@ -44,6 +45,8 @@ export default function Profile() {
   const [email, setEmail] = useState(user?.email ?? "");
   const [age, setAge] = useState<string>(user?.age?.toString() ?? "");
   const [avatar, setAvatar] = useState<string | null>(user?.avatar ?? null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -57,11 +60,31 @@ export default function Profile() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
+  const onAvatarPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setAvatarFile(f);
+    const r = new FileReader();
+    r.onload = () => setAvatar(r.result as string);
+    r.readAsDataURL(f);
+  };
+
 const save = async () => {
     setSaving(true);
     try {
-      const updated = await api<{ name: string; email: string; mobile: string; age: number; avatar: string }>("/auth/complete-profile", { method: "PATCH", body: JSON.stringify({ name, email, age: age ? Number(age) : undefined, avatar: avatar || "" }) });
-      setUser({ ...(user as { name: string; email: string; mobile: string }), ...updated, avatar: updated.avatar || avatar || undefined });
+      let avatarUrl = avatar || "";
+      if (avatarFile) {
+        setAvatarUploading(true);
+        try {
+          const uploaded = await uploadFile(avatarFile);
+          avatarUrl = absoluteMediaUrl(uploaded.url) ?? uploaded.url;
+          setAvatar(avatarUrl);
+        } finally { setAvatarUploading(false); }
+      } else if (avatar && avatar.startsWith("data:")) {
+        avatarUrl = user?.avatar ?? "";
+      }
+      const updated = await api<{ name: string; email: string; mobile: string; age: number; avatar: string }>("/auth/complete-profile", { method: "PATCH", body: JSON.stringify({ name, email, age: age ? Number(age) : undefined, avatar: avatarUrl }) });
+      setUser({ ...(user as { name: string; email: string; mobile: string }), ...updated, avatar: updated.avatar || avatarUrl || undefined });
       setToast("Profile updated");
       setEditing(false);
       setTimeout(() => setToast(null), 1800);
@@ -90,9 +113,11 @@ const save = async () => {
   const avgRating = courses.length ? (courses.reduce((a, c) => a + Number(c.average_rating || 0), 0) / courses.length).toFixed(1) : "0.0";
 
   return (
-    <div className="min-h-screen bg-[#f6f5f1]">
-      <div className="px-3 pt-6 sm:px-4">
-        <div className="mx-auto max-w-[1100px]">
+    <>
+      <InstructorHeader />
+      <div className="min-h-screen bg-[#f6f5f1]">
+        <div className="px-4 pt-6 sm:px-6">
+          <div className="w-full">
           <div className="rounded-[28px] bg-gradient-to-br from-zinc-900 via-amber-900 to-zinc-900 p-6 text-white shadow-sm sm:p-8">
             <div className="flex flex-wrap items-start gap-4">
               <div className="h-20 w-20 overflow-hidden rounded-full border-4 border-yellow-400/40 bg-zinc-700 sm:h-24 sm:w-24">
@@ -132,12 +157,12 @@ const save = async () => {
                     <div className="h-10 w-10 overflow-hidden rounded-full bg-zinc-100">
                       {avatar ? <img src={avatar} className="h-full w-full object-cover" alt="" /> : <span className="flex h-full w-full items-center justify-center text-xs"><User size={20} className="text-zinc-400" /></span>}
                     </div>
-                    <label className="rounded-full border px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-zinc-50">Upload<input type="file" accept="image/*" className="hidden" onChange={(e)=>{ const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>setAvatar(r.result as string); r.readAsDataURL(f); }} /></label>
+                    <label className="rounded-full border px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-zinc-50">{avatarUploading ? "Uploading…" : "Upload"}<input type="file" accept="image/*" className="hidden" onChange={onAvatarPicked} disabled={avatarUploading} /></label>
                   </div>
                 </div>
               </div>
               <div className="mt-4 flex gap-3">
-                <button onClick={save} disabled={saving} className="rounded-full bg-[#0f172a] px-5 py-2 text-xs font-bold text-white disabled:opacity-60">{saving ? "Saving…" : "Save changes"}</button>
+                <button onClick={save} disabled={saving || avatarUploading} className="rounded-full bg-[#0f172a] px-5 py-2 text-xs font-bold text-white disabled:opacity-60">{saving || avatarUploading ? "Saving…" : "Save changes"}</button>
                 <button onClick={()=> setEditing(false)} className="rounded-full border px-5 py-2 text-xs font-medium">Cancel</button>
               </div>
             </div>
@@ -173,7 +198,7 @@ const save = async () => {
               </div>
               <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-red-700"><AlertTriangle size={15} /> Danger zone</div>
-                <p className="mt-1 text-xs text-red-600">Deleting your account permanently removes your profile, courses, and data from Knoova.</p>
+                <p className="mt-1 text-xs text-red-600">Deleting your account permanently removes your profile, courses, and data from QTNXT.</p>
                 {confirmDelete ? (
                   <div className="mt-3 rounded-lg bg-white p-3">
                     <p className="text-xs font-semibold text-zinc-700">Type <span className="font-mono font-bold">delete</span> to confirm:</p>
@@ -207,7 +232,7 @@ const save = async () => {
               <Link to="/courses" className="inline-flex items-center gap-1 text-xs font-semibold text-[#3478ff]">Manage <ArrowRight size={12} strokeWidth={2.5} /></Link>
             </div>
             {loading ? <p className="mt-3 text-sm text-zinc-500">Loading…</p> : total === 0 ? (
-              <p className="mt-3 text-sm text-zinc-500">No courses yet. <Link to="/courses/new" className="inline-flex items-center gap-1 font-semibold text-[#3478ff]">Create one <ArrowRight size={12} strokeWidth={2.5} /></Link></p>
+              <p className="mt-3 text-sm text-zinc-500">No courses yet. <Link to="/courses/create" className="inline-flex items-center gap-1 font-semibold text-[#3478ff]">Create one <ArrowRight size={12} strokeWidth={2.5} /></Link></p>
             ) : (
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 {courses.map((c) => (
@@ -218,7 +243,7 @@ const save = async () => {
                         <p className="text-sm font-bold leading-tight">{c.title}</p>
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${c.status === "published" ? "bg-emerald-500 text-white" : "bg-yellow-400 text-zinc-900"}`}>{c.status}</span>
                       </div>
-                      <p className="text-xs text-zinc-500">{c.student_count} students • {Number(c.price) === 0 ? "Free" : `$${c.price}`}</p>
+                      <p className="text-xs text-zinc-500">{c.student_count} students • {Number(c.price) === 0 ? "Free" : `₹${Number(c.price).toLocaleString("en-IN")}`}</p>
                       <p className="text-[10px] text-zinc-400">Updated {new Date(c.updated_at).toLocaleDateString()}</p>
                     </div>
                   </Link>
@@ -228,7 +253,8 @@ const save = async () => {
           </div>
         </div>
       </div>
-      {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white shadow-xl">{toast}</div>}
-    </div>
+        {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white shadow-xl">{toast}</div>}
+      </div>
+    </>
   );
 }

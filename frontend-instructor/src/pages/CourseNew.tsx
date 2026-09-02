@@ -32,7 +32,7 @@ export default function CourseNew() {
   const onSubmit = async (data: Form) => {
     try {
       const { api } = await import("../lib/api");
-      const priceNum = data.price === "Free" ? 0 : Number(data.price.replace("$", ""));
+      const priceNum = data.price === "Free" ? 0 : Number(data.price.replace("₹", "").replace("$", "").replace(/,/g, ""));
       const learn = data.what_you_will_learn.split(".").map((s) => s.trim()).filter(Boolean);
       await api("/courses/", {
         method: "POST",
@@ -58,7 +58,7 @@ export default function CourseNew() {
   return (
     <div className="min-h-screen bg-[#f6f5f1]">
       <InstructorHeader />
-      <div className="mx-auto max-w-[1080px] px-3 py-6 sm:px-4">
+      <div className="w-full px-4 py-6 sm:px-6">
         <Link to="/courses" className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-900"><ArrowLeft size={14} strokeWidth={2.5} /> Back to courses</Link>
         <div className="mt-4 rounded-[20px] bg-white p-6 shadow-sm sm:p-8">
           <h1 className="text-2xl font-extrabold tracking-tight">Create new course</h1>
@@ -69,7 +69,7 @@ export default function CourseNew() {
             <div className="grid gap-4 sm:grid-cols-3">
               <div><label className="text-xs font-semibold">Category</label><select {...register("category")} className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2.5 text-sm"><option value="">Select</option><option>Design</option><option>Engineering</option><option>Business</option><option>Marketing</option></select>{errors.category && <p className="text-xs text-red-500">Required</p>}</div>
               <div><label className="text-xs font-semibold">Level</label><select {...register("level")} className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2.5 text-sm"><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></div>
-              <div><label className="text-xs font-semibold">Price</label><select {...register("price")} className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2.5 text-sm"><option>Free</option><option>$19</option><option>$29</option><option>$49</option></select></div>
+              <div><label className="text-xs font-semibold">Price</label><select {...register("price")} className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2.5 text-sm"><option>Free</option><option>₹449</option><option>₹799</option><option>₹1,299</option></select></div>
             </div>
             <div>
               <label className="text-xs font-semibold">Cover image</label>

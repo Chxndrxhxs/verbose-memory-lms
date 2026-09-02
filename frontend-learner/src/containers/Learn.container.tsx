@@ -2,61 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowLeft, ChevronDown, ChevronUp, Play, CheckCircle2, ArrowUpRight } from "@masterlms/shared";
+import { ArrowLeft, ArrowUpRight, CheckCircle2, ChevronDown, ChevronUp, Play, Star, LESSON_KIND_BADGE, toEmbed } from "@masterlms/shared";
+import type { LessonKind } from "@masterlms/shared";
 import { PdfReader } from "../components/PdfReader";
 import { absoluteMediaUrl, api } from "../lib/api";
 import { cn } from "../lib/utils";
 
 type QuizQ = { id: string; question: string; options: string[]; correct: number };
-type Lesson = { id: number; title: string; duration: string; preview?: boolean; kind: string; resource_url?: string; quiz_data?: QuizQ[] };
+type Lesson = { id: number; title: string; duration: string; preview?: boolean; kind: LessonKind; resource_url?: string; quiz_data?: QuizQ[] };
 type Section = { id: number; title: string; lessons: Lesson[] };
 type ApiCourse = { id: number; title: string; sections: Section[] };
-
-const IFRAME_SRC_RE = /<iframe[^>]*\bsrc=["']([^"']+)["']/i;
-const YT_HOSTS = ["youtube.com", "youtu.be"];
-const VIMEO_HOSTS = ["vimeo.com"];
-const LOOM_HOSTS = ["loom.com"];
-
-function normalizeEmbedInput(input: string | undefined): string {
-  if (!input) return "";
-  const trimmed = input.trim();
-  const iframeMatch = trimmed.match(IFRAME_SRC_RE);
-  if (iframeMatch) return iframeMatch[1];
-  return trimmed;
-}
-
-function toEmbed(input: string | undefined): string | null {
-  const url = normalizeEmbedInput(input);
-  if (!url) return null;
-  let u: URL;
-  try {
-    u = new URL(url);
-  } catch {
-    return null;
-  }
-  const host = u.hostname.replace(/^www\./, "");
-
-  if (YT_HOSTS.includes(host)) {
-    if (host === "youtu.be") {
-      const id = u.pathname.slice(1).split(/[/?]/)[0];
-      return id ? `https://www.youtube.com/embed/${id}?rel=0` : null;
-    }
-    if (u.pathname.startsWith("/embed/")) return `${url}${u.search ? "" : "?rel=0"}`;
-    const v = u.searchParams.get("v");
-    if (v) return `https://www.youtube.com/embed/${v}?rel=0`;
-    const shorts = u.pathname.match(/^\/shorts\/([\w-]+)/);
-    if (shorts) return `https://www.youtube.com/embed/${shorts[1]}?rel=0`;
-    return null;
-  }
-  if (VIMEO_HOSTS.includes(host)) {
-    const id = u.pathname.split("/").filter(Boolean).pop();
-    return id ? `https://player.vimeo.com/video/${id}` : null;
-  }
-  if (LOOM_HOSTS.includes(host) && u.pathname.includes("/share/")) {
-    return url.replace("/share/", "/embed/");
-  }
-  return null;
-}
 
 export function LearnContainer({ courseId: propId, title: propTitle }: { courseId?: string; title?: string }) {
   const { id: routeId } = useParams();
@@ -72,6 +27,11 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
   const [note, setNote] = useState("");
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [showRating, setShowRating] = useState(false);
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const [userRating, setUserRating] = useState<number | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,10 +42,29 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
         setTitle(c.title);
         setSections(c.sections ?? []);
         if (c.sections?.[0]?.lessons?.[0]) setActive(c.sections[0].lessons[0].id);
+        // load saved progress for this course
+        try {
+          const enrollments = await api<{ course: { id: number }; completed_lessons: number[]; progress: number }[] | { results: { course: { id: number }; completed_lessons: number[] }[] }>("/me/courses");
+          const list = Array.isArray(enrollments) ? enrollments : (enrollments as { results: { course: { id: number }; completed_lessons: number[] }[] }).results ?? [];
+          const mine = list.find((e) => String(e.course.id) === String(courseId));
+          if (mine && Array.isArray(mine.completed_lessons) && !cancelled) {
+            setCompleted(new Set(mine.completed_lessons));
+          }
+        } catch { /* not enrolled yet — keep empty */ }
       } catch (e) { setError(String(e)); }
       finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
+  }, [courseId]);
+
+  useEffect(() => {
+    if (!courseId) return;
+    (async () => {
+      try {
+        const res = await api<{ rating: number | null }>(`/courses/${courseId}/rate/`);
+        if (res.rating != null) setUserRating(res.rating as number);
+      } catch {}
+    })();
   }, [courseId]);
 
   const allLessons = useMemo(() => sections.flatMap((s) => s.lessons), [sections]);
@@ -103,6 +82,27 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
     if (active == null) return;
     const next = new Set(completed); next.add(active); setCompleted(next);
     try { await api(`/courses/${courseId}/lessons/complete`, { method: "POST", body: JSON.stringify({ lesson_id: active }) }); } catch {}
+  };
+
+  const submitRating = async () => {
+    if (!selectedRating) return;
+    setSubmittingRating(true);
+    try {
+      await api(`/courses/${courseId}/rate/`, { method: "POST", body: JSON.stringify({ rating: selectedRating }) });
+      setUserRating(selectedRating);
+      setShowRating(false);
+      // generate certificate on completion + rating
+      try {
+        await api(`/courses/${courseId}/certificate`, { method: "POST" });
+      } catch {}
+      setToast("Thanks for your rating! Certificate issued ★");
+      setTimeout(() => setToast(null), 2600);
+    } catch (e) {
+      setToast(String(e));
+      setTimeout(() => setToast(null), 2200);
+    } finally {
+      setSubmittingRating(false);
+    }
   };
 
   if (loading) return <p className="py-10 text-center text-sm text-zinc-500">Loading course…</p>;
@@ -255,7 +255,7 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
                     {sec.lessons.map((l) => (
                       <li key={l.id}>
                         <button onClick={() => { setActive(l.id); setQuizSubmitted(false); }} className={cn("flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-zinc-50", active === l.id && "bg-[#f6f5f1]")}>
-                          <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px]", completed.has(l.id) ? "bg-emerald-500 border-emerald-500 text-white" : active === l.id ? "bg-[#0f172a] border-[#0f172a] text-white" : "bg-white text-zinc-400")}>{completed.has(l.id) ? <CheckCircle2 size={12} strokeWidth={2.5} /> : l.kind === "quiz" ? "?" : <Play size={10} strokeWidth={2.5} className="ml-0.5" />}</span>
+                          <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full", completed.has(l.id) ? "bg-emerald-500 text-white" : active === l.id ? "bg-[#0f172a] text-white" : LESSON_KIND_BADGE[l.kind].badge)}>{completed.has(l.id) ? <CheckCircle2 size={12} strokeWidth={2.5} /> : (() => { const Icon = LESSON_KIND_BADGE[l.kind].Icon; return <Icon size={11} strokeWidth={2.5} />; })()}</span>
                           <span className={cn("text-sm", active === l.id ? "font-semibold text-zinc-900" : "text-zinc-700")}>{l.title}</span>
                           <span className="ml-auto flex items-center gap-1 text-xs text-zinc-500">{l.kind === "quiz" && <span className="rounded-full bg-yellow-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900">Quiz</span>}{l.duration}</span>
                         </button>
@@ -267,10 +267,34 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
             ))}
             <div className="p-3">
               <Link to={`/courses/${courseId}`} className="block w-full rounded-full border py-2.5 text-center text-sm font-medium hover:bg-zinc-50">Back to course</Link>
+              {progress === 100 && !userRating && !showRating && (
+                <button onClick={() => setShowRating(true)} className="mt-2 block w-full rounded-full bg-[#0f172a] py-2.5 text-center text-sm font-bold text-white hover:bg-black">Mark course as complete →</button>
+              )}
+              {showRating && !userRating && (
+                <div className="mt-3 rounded-2xl border bg-white p-4">
+                  <h4 className="text-sm font-bold">Rate this course</h4>
+                  <p className="mt-1 text-xs text-zinc-500">How was your experience?</p>
+                  <div className="mt-3 flex gap-1">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button key={n} onClick={() => setSelectedRating(n)} className={`flex h-8 w-8 items-center justify-center rounded-full border ${n <= selectedRating ? "bg-amber-400 border-amber-400 text-white" : "bg-white text-zinc-300"}`}>
+                        <Star size={16} strokeWidth={2.5} fill={n <= selectedRating ? "currentColor" : "none"} />
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={submitRating} disabled={!selectedRating || submittingRating} className="mt-3 w-full rounded-full bg-[#0f172a] py-2 text-xs font-bold text-white disabled:opacity-50">{submittingRating ? "Submitting…" : "Submit rating"}</button>
+                </div>
+              )}
+              {userRating && (
+                <div className="mt-3 rounded-2xl border bg-emerald-50 p-3 text-center">
+                  <p className="text-xs font-semibold text-emerald-700">You rated {userRating} ★ — thanks for your feedback!</p>
+                  <p className="mt-1 text-[11px] text-zinc-500">Average rating updated on course details & cards.</p>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+           </div>
+         </div>
+       </div>
+       {toast && <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white shadow-xl">{toast}</div>}
+     </div>
+   );
 }

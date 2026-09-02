@@ -8,6 +8,9 @@ export type Course = {
   instructor: string;
   instructorAvatar?: string;
   price: string;
+  rawPrice: number;
+  originalPrice?: number;
+  pricingType?: string;
   rating?: string;
   img: string;
   icon: LucideIcon;
@@ -18,4 +21,8 @@ export type Course = {
   category?: string;
   level?: string;
   cover_image?: string;
+  studentCount: number;
+  sectionCount: number;
+  lessonCount: number;
+  enrolled?: boolean;
 };

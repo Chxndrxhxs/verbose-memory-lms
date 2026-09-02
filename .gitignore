@@ -54,3 +54,6 @@ frontend-instructor/test-results/
 db.sqlite3
 *.sqlite3
 *.sqlite
+
+# user-uploaded media (never commit)
+backend/media/

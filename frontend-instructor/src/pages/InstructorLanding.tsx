@@ -23,7 +23,7 @@ export default function InstructorLanding() {
           <header className="absolute left-1/2 top-4 flex w-[92%] max-w-[720px] -translate-x-1/2 items-center justify-between rounded-full bg-white px-2 py-2 shadow-lg sm:px-3">
             <div className="flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f172a] text-xs font-bold text-white">K</span>
-              <span className="text-sm font-bold tracking-tight">Knoova</span>
+              <span className="text-sm font-bold tracking-tight">QTNXT</span>
               <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-bold text-zinc-900">Teach</span>
             </div>
             <div className="flex items-center gap-2">
@@ -40,8 +40,8 @@ export default function InstructorLanding() {
 
           {/* floating deco — teach earnings + live students */}
           <div className="absolute left-6 top-[38%] hidden -rotate-3 rounded-2xl bg-white p-3 shadow-xl lg:flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white text-sm">$</div>
-            <div><p className="text-xs font-bold">$2,840 this month</p><p className="text-[10px] text-zinc-500">Avg. top 10% instructors</p></div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white text-sm">₹</div>
+            <div><p className="text-xs font-bold">₹2,840 this month</p><p className="text-[10px] text-zinc-500">Avg. top 10% instructors</p></div>
           </div>
           <div className="absolute right-6 top-[42%] hidden rotate-2 rounded-2xl bg-white p-3 shadow-xl lg:flex items-center gap-2">
             <div className="flex -space-x-2">{avatars.map((a)=><img key={a} src={a} alt="" className="h-8 w-8 rounded-full border-2 border-white object-cover" />)}</div>
@@ -49,7 +49,7 @@ export default function InstructorLanding() {
           </div>
 
           <div className="absolute inset-0 flex flex-col items-center justify-center px-4 pt-12 text-center">
-            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-md border border-white/20"><span className="h-2 w-2 rounded-full bg-yellow-400" /> Teach on Knoova • Keep 85% revenue</span>
+            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-md border border-white/20"><span className="h-2 w-2 rounded-full bg-yellow-400" /> Teach on QTNXT • Keep 85% revenue</span>
             <h1 className="max-w-[660px] leading-[0.88] tracking-[-0.04em] text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.35)]">
               <span className="block text-[30px] font-light tracking-[-0.03em] sm:text-[46px]">Share what you</span>
               <span className="block font-serif text-[36px] font-normal italic tracking-[-0.03em] sm:text-[56px]"><span className="relative inline-block px-1.5"><span className="relative z-10">know</span><span className="absolute inset-x-0 bottom-1.5 h-[10px] bg-yellow-400 -rotate-1 sm:h-[14px]" /></span> & inspire</span>
@@ -72,7 +72,7 @@ export default function InstructorLanding() {
           </div>
         </div>
       </div>
-      <section id="how" className="mx-auto max-w-[1080px] px-3 py-10 sm:px-4 grid gap-4 sm:grid-cols-3">
+      <section id="how" className="w-full px-3 py-10 sm:px-4 grid gap-4 sm:grid-cols-3">
         {[
           ["Create", "Record and upload — we handle hosting", "✎"],
           ["Publish", "Set price, go live to 12k+ learners", "◉"],
