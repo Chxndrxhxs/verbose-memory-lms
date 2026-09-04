@@ -54,4 +54,3 @@ def test_upload_requires_auth():
         format="multipart",
     )
     assert r.status_code == 401
-

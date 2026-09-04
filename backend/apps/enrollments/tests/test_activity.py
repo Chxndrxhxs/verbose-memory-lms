@@ -36,9 +36,7 @@ def course_with_lesson(instructor, learner):
         status="published",
     )
     section = Section.objects.create(course=course, title="S1", order=0)
-    lesson = Lesson.objects.create(
-        section=section, title="L1", kind="text", order=0
-    )
+    lesson = Lesson.objects.create(section=section, title="L1", kind="text", order=0)
     Enrollment.objects.create(learner=learner, course=course)
     return course, lesson
 
@@ -83,4 +81,3 @@ def test_activity_requires_auth():
     c = APIClient()
     r = c.get("/api/v1/me/activity/")
     assert r.status_code == 401
-

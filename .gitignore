@@ -38,6 +38,7 @@ desktop.ini
 
 # logs
 *.log
+pytest_out.txt
 npm-debug.log*
 pnpm-debug.log*
 

@@ -5,12 +5,22 @@ from pathlib import Path
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 
-from .models import Course
+from .models import Course, Lesson, Review, Section
 
 logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {
-    ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".mp4", ".mp3", ".wav", ".txt", ".md",
+    ".pdf",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".mp4",
+    ".mp3",
+    ".wav",
+    ".txt",
+    ".md",
 }
 MAX_BYTES = 25 * 1024 * 1024
 
@@ -44,3 +54,50 @@ def save_uploaded_file(file: UploadedFile) -> tuple[str, int]:
     logger.info("Saved upload %s (%s bytes)", url, full_path.stat().st_size)
     return url, full_path.stat().st_size
 
+
+def replace_curriculum(course: Course, sections: list) -> Course:
+    course.sections.all().delete()
+    for si, sec in enumerate(sections or []):
+        s = Section.objects.create(
+            course=course,
+            title=sec.get("title", f"Section {si + 1}"),
+            order=si,
+        )
+        for li, les in enumerate(sec.get("lessons", [])):
+            Lesson.objects.create(
+                section=s,
+                title=les.get("title", "Untitled"),
+                kind=les.get("kind", "video"),
+                duration=les.get("duration", ""),
+                resource_url=les.get("resource_url", ""),
+                quiz_data=les.get("quiz_data", []),
+                order=li,
+            )
+    return course
+
+
+def rate_course(course: Course, user, rating: int) -> dict:
+    from django.db.models import Avg
+
+    Review.objects.update_or_create(course=course, user=user, defaults={"rating": rating})
+    agg = Review.objects.filter(course=course).aggregate(avg=Avg("rating"), count=Avg("id"))
+    total = Review.objects.filter(course=course).count()
+    course.average_rating = round(agg["avg"] or 0, 1)
+    course.save(update_fields=["average_rating", "updated_at"])
+    return {
+        "rating": rating,
+        "average_rating": str(course.average_rating),
+        "rating_count": total,
+    }
+
+
+def get_user_rating(course: Course, user) -> dict:
+    rating = (
+        Review.objects.filter(course=course, user=user).values_list("rating", flat=True).first()
+    )
+    total = Review.objects.filter(course=course).count()
+    return {
+        "rating": rating,
+        "average_rating": str(course.average_rating),
+        "rating_count": total,
+    }

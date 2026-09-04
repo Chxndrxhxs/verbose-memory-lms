@@ -3,7 +3,6 @@ import hmac
 import logging
 
 import environ
-
 from django.conf import settings
 
 env = environ.Env()
@@ -22,12 +21,19 @@ def get_razorpay_client():
     return razorpay.Client(auth=(key_id, key_secret))
 
 
-def create_razorpay_order(amount_paise: int, currency: str = "INR", receipt: str | None = None) -> dict:
+def create_razorpay_order(
+    amount_paise: int, currency: str = "INR", receipt: str | None = None
+) -> dict:
     client = get_razorpay_client()
     if client is None:
         raise ValueError("Razorpay not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.")
     order = client.order.create(
-        {"amount": amount_paise, "currency": currency, "receipt": receipt or f"receipt_{amount_paise}", "payment_capture": 1}
+        {
+            "amount": amount_paise,
+            "currency": currency,
+            "receipt": receipt or f"receipt_{amount_paise}",
+            "payment_capture": 1,
+        }
     )
     return order
 

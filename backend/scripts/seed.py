@@ -1,9 +1,12 @@
+import logging
 import os
 import sys
 from decimal import Decimal
 from pathlib import Path
 
 import django
+
+logger = logging.getLogger(__name__)
 
 BACKEND = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND))
@@ -95,7 +98,7 @@ def run() -> None:
             Section.objects.create(course=c, title="Core concepts", order=2)
             Lesson.objects.create(section=s1, title="Welcome", duration="03:12", order=1)
             Lesson.objects.create(section=s1, title="Setup", duration="06:20", order=2)
-    print(f"OK: {Course.objects.count()} courses, {User.objects.count()} users")
+    logger.info("OK: %s courses, %s users", Course.objects.count(), User.objects.count())
 
 
 if __name__ == "__main__":

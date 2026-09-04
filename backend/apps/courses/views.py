@@ -1,18 +1,32 @@
-from rest_framework import status, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
-from .models import Course, Review
+from .models import Course
 from .serializers import CourseDetailSerializer, CourseListSerializer
-from .services import create_course, publish_course, save_uploaded_file
+from .services import (
+    create_course,
+    get_user_rating,
+    publish_course,
+    rate_course,
+    replace_curriculum,
+    save_uploaded_file,
+)
 
 
 class IsInstructorOrReadOnly(IsAuthenticatedOrReadOnly):
     def has_permission(self, request, view):
         if request.method in ("GET", "HEAD", "OPTIONS"):
             return True
-        return bool(request.user and request.user.is_authenticated)
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and (getattr(user, "role", "") == "instructor" or user.is_staff)
+        )
 
     def has_object_permission(self, request, view, obj):
         if request.method in ("GET", "HEAD", "OPTIONS"):
@@ -22,6 +36,7 @@ class IsInstructorOrReadOnly(IsAuthenticatedOrReadOnly):
 
 class CourseViewSet(viewsets.ModelViewSet):
     permission_classes = [IsInstructorOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["category", "status"]
     search_fields = ["title", "subtitle"]
     ordering_fields = ["created_at", "price"]
@@ -59,14 +74,13 @@ class CourseViewSet(viewsets.ModelViewSet):
         page = self.paginate_queryset(qs)
         s = self.get_serializer(page if page is not None else qs, many=True)
         if page is not None:
+            total = self.paginator.page.paginator.count
+            num = self.paginator.page.number
             return Response(
                 {
-                    "data": {
-                        "results": s.data,
-                        "count": self.paginator.page.paginator.count,
-                        "page": request.GET.get("page", 1),
-                    },
+                    "data": s.data,
                     "error": None,
+                    "meta": {"page": num, "total": total},
                 }
             )
         return Response({"data": s.data, "error": None})
@@ -77,14 +91,14 @@ class CourseViewSet(viewsets.ModelViewSet):
             if not request.user.is_authenticated or not (
                 request.user.is_staff or obj.instructor_id == request.user.id
             ):
-                from rest_framework.exceptions import NotFound
-
                 raise NotFound("Course not found")
         return Response({"data": self.get_serializer(obj).data, "error": None})
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def publish(self, request, id=None):
         course = self.get_object()
+        if course.instructor_id != request.user.id and not request.user.is_staff:
+            raise PermissionDenied("Only the course instructor can publish this course")
         publish_course(course)
         return Response({"data": CourseDetailSerializer(course).data, "error": None})
 
@@ -97,72 +111,62 @@ class CourseViewSet(viewsets.ModelViewSet):
     def curriculum(self, request, id=None):
         course = self.get_object()
         if course.instructor_id != request.user.id:
-            from rest_framework.exceptions import PermissionDenied
-
             raise PermissionDenied
         sections = request.data.get("sections", [])
-        from .models import Lesson, Section
-
-        # replace curriculum
-        course.sections.all().delete()
-        for si, sec in enumerate(sections):
-            s = Section.objects.create(
-                course=course,
-                title=sec.get("title", f"Section {si + 1}"),
-                order=si,
-            )
-            for li, les in enumerate(sec.get("lessons", [])):
-                Lesson.objects.create(
-                    section=s,
-                    title=les.get("title", "Untitled"),
-                    kind=les.get("kind", "video"),
-                    duration=les.get("duration", ""),
-                    resource_url=les.get("resource_url", ""),
-                    quiz_data=les.get("quiz_data", []),
-                    order=li,
-                )
+        replace_curriculum(course, sections)
         return Response({"data": CourseDetailSerializer(course).data, "error": None})
 
-    @action(detail=True, methods=["get", "post"], permission_classes=[IsAuthenticated], url_path="rate")
+    @action(
+        detail=True, methods=["get", "post"], permission_classes=[IsAuthenticated], url_path="rate"
+    )
     def rate(self, request, id=None):
         course = self.get_object()
         if request.method == "GET":
-            try:
-                review = Review.objects.get(course=course, user=request.user)
-                rating = review.rating
-            except Review.DoesNotExist:
-                rating = None
-            return Response(
-                {"data": {"rating": rating, "average_rating": str(course.average_rating), "rating_count": course.reviews.count()}, "error": None}
-            )
+            return Response({"data": get_user_rating(course, request.user), "error": None})
         rating = request.data.get("rating")
         try:
             rating_int = int(rating)
         except (TypeError, ValueError):
-            return Response({"data": None, "error": "rating must be 1-5"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"data": None, "error": "rating must be 1-5"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if not 1 <= rating_int <= 5:
-            return Response({"data": None, "error": "rating must be 1-5"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"data": None, "error": "rating must be 1-5"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         from apps.enrollments.models import Enrollment
 
         if not Enrollment.objects.filter(learner=request.user, course=course).exists():
-            return Response({"data": None, "error": "Enroll first"}, status=status.HTTP_403_FORBIDDEN)
-        Review.objects.update_or_create(course=course, user=request.user, defaults={"rating": rating_int})
-        from django.db.models import Avg
-
-        agg = Review.objects.filter(course=course).aggregate(avg=Avg("rating"))
-        course.average_rating = round(agg["avg"] or 0, 1)
-        course.save(update_fields=["average_rating", "updated_at"])
-        return Response(
-            {"data": {"rating": rating_int, "average_rating": str(course.average_rating), "rating_count": course.reviews.count()}, "error": None}
-        )
+            return Response(
+                {"data": None, "error": "Enroll first"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return Response({"data": rate_course(course, request.user, rating_int), "error": None})
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def mine(self, request):
-        qs = Course.objects.filter(instructor=request.user).order_by("-updated_at")
+        qs = (
+            Course.objects.filter(instructor=request.user)
+            .select_related("instructor")
+            .prefetch_related("sections__lessons")
+            .order_by("-updated_at")
+        )
+        qs = self.filter_queryset(qs)
         page = self.paginate_queryset(qs)
         if page is not None:
-            return self.get_paginated_response(CourseListSerializer(page, many=True).data)
-        return Response({"data": CourseListSerializer(qs, many=True).data})
+            s = CourseListSerializer(page, many=True)
+            total = self.paginator.page.paginator.count
+            num = self.paginator.page.number
+            return Response(
+                {
+                    "data": s.data,
+                    "error": None,
+                    "meta": {"page": num, "total": total},
+                }
+            )
+        return Response({"data": CourseListSerializer(qs, many=True).data, "error": None})
 
 
 @api_view(["POST"])
@@ -177,7 +181,5 @@ def upload(request):
     try:
         url, size = save_uploaded_file(file)
     except ValueError as e:
-        return Response(
-            {"data": None, "error": str(e)}, status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({"data": None, "error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"data": {"url": url, "size": size}, "error": None})

@@ -24,6 +24,19 @@ def record_completion(learner, lesson: Lesson) -> LessonCompletion:
     return completion
 
 
+def mark_lesson_done(learner, course: Course, lesson: Lesson) -> Enrollment:
+    record_completion(learner, lesson)
+    enrollment = Enrollment.objects.get(learner=learner, course=course)
+    lid = int(lesson.id)
+    if lid not in enrollment.completed_lessons:
+        enrollment.completed_lessons.append(lid)
+        total = Lesson.objects.filter(section__course=course).count()
+        done = len(enrollment.completed_lessons)
+        enrollment.progress = int(done / total * 100) if total else 0
+        enrollment.save(update_fields=["completed_lessons", "progress"])
+    return enrollment
+
+
 def activity_last_six_months(learner) -> list[dict]:
     start = (timezone.now() - timedelta(days=26 * 7 - 1)).date()
     qs = LessonCompletion.objects.filter(

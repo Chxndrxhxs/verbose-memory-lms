@@ -1,6 +1,6 @@
 import logging
 
-from rest_framework import status
+from django.conf import settings
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -29,7 +29,12 @@ def create_order(request):
     # free course: enroll directly, no payment needed
     if course.price == 0:
         enrollment = enroll(request.user, course)
-        return Response({"data": {"free": True, "enrolled": True, "enrollment_id": enrollment.id}, "error": None})
+        return Response(
+            {
+                "data": {"free": True, "enrolled": True, "enrollment_id": enrollment.id},
+                "error": None,
+            }
+        )
 
     # already enrolled?
     from apps.enrollments.models import Enrollment
@@ -42,8 +47,8 @@ def create_order(request):
     receipt = f"course_{course.id}_user_{request.user.id}"
 
     client = get_razorpay_client()
-    if client is None:
-        # mock order for dev without keys
+    if client is None and settings.DEBUG:
+        # mock order for local dev without keys
         import uuid
 
         mock_order_id = f"order_mock_{uuid.uuid4().hex[:14]}"
@@ -83,13 +88,16 @@ def create_order(request):
         status=Payment.Status.CREATED,
     )
 
-    import environ
-
-    env = environ.Env()
-    key_id = env("RAZORPAY_KEY_ID", default="")
-
     return Response(
-        {"data": {"order_id": order["id"], "amount": order["amount"], "currency": order["currency"], "key_id": key_id}, "error": None}
+        {
+            "data": {
+                "order_id": order["id"],
+                "amount": order["amount"],
+                "currency": order["currency"],
+                "key_id": settings.RAZORPAY_KEY_ID,
+            },
+            "error": None,
+        }
     )
 
 
@@ -109,14 +117,21 @@ def verify_payment(request):
     except Payment.DoesNotExist:
         return Response({"data": None, "error": "Order not found"}, status=404)
 
-    # mock order: skip signature check and enroll
-    if order_id.startswith("order_mock_"):
+    # mock order: skip signature check and enroll (dev only, requires DEBUG)
+    if settings.DEBUG and order_id.startswith("order_mock_"):
         payment.razorpay_payment_id = payment_id
         payment.razorpay_signature = signature
         payment.status = Payment.Status.PAID
-        payment.save(update_fields=["razorpay_payment_id", "razorpay_signature", "status", "updated_at"])
+        payment.save(
+            update_fields=["razorpay_payment_id", "razorpay_signature", "status", "updated_at"]
+        )
         enrollment = enroll(request.user, payment.course)
-        return Response({"data": {"verified": True, "enrollment_id": enrollment.id, "mock": True}, "error": None})
+        return Response(
+            {
+                "data": {"verified": True, "enrollment_id": enrollment.id, "mock": True},
+                "error": None,
+            }
+        )
 
     if not verify_signature(order_id, payment_id, signature):
         payment.status = Payment.Status.FAILED
@@ -126,7 +141,9 @@ def verify_payment(request):
     payment.razorpay_payment_id = payment_id
     payment.razorpay_signature = signature
     payment.status = Payment.Status.PAID
-    payment.save(update_fields=["razorpay_payment_id", "razorpay_signature", "status", "updated_at"])
+    payment.save(
+        update_fields=["razorpay_payment_id", "razorpay_signature", "status", "updated_at"]
+    )
 
     # ensure course_id matches if provided
     course = payment.course
@@ -140,7 +157,14 @@ def verify_payment(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def my_payments(request):
-    qs = Payment.objects.filter(
-        user=request.user, status=Payment.Status.PAID
-    ).select_related("course", "course__instructor").order_by("-created_at")
+    qs = (
+        Payment.objects.filter(user=request.user, status=Payment.Status.PAID)
+        .select_related("course", "course__instructor")
+        .order_by("-created_at")
+    )
+    from core.pagination import paginate_queryset_view
+
+    paged = paginate_queryset_view(request, qs, PaymentSerializer)
+    if paged is not None:
+        return paged
     return Response({"data": PaymentSerializer(qs, many=True).data, "error": None})

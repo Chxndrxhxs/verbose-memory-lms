@@ -4,10 +4,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.courses.models import Course, Lesson
+from core.pagination import paginate_queryset_view
 
 from .models import Certificate, Enrollment
 from .serializers import CertificateSerializer, EnrollmentSerializer
-from .services import activity_last_six_months, enroll, record_completion
+from .services import activity_last_six_months, enroll, mark_lesson_done
 
 
 @api_view(["POST"])
@@ -32,6 +33,9 @@ def my_courses(request):
         .select_related("course")
         .order_by("-enrolled_at")
     )
+    paged = paginate_queryset_view(request, qs, EnrollmentSerializer)
+    if paged is not None:
+        return paged
     return Response({"data": EnrollmentSerializer(qs, many=True).data, "error": None})
 
 
@@ -53,13 +57,7 @@ def complete_lesson(request, course_id: int):
             {"data": None, "error": "Lesson not found"},
             status=status.HTTP_404_NOT_FOUND,
         )
-    record_completion(request.user, lesson)
-    lid = int(lesson_id)
-    if lid not in enrollment.completed_lessons:
-        enrollment.completed_lessons.append(lid)
-        total = Lesson.objects.filter(section__course_id=course_id).count()
-        enrollment.progress = int(len(enrollment.completed_lessons) / total * 100) if total else 0
-        enrollment.save(update_fields=["completed_lessons", "progress"])
+    enrollment = mark_lesson_done(request.user, enrollment.course, lesson)
     return Response({"data": EnrollmentSerializer(enrollment).data, "error": None})
 
 
@@ -72,9 +70,14 @@ def my_activity(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def my_certificates(request):
-    qs = Certificate.objects.filter(
-        learner=request.user
-    ).select_related("course", "enrollment").order_by("-issued_at")
+    qs = (
+        Certificate.objects.filter(learner=request.user)
+        .select_related("course", "enrollment")
+        .order_by("-issued_at")
+    )
+    paged = paginate_queryset_view(request, qs, CertificateSerializer)
+    if paged is not None:
+        return paged
     return Response({"data": CertificateSerializer(qs, many=True).data, "error": None})
 
 

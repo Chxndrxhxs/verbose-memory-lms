@@ -8,7 +8,9 @@ class Payment(models.Model):
         PAID = "paid", "Paid"
         FAILED = "failed", "Failed"
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payments")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payments"
+    )
     course = models.ForeignKey("courses.Course", on_delete=models.CASCADE, related_name="payments")
     razorpay_order_id = models.CharField(max_length=100, unique=True)
     razorpay_payment_id = models.CharField(max_length=100, blank=True)

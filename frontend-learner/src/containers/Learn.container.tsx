@@ -84,6 +84,15 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
     try { await api(`/courses/${courseId}/lessons/complete`, { method: "POST", body: JSON.stringify({ lesson_id: active }) }); } catch {}
   };
 
+  const submitQuiz = () => {
+    if (active == null || !activeLesson?.quiz_data?.length) return;
+    const correct = activeLesson.quiz_data.filter((q, qi) => quizAnswers[qi] === q.correct).length;
+    if (correct === activeLesson.quiz_data.length) {
+      markComplete();
+    }
+    setQuizSubmitted(true);
+  };
+
   const submitRating = async () => {
     if (!selectedRating) return;
     setSubmittingRating(true);
@@ -156,7 +165,7 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
              ) : activeLesson?.kind === "link" && activeLesson.resource_url ? (
               <div className="aspect-video w-full bg-white p-6 flex flex-col items-center justify-center text-center gap-3">
                 <p className="text-sm font-semibold">External resource</p>
-                <a href={activeLesson.resource_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-[#0f172a] px-5 py-2 text-xs font-bold text-white">Open link <ArrowUpRight size={12} strokeWidth={2.5} /></a>
+                <a href={activeLesson.resource_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-[#0f172a] px-5 py-2 text-xs font-bold text-white">Open link <ArrowUpRight size={12} strokeWidth={2.5} /></a>
               </div>
             ) : activeLesson?.kind === "quiz" && activeLesson.quiz_data ? (
               <div className="aspect-video w-full bg-white p-6 overflow-auto">
@@ -176,7 +185,7 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
                     </div>
                   ))}
                   {!quizSubmitted ? (
-                    <button onClick={()=> setQuizSubmitted(true)} className="rounded-full bg-[#0f172a] px-5 py-2 text-sm font-semibold text-white">Submit quiz</button>
+                    <button onClick={submitQuiz} className="rounded-full bg-[#0f172a] px-5 py-2 text-sm font-semibold text-white">Submit quiz</button>
                   ) : (
                     <div className="rounded-xl bg-emerald-500 text-white p-3 text-sm">Score: {activeLesson.quiz_data.filter((q, qi)=> quizAnswers[qi]===q.correct).length}/{activeLesson.quiz_data.length} — {(()=>{ const s = activeLesson.quiz_data!.filter((q, qi)=> quizAnswers[qi]===q.correct).length; return s === activeLesson.quiz_data!.length ? "Perfect! ✓" : "Keep practicing"; })()}</div>
                   )}

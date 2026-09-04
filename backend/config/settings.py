@@ -7,12 +7,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(DEBUG=(bool, False))
 environ.Env.read_env(BASE_DIR / ".env", overwrite=False)
 
-SECRET_KEY = env(
-    "SECRET_KEY",
-    default="django-insecure-m5x3#zz35^^cnqz#zks0ytuy0iih(n_x1wg76al-&rx7&=d9@s",
-)
-DEBUG = env("DEBUG", default=True)
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
+SECRET_KEY = env("SECRET_KEY", default="django-insecure-unset-change-before-deploy")
+# Debug is only ever on when explicitly enabled in the environment.
+DEBUG = env("DEBUG", default=False)
+# When DEBUG is on and no hosts are configured, allow localhost so `runserver` keeps working.
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"] if DEBUG else [])
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -41,7 +40,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=False)
 
 ROOT_URLCONF = "config.urls"
 TEMPLATES = [
@@ -101,7 +100,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("apps.users.authentication.CookieJWTAuthentication",),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS": "core.pagination.EnvelopePagination",
     "PAGE_SIZE": 12,
     "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
 }

@@ -29,9 +29,7 @@ class Course(models.Model):
     pricing_type = models.CharField(
         max_length=10, choices=PricingType.choices, default=PricingType.FREE
     )
-    original_price = models.DecimalField(
-        max_digits=7, decimal_places=2, default=0, blank=True
-    )
+    original_price = models.DecimalField(max_digits=7, decimal_places=2, default=0, blank=True)
     pg_fees_to_learner = models.BooleanField(default=False)
     cover_image = models.URLField(blank=True)
     level = models.CharField(max_length=12, choices=Level.choices, default=Level.BEGINNER)
@@ -86,7 +84,9 @@ class Lesson(models.Model):
 
 class Review(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="reviews")
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="course_reviews")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="course_reviews"
+    )
     rating = models.PositiveSmallIntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

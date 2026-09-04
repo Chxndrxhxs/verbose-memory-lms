@@ -15,6 +15,7 @@ import InstructorLanding from "./pages/InstructorLanding";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import { Protected } from "./components/Protected";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAuth } from "./hooks/useAuth";
 
 const qc = new QueryClient();
@@ -46,7 +47,9 @@ export default function App() {
   }, [fetchMe]);
   return (
     <QueryClientProvider client={qc}>
-      <RouterProvider router={router} />
+      <ErrorBoundary>
+        <RouterProvider router={router} />
+      </ErrorBoundary>
     </QueryClientProvider>
   );
 }
