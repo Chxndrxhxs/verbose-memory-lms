@@ -89,9 +89,11 @@ export function CourseCreateStep2(props: Props) {
                   </p>
                   <button
                     onClick={onAiGenerate}
-                    className="mt-4 w-full rounded-full bg-gradient-to-r from-[#4490ff] to-[#0620a7] py-2.5 text-sm font-bold text-white hover:opacity-90"
+                    disabled
+                    title="AI outlines are coming soon — add chapters manually for now"
+                    className="mt-4 w-full cursor-not-allowed rounded-full bg-gradient-to-r from-[#4490ff] to-[#0620a7] py-2.5 text-sm font-bold text-white opacity-70"
                   >
-                    <span className="inline-flex items-center gap-1.5"><Sparkles size={15} /> Generate outline using AI</span>
+                    <span className="inline-flex items-center gap-1.5"><Sparkles size={15} /> Generate outline using AI · Soon</span>
                   </button>
                 </div>
                 <div className="flex items-center gap-3 text-xs font-semibold text-zinc-400">

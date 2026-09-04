@@ -34,10 +34,10 @@ export function CourseBuilderHeader({ title, saving, onPreview, onPublish, onSav
           </button>
           <button
             onClick={onPublish}
-            className="hidden items-center gap-1.5 rounded-full border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 sm:inline-flex"
+            className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 px-2.5 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 sm:px-3"
           >
             <ArrowUpRight size={13} strokeWidth={2.5} />
-            Publish course
+            Publish
           </button>
           <button
             onClick={onSave}

@@ -1,3 +1,4 @@
+from django.db.models import Avg, Count, Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
@@ -167,6 +168,71 @@ class CourseViewSet(viewsets.ModelViewSet):
                 }
             )
         return Response({"data": CourseListSerializer(qs, many=True).data, "error": None})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def instructor_overview(request):
+    from apps.enrollments.models import Enrollment
+    from apps.payments.models import Payment
+
+    courses = Course.objects.filter(instructor=request.user).annotate(
+        student_count=Count("enrollments")
+    )
+    total = courses.count()
+    published = courses.filter(status=Course.Status.PUBLISHED).count()
+    agg = courses.aggregate(
+        students=Sum("student_count"),
+        rating=Avg("average_rating"),
+    )
+    revenue_paise = (
+        Payment.objects.filter(
+            course__instructor=request.user, status=Payment.Status.PAID
+        ).aggregate(total=Sum("amount"))["total"]
+        or 0
+    )
+    recent = (
+        Enrollment.objects.filter(course__instructor=request.user)
+        .select_related("learner", "course")
+        .order_by("-enrolled_at")[:5]
+    )
+    top = courses.order_by("-student_count").first()
+    return Response(
+        {
+            "data": {
+                "total_courses": total,
+                "drafts": total - published,
+                "total_students": agg["students"] or 0,
+                "average_rating": str(round(agg["rating"] or 0, 1)),
+                "revenue_inr": revenue_paise / 100,
+                "top_course": (
+                    {"id": top.id, "title": top.title, "students": top.student_count}
+                    if top
+                    else None
+                ),
+                "courses": [
+                    {
+                        "id": c.id,
+                        "title": c.title,
+                        "students": c.student_count,
+                        "price": str(c.price),
+                        "status": c.status,
+                    }
+                    for c in courses.order_by("-student_count")
+                ],
+                "recent_enrollments": [
+                    {
+                        "learner": e.learner.get_full_name() or e.learner.username,
+                        "course": e.course.title,
+                        "price": str(e.course.price),
+                        "enrolled_at": e.enrolled_at,
+                    }
+                    for e in recent
+                ],
+            },
+            "error": None,
+        }
+    )
 
 
 @api_view(["POST"])

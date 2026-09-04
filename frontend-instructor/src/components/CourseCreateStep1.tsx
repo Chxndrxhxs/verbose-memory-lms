@@ -25,6 +25,8 @@ function discountPct(original: string, price: string): number {
 
 export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiClick, onChange, onSubmit }: Props) {
   const pct = discountPct(values.originalPrice, values.price);
+  const priceNum = Number(values.price) || 0;
+  const keep = Math.round(priceNum * 0.85);
 
   return (
     <div className="rounded-[20px] bg-white p-6 shadow-sm sm:p-8">
@@ -65,12 +67,15 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
           <button
             type="button"
             onClick={onAiClick}
-            className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold shadow-sm transition-shadow hover:shadow-md"
+            disabled
+            title="AI descriptions are coming soon"
+            className="inline-flex h-10 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold opacity-70"
           >
             <Sparkles size={16} className="text-[#3478ff]" />
-            <span className="bg-gradient-to-r from-[#37bec9] via-[#f57aa6] to-[#8e7bf5] bg-clip-text text-transparent">
+            <span className="text-[#152561]">
               Generate using AI
             </span>
+            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-bold text-zinc-500">SOON</span>
           </button>
         </div>
 
@@ -179,8 +184,15 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
                       onChange={(e) => onChange({ pgFeesToLearner: e.target.checked })}
                       className="h-4 w-4 accent-[#3478ff]"
                     />
-                    Pass internet handling fees (PG fees) to learners
+                    <span>Pass gateway fee to learners <span className="text-zinc-400">(added on top of price)</span></span>
                   </label>
+
+                  {priceNum > 0 && (
+                    <div className="rounded-xl bg-emerald-50 px-4 py-2.5 text-xs text-emerald-800">
+                      Learner pays <b>₹{priceNum.toLocaleString("en-IN")}</b> · You keep ≈ <b>₹{keep.toLocaleString("en-IN")}</b> (85% revenue share)
+                      {pct > 0 && <span> · <b>{pct}% off</b> MRP</span>}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

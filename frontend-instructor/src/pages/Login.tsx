@@ -162,7 +162,7 @@ export default function Login() {
                 <button type="submit" disabled={loading} className="w-full rounded-full bg-[#0f172a] py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-60">
                   {sendOtp.isPending ? "Sending…" : "Send OTP"}
                 </button>
-                <p className="text-center text-xs text-zinc-400">Demo: OTP will appear in the toast below</p>
+                <p className="text-center text-xs text-zinc-500">Demo: OTP will appear in the toast below</p>
               </form>
             ) : (
               <form onSubmit={otpForm.handleSubmit((v) => verify.mutate({ mobile: phone, code: v.otp }))} className="mt-8 space-y-5">
@@ -186,7 +186,7 @@ export default function Login() {
         </div>
 
         <div className="space-y-3 pt-8">
-          <p className="text-center text-xs text-zinc-400">By continuing you agree to our Terms • Privacy</p>
+          <p className="text-center text-xs text-zinc-500">By continuing you agree to our Terms • Privacy</p>
           <Link to="/" className="flex items-center justify-center gap-2 rounded-full bg-zinc-100 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-200">
             <Home size={14} strokeWidth={2.5} />
             Skip — go to Home

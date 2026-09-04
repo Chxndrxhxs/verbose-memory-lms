@@ -8,6 +8,7 @@ import { CourseCreateStep2 } from "../components/CourseCreateStep2";
 import { LessonTypePicker } from "../components/LessonTypePicker";
 import { StudentPreviewModal } from "../components/StudentPreviewModal";
 import { api, absoluteMediaUrl, uploadFile } from "../lib/api";
+import { PublishChecklistModal } from "../components/PublishChecklistModal";
 import type { Chapter, CourseStep1, Lesson, LessonKind } from "../types/courseCreate";
 
 const step1Schema = z
@@ -16,6 +17,7 @@ const step1Schema = z
     description: z.string().trim().min(10, "Add a short description"),
     pricingType: z.enum(["free", "one_time"]),
     price: z.string(),
+    originalPrice: z.string(),
   })
   .superRefine((v, ctx) => {
     if (v.pricingType === "one_time" && Number(v.price) <= 0) {
@@ -23,6 +25,17 @@ const step1Schema = z
         code: "custom",
         path: ["price"],
         message: "Enter a price for paid course",
+      });
+    }
+    if (
+      v.pricingType === "one_time" &&
+      Number(v.originalPrice) > 0 &&
+      Number(v.price) > Number(v.originalPrice)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["price"],
+        message: "Selling price can't exceed MRP",
       });
     }
   });
@@ -110,6 +123,9 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
   const [errors, setErrors] = useState<Partial<Record<"title" | "description" | "price", string>>>({});
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [toastAction, setToastAction] = useState<{ label: string; run: () => void } | null>(null);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [coverImage, setCoverImage] = useState("");
@@ -117,9 +133,45 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, ms = 2500) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 2500);
+    setToastAction(null);
+    setTimeout(() => { setToast(null); setToastAction(null); }, ms);
+  };
+
+  const showUndoToast = (msg: string, onUndo: () => void) => {
+    setToast(msg);
+    setToastAction({ label: "Undo", run: onUndo });
+    setTimeout(() => { setToast(null); setToastAction(null); }, 10000);
+  };
+
+  const deleteChapter = (id: string) => {
+    const idx = chapters.findIndex((c) => c.id === id);
+    if (idx < 0) return;
+    const removed = chapters[idx];
+    setChapters((cs) => cs.filter((c) => c.id !== id));
+    showUndoToast(`Deleted "${removed.title || "Section"}"`, () =>
+      setChapters((cs) => [...cs.slice(0, idx), removed, ...cs.slice(idx)])
+    );
+  };
+
+  const deleteLesson = (chapterId: string, lessonId: string) => {
+    const ch = chapters.find((c) => c.id === chapterId);
+    const idx = ch ? ch.lessons.findIndex((l) => l.id === lessonId) : -1;
+    if (!ch || idx < 0) return;
+    const removed = ch.lessons[idx];
+    setChapters((cs) =>
+      cs.map((c) => (c.id === chapterId ? { ...c, lessons: c.lessons.filter((l) => l.id !== lessonId) } : c))
+    );
+    showUndoToast(`Deleted "${removed.title || "Lesson"}"`, () =>
+      setChapters((cs) =>
+        cs.map((c) =>
+          c.id === chapterId
+            ? { ...c, lessons: [...c.lessons.slice(0, idx), removed, ...c.lessons.slice(idx)] }
+            : c
+        )
+      )
+    );
   };
 
   const existingQuery = useQuery({
@@ -254,7 +306,8 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
 
   const saveCourse = async (publish: boolean) => {
     if (!courseId) return;
-    setSaving(true);
+    if (publish) setPublishing(true);
+    else setSaving(true);
     try {
       if (coverImage) {
         await api(`/courses/${courseId}/`, {
@@ -268,17 +321,50 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
       });
       if (publish) {
         await api(`/courses/${courseId}/publish/`, { method: "POST" });
+        setPublishOpen(false);
         showToast("Published ✓ — visible to learners");
       } else {
         showToast("Saved ✓");
       }
       setTimeout(() => nav("/courses"), 900);
     } catch (e) {
-      showToast(String(e));
+      const msg = String(e);
+      showToast(
+        /network|fetch|load/i.test(msg) ? "Couldn't save — check connection, then retry" : msg,
+        4000
+      );
     } finally {
       setSaving(false);
+      setPublishing(false);
     }
   };
+
+  const paidInvalid =
+    values.pricingType === "one_time" &&
+    (Number(values.price) <= 0 ||
+      (Number(values.originalPrice) > 0 && Number(values.price) > Number(values.originalPrice)));
+  const publishChecks = [
+    {
+      label: "Course details complete",
+      ok: values.title.trim().length >= 4 && values.description.trim().length >= 10,
+      hint: "Title needs 4+ characters, description 10+",
+    },
+    {
+      label: "Cover image added",
+      ok: coverImage.trim().length > 0,
+      hint: "Upload a cover — it's the first thing learners see",
+    },
+    {
+      label: "At least 1 lesson",
+      ok: chapters.some((c) => c.lessons.some((l) => l.title.trim().length > 0)),
+      hint: "Add a chapter with a titled lesson",
+    },
+    {
+      label: values.pricingType === "free" ? "Free course — price OK" : "Price valid",
+      ok: !paidInvalid,
+      hint: "Selling price must be above ₹0 and not exceed MRP",
+    },
+  ];
 
   if (loading) {
     return (
@@ -307,7 +393,7 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
         </div>
       ) : (
         <div className="w-full px-4 py-3 sm:px-6">
-          <CourseBuilderHeader title={values.title} saving={saving} onPreview={() => setPreviewOpen(true)} onPublish={() => saveCourse(true)} onSave={() => saveCourse(false)} />
+          <CourseBuilderHeader title={values.title} saving={saving || publishing} onPreview={() => setPreviewOpen(true)} onPublish={() => setPublishOpen(true)} onSave={() => saveCourse(false)} />
           <div className="mt-4">
             <StepIndicator step={1} canGoBuilder={Boolean(courseId)} onNavigate={setStep} />
           </div>
@@ -317,13 +403,13 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
             uploadingId={uploadingId}
             onCoverChange={setCoverImage}
             onRenameChapter={(id, t) => setChapters((cs) => cs.map((c) => c.id === id ? { ...c, title: t } : c))}
-            onDeleteChapter={(id) => setChapters((cs) => cs.filter((c) => c.id !== id))}
+            onDeleteChapter={deleteChapter}
             onAddChapter={() => addChapter()}
             onFirstManual={onFirstManual}
             onAiGenerate={() => showToast("AI outline generation coming soon ✨")}
             onAddLesson={onAddLesson}
             onUpdateLesson={updateLesson}
-            onDeleteLesson={(chapterId, lessonId) => setChapters((cs) => cs.map((c) => c.id === chapterId ? { ...c, lessons: c.lessons.filter((l) => l.id !== lessonId) } : c))}
+            onDeleteLesson={deleteLesson}
             onUploadLesson={uploadLessonFile}
           />
         </div>
@@ -340,8 +426,27 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
         <StudentPreviewModal courseId={courseId} onClose={() => setPreviewOpen(false)} />
       )}
 
+      {publishOpen && (
+        <PublishChecklistModal
+          checks={publishChecks}
+          publishing={publishing}
+          onConfirm={() => saveCourse(true)}
+          onClose={() => setPublishOpen(false)}
+        />
+      )}
+
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white shadow-xl">{toast}</div>
+        <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white shadow-xl">
+          <span>{toast}</span>
+          {toastAction && (
+            <button
+              onClick={() => { toastAction.run(); setToast(null); setToastAction(null); }}
+              className="rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold text-zinc-900"
+            >
+              {toastAction.label}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
