@@ -79,7 +79,16 @@ def replace_curriculum(course: Course, sections: list) -> Course:
 def rate_course(course: Course, user, rating: int) -> dict:
     from django.db.models import Avg
 
+    from apps.enrollments.models import ActivityEvent
+    from apps.enrollments.services import log_event
+
     Review.objects.update_or_create(course=course, user=user, defaults={"rating": rating})
+    log_event(
+        user,
+        ActivityEvent.Verb.RATED_COURSE,
+        course=course,
+        meta={"rating": rating},
+    )
     agg = Review.objects.filter(course=course).aggregate(avg=Avg("rating"), count=Avg("id"))
     total = Review.objects.filter(course=course).count()
     course.average_rating = round(agg["avg"] or 0, 1)

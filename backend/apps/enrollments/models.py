@@ -63,3 +63,48 @@ class Certificate(models.Model):
     class Meta:
         unique_together = ("learner", "course")
         ordering = ["-issued_at"]
+
+
+class ActivityEvent(models.Model):
+    """Append-only learner activity log. Never updated — history is the point."""
+
+    class Verb(models.TextChoices):
+        ENROLLED = "enrolled", "Enrolled"
+        VIEWED_LESSON = "viewed_lesson", "Viewed lesson"
+        COMPLETED_LESSON = "completed_lesson", "Completed lesson"
+        QUIZ_ATTEMPT = "quiz_attempt", "Quiz attempt"
+        ASSIGNMENT_SUBMITTED = "assignment_submitted", "Submitted assignment"
+        ASSIGNMENT_GRADED = "assignment_graded", "Assignment graded"
+        RATED_COURSE = "rated_course", "Rated course"
+        EARNED_CERTIFICATE = "earned_certificate", "Earned certificate"
+        SESSION_START = "session_start", "Session start"
+
+    learner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="activity_events",
+    )
+    course = models.ForeignKey(
+        "courses.Course",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="activity_events",
+    )
+    lesson = models.ForeignKey(
+        "courses.Lesson",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="activity_events",
+    )
+    verb = models.CharField(max_length=24, choices=Verb.choices, db_index=True)
+    meta = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["learner", "created_at"]),
+            models.Index(fields=["course", "verb", "created_at"]),
+        ]

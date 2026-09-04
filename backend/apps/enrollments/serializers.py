@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from apps.courses.serializers import CourseListSerializer
 
-from .models import Certificate, Enrollment
+from .models import ActivityEvent, Certificate, Enrollment
 
 
 class EnrollmentSerializer(serializers.ModelSerializer):
@@ -31,3 +31,27 @@ class CertificateSerializer(serializers.ModelSerializer):
 
     def get_learner_name(self, obj) -> str:
         return obj.learner.get_full_name() or obj.learner.username
+
+
+class ActivityEventSerializer(serializers.ModelSerializer):
+    course_title = serializers.SerializerMethodField()
+    lesson_title = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ActivityEvent
+        fields = (
+            "id",
+            "verb",
+            "course",
+            "course_title",
+            "lesson",
+            "lesson_title",
+            "meta",
+            "created_at",
+        )
+
+    def get_course_title(self, obj) -> str | None:
+        return obj.course.title if obj.course else None
+
+    def get_lesson_title(self, obj) -> str | None:
+        return obj.lesson.title if obj.lesson else None
