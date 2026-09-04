@@ -46,6 +46,8 @@ type Props = {
   note: string;
   quizAnswers: Record<number, number>;
   quizSubmitted: boolean;
+  quizAttempt: number | null;
+  quizBest: number | null;
   showRating: boolean;
   selectedRating: number;
   submittingRating: boolean;
@@ -67,7 +69,7 @@ export function LearnView(p: Props) {
   const {
     courseId, title, progress, active, activeLesson, embedUrl, textBody,
     pdfUrl, audioUrl, sections, completed, openSections, tab, note,
-    quizAnswers, quizSubmitted, showRating, selectedRating, submittingRating,
+    quizAnswers, quizSubmitted, quizAttempt, quizBest, showRating, selectedRating, submittingRating,
     userRating, toast,
   } = p;
   return (
@@ -134,7 +136,7 @@ export function LearnView(p: Props) {
                   {!quizSubmitted ? (
                     <button onClick={p.onSubmitQuiz} className="rounded-full bg-[#0f172a] px-5 py-2 text-sm font-semibold text-white">Submit quiz</button>
                   ) : (
-                    <div className="rounded-xl bg-emerald-500 text-white p-3 text-sm">Score: {activeLesson.quiz_data.filter((q, qi)=> quizAnswers[qi]===q.correct).length}/{activeLesson.quiz_data.length} — {(()=>{ const s = activeLesson.quiz_data!.filter((q, qi)=> quizAnswers[qi]===q.correct).length; return s === activeLesson.quiz_data!.length ? "Perfect! ✓" : "Keep practicing"; })()}</div>
+                    <div className="rounded-xl bg-emerald-500 text-white p-3 text-sm">Score: {activeLesson.quiz_data.filter((q, qi)=> quizAnswers[qi]===q.correct).length}/{activeLesson.quiz_data.length} — {(()=>{ const s = activeLesson.quiz_data!.filter((q, qi)=> quizAnswers[qi]===q.correct).length; return s === activeLesson.quiz_data!.length ? "Perfect! ✓" : "Keep practicing"; })()}{quizAttempt != null && quizBest != null && activeLesson.quiz_data.length > 0 && <span className="mt-1 block text-xs text-white/85">Attempt {quizAttempt} · Best {quizBest}/{activeLesson.quiz_data.length}</span>}</div>
                   )}
                 </div>
               </div>

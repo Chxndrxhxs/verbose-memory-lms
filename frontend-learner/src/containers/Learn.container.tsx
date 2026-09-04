@@ -69,6 +69,23 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["progress", courseId] }),
   });
 
+  const [quizResult, setQuizResult] = useState<{
+    attempt: number;
+    best: number;
+  } | null>(null);
+
+  const quizMutation = useMutation({
+    mutationFn: (args: { lessonId: number; score: number; total: number }) =>
+      api<{ score: number; total: number; passed: boolean; attempt: number; best: number }>(
+        `/courses/${courseId}/lessons/quiz-attempt`,
+        {
+          method: "POST",
+          body: JSON.stringify({ lesson_id: args.lessonId, score: args.score, total: args.total }),
+        }
+      ),
+    onSuccess: (res) => setQuizResult({ attempt: res.attempt, best: res.best }),
+  });
+
   const rateMutation = useMutation({
     mutationFn: (rating: number) =>
       api(`/courses/${courseId}/rate/`, { method: "POST", body: JSON.stringify({ rating }) }),
@@ -110,6 +127,8 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
     if (correct === activeLesson.quiz_data.length) {
       markComplete();
     }
+    // best-effort server log — learner flow never blocks on it
+    quizMutation.mutate({ lessonId: active, score: correct, total: activeLesson.quiz_data.length });
     setQuizSubmitted(true);
   };
 
@@ -146,12 +165,14 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
       note={note}
       quizAnswers={quizAnswers}
       quizSubmitted={quizSubmitted}
+      quizAttempt={quizResult?.attempt ?? null}
+      quizBest={quizResult?.best ?? null}
       showRating={showRating}
       selectedRating={selectedRating}
       submittingRating={rateMutation.isPending}
       userRating={userRating}
       toast={toast}
-      onSelectLesson={(lessonId) => { setActive(lessonId); setQuizSubmitted(false); }}
+      onSelectLesson={(lessonId) => { setActive(lessonId); setQuizSubmitted(false); setQuizResult(null); }}
       onToggleSection={toggleSection}
       onTab={setTab}
       onNote={setNote}
