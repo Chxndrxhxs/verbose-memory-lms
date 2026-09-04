@@ -10,8 +10,10 @@ from .views import (
     my_timeline,
     quiz_attempt,
 )
+from .views_leaderboard import leaderboard_view
 
 urlpatterns = [
+    path("leaderboard/", leaderboard_view),
     path("courses/<int:course_id>/enroll", enroll_view),
     path("courses/<int:course_id>/lessons/complete", complete_lesson),
     path("courses/<int:course_id>/lessons/quiz-attempt", quiz_attempt),

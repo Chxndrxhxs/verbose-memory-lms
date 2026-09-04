@@ -66,7 +66,11 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
         method: "POST",
         body: JSON.stringify({ lesson_id: lessonId }),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["progress", courseId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["progress", courseId] });
+      queryClient.invalidateQueries({ queryKey: ["me", "activity"] });
+      queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
+    },
   });
 
   const [quizResult, setQuizResult] = useState<{
@@ -83,7 +87,10 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
           body: JSON.stringify({ lesson_id: args.lessonId, score: args.score, total: args.total }),
         }
       ),
-    onSuccess: (res) => setQuizResult({ attempt: res.attempt, best: res.best }),
+    onSuccess: (res) => {
+      setQuizResult({ attempt: res.attempt, best: res.best });
+      queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
+    },
   });
 
   const rateMutation = useMutation({
@@ -94,6 +101,7 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
         await api(`/courses/${courseId}/certificate`, { method: "POST" });
       } catch { /* certificate optional */ }
       queryClient.invalidateQueries({ queryKey: ["rating", courseId] });
+      queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
       setShowRating(false);
       setToast("Thanks for your rating! Certificate issued ★");
       setTimeout(() => setToast(null), 2600);

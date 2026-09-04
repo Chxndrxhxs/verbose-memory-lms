@@ -7,7 +7,6 @@ export async function api<T>(path: string, init: RequestInit & { auth?: boolean 
   if (res.status !== 401 || path.startsWith('/auth/')) {
     return handle<T>(res);
   }
-  // access token may have expired — try one cookie refresh, then retry once
   try {
     const refresh = await request('/auth/refresh', { method: 'POST' });
     if (!refresh.ok) return handle<T>(res);
@@ -15,6 +14,20 @@ export async function api<T>(path: string, init: RequestInit & { auth?: boolean 
     return handle<T>(res);
   }
   return handle<T>(await request(path, rest));
+}
+
+export async function apiEnvelope<T>(path: string, init: RequestInit & { auth?: boolean } = {}): Promise<T> {
+  const { auth: _auth, ...rest } = init;
+  let res = await request(path, rest);
+  if (res.status === 401 && !path.startsWith('/auth/')) {
+    try {
+      const refresh = await request('/auth/refresh', { method: 'POST' });
+      if (refresh.ok) res = await request(path, rest);
+    } catch {}
+  }
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || json.detail || `API ${res.status}`);
+  return json as T;
 }
 
 async function request(path: string, init: RequestInit): Promise<Response> {

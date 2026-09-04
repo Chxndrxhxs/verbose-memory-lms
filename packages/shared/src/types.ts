@@ -29,3 +29,17 @@ export interface SharedInstructorCourse {
   cover_image: string; updated_at: string; average_rating: string;
 }
 
+export type Tier = "Iron" | "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond" | "Ascendant" | "Immortal" | "Radiant";
+export interface LeaderboardLearner { id: number; name: string; avatar: string; city: string }
+export interface LeaderboardEntry {
+  rank: number; rr: number; tier: Tier;
+  learner: LeaderboardLearner;
+  breakdown: { quiz: number; completion: number; certs: number; streak: number };
+  stats: { quiz_accuracy: number; completion_rate: number; certificates: number; streak: number; lessons_completed: number };
+}
+export interface LeaderboardResponse {
+  data: LeaderboardEntry[]; error: null;
+  meta: { page: number; total: number; pages: number; season: string; cities: string[]; categories: string[] };
+  me: LeaderboardEntry | null;
+}
+

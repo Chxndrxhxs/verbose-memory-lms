@@ -1,4 +1,5 @@
 import { InstructorHeader } from "../components/InstructorHeader";
+import { LeaderboardContainer } from "../containers/Leaderboard.container";
 
 export default function Leaderboard() {
   return (
@@ -6,9 +7,7 @@ export default function Leaderboard() {
       <InstructorHeader />
       <div className="w-full px-4 py-6 sm:px-6">
         <div className="rounded-[20px] bg-white p-6 shadow-sm sm:p-8">
-          <h1 className="text-2xl font-extrabold tracking-tight">Leaderboard</h1>
-          <p className="mt-1 text-sm text-zinc-500">Top instructors and learner engagement rankings.</p>
-          <div className="mt-6 rounded-2xl border bg-zinc-50 p-8 text-center text-sm text-zinc-500">Leaderboard coming soon.</div>
+          <LeaderboardContainer />
         </div>
       </div>
     </div>
