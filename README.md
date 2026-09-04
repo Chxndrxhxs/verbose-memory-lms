@@ -9,7 +9,7 @@ A full-stack Learning Management System with separate learner and instructor app
 | **Learner** | `frontend-learner/` | Browse, search, enroll, learn, track progress → `lms.com` |
 | **Instructor** | `frontend-instructor/` | Create courses (2-step builder), manage curriculum, view analytics → `teach.lms.com` |
 | **Backend** | `backend/` | Single shared Django + DRF API (`/api/v1/`) + MySQL |
-| **Shared** | `packages/shared/` | `toEmbed`, `LESSON_KIND_BADGE`, `cn()`, types, icons |
+| **Shared** | `packages/shared/` | Single `api()` client (cookies + envelope), `toEmbed`, `LESSON_KIND_BADGE`, `cn()`, shared types, icons |
 
 Roles: `learner` · `instructor` · `admin`.
 
@@ -28,13 +28,14 @@ masterlms/
 ├── DESIGN.md              # UI design system (QTNXT — full-width nav, gradient hero, lean cards)
 ├── package.json / pnpm-workspace.yaml
 ├── frontend-learner/      # Vite + React + TS + Tailwind v4
-│   ├── src/pages/         # Landing, Courses, CourseDetail, Learn, Activity, Leaderboard, Profile, Assignments, Login, CompleteProfile
-│   ├── src/containers/    # CourseList, CourseDetail, Learn, Profile, Landing
-│   └── src/components/    # CourseCard (lean 280px), ActivityHeatmap, Header/TopNav, LandingView, PdfReader
+│   ├── src/pages/         # thin routes — Landing, Courses, CourseDetail, Learn, Activity, Leaderboard, Profile, Assignments, Login, CompleteProfile (compose containers)
+│   ├── src/containers/    # CourseList, CourseDetail, Learn, Profile, Landing, Activity (TanStack Query data + logic)
+│   └── src/components/    # pure presenters — CourseCard (lean 280px), CourseDetailView, LearnView, ActivityView, ActivityHeatmap, Header/TopNav, LandingView, PdfReader
 ├── frontend-instructor/   # Vite + React + TS + Tailwind v4
-│   ├── src/pages/         # Dashboard, Courses, CourseCreate, CourseEdit, CourseNew, Analytics, Assignments, Activity, Leaderboard, Profile, InstructorLanding
-│   └── src/containers/    # CourseCreate (2-step), CourseManage (grid/list)
-├── packages/shared/       # toEmbed, LESSON_KIND_BADGE, LessonKind, cn(), icons (lucide-react)
+│   ├── src/pages/         # thin routes — Dashboard, Courses, CourseCreate, CourseEdit, CourseNew, Analytics, Assignments, Activity, Leaderboard, Profile, InstructorLanding, Login, CompleteProfile
+│   ├── src/components/    # pure presenters — CourseCreateStep1/Step2, ProfileView, ErrorBoundary, InstructorHeader, …
+│   └── src/containers/    # CourseCreate (2-step, zod), CourseManage (grid/list), CourseNew (RHF+zod), Profile (queries + mutations)
+├── packages/shared/       # api-client (cookie `api()`, `absoluteMediaUrl`, `uploadFile`), toEmbed, LESSON_KIND_BADGE, LessonKind, cn(), icons (lucide-react), SharedUser/SharedApiCourse* types
 └── backend/
     ├── config/            # settings, urls, wsgi (PAGE_SIZE=12, CookieJWT)
     ├── apps/
@@ -72,9 +73,17 @@ Other commands:
 
 ```bash
 pnpm -r build
-pnpm -r exec tsc --noEmit
+pnpm --filter frontend-learner exec tsc --noEmit
+pnpm --filter frontend-instructor exec tsc --noEmit
+pnpm --filter frontend-learner exec oxlint
+pnpm --filter frontend-instructor exec oxlint
+```
+
+```bash
+cd backend
 uv run pytest
-uv run ruff check apps/courses apps/enrollments
+uv run ruff check .
+uv run ruff format .
 ```
 
 Configure `backend/.env`:
@@ -167,7 +176,7 @@ Roles checked in `IsInstructorOrReadOnly` (courses) and `IsAuthenticated` (enrol
 
 ## Testing
 - **Backend:** `uv run pytest` (OTP + course CRUD/publish + enrollments progress + payments mock + reviews + certificates).
-- **Frontend:** `pnpm -r build` + `pnpm -r exec tsc --noEmit` + `oxlint` must pass; Vitest + RTL + Playwright scaffolding planned.
+- **Frontend:** `pnpm -r build` + per-app `tsc --noEmit` + `oxlint` must pass; Vitest + RTL + msw + Playwright not installed yet (planned).
 
 ## Roadmap
 - [x] httpOnly JWT cookies · [x] `/upload/` · [x] `toEmbed` yt/embed+iframe+shorts · [x] 2-step instructor builder (subtitle/description/learn/price ₹) · [x] lean learner cards (₹, subtitle 2 lines, instructor + counts, enrolled→Go to course) · [x] search + grid/list (both apps) · [x] persisted progress (`LessonCompletion` + `completed_lessons`) · [x] QTNXT rebrand + full-width centered nav + gradient hero (bigger/wider, banners removed) + sticky navbar · [x] `Mark course as complete` at 100% → star rating → `average_rating` + `rating_count` on cards/detail · [x] `Review` + `Certificate` (QTNXT-XXXX, enrolled/completed dates, professional print template) in profile + `Payment activity` invoices (Razorpay mock/live, ₹) + `Activity` GitHub heatmap with QTNXT ink scale + profile navbar + full-width instructor routes + profile header redesign

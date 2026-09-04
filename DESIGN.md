@@ -100,4 +100,5 @@ Source of truth for learner + instructor aesthetics. Stack: React + Tailwind CSS
 - `cn()` for conditionals, mobile-first `sm:`/`lg:`, no `dark:`.
 - No CSS modules, no `style` objects.
 - Container-Presenter: `*.container.tsx` fetches (TanStack Query), `*.tsx` pure props.
-- `pnpm --filter frontend-learner build` + `frontend-instructor` must pass.Testimonial `1490750967868` kept.
+- `pnpm --filter frontend-learner build` + `frontend-instructor` must pass.
+- Testimonial photo `1490750967868` kept.
