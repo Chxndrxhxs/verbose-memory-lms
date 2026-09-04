@@ -31,7 +31,11 @@ async function fetchCourse(id: string): Promise<Detail> {
     preview: c.cover_image || "",
     description: c.description ?? "",
     learn: c.what_you_will_learn ?? [],
-    curriculum: sections.map((s) => ({ title: s.title, meta: `${s.lessons.length} lecture${s.lessons.length === 1 ? "" : "s"}`, lessons: s.lessons.map((l) => ({ id: l.id, title: l.title, kind: l.kind, duration: l.duration })) })),
+    curriculum: sections.map((s) => ({
+      title: s.title,
+      meta: `${(s.lessons ?? []).length} lecture${(s.lessons ?? []).length === 1 ? "" : "s"}`,
+      lessons: (s.lessons ?? []).map((l) => ({ id: l.id, title: l.title, kind: l.kind, duration: l.duration })),
+    })),
     includes: [],
   };
 }
@@ -39,7 +43,7 @@ async function fetchCourse(id: string): Promise<Detail> {
 export function CourseDetailContainer() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: ["course", id], queryFn: () => fetchCourse(id!), enabled: !!id });
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["course", id], queryFn: () => fetchCourse(id!), enabled: !!id });
   const [open, setOpen] = useState<number>(0);
   const [toast, setToast] = useState<string | null>(null);
   const user = useAuth((s) => s.user);
@@ -161,6 +165,7 @@ export function CourseDetailContainer() {
   };
 
   if (isLoading) return <p className="py-10 text-center text-sm text-zinc-500">Loading…</p>;
+  if (isError) return <p className="py-10 text-center text-sm text-zinc-500">Couldn't load this course. <button onClick={() => refetch()} className="text-[#3478ff] underline">Retry</button> <Link to="/courses" className="text-[#3478ff] underline">Back</Link></p>;
   if (!data) return <p className="py-10 text-center text-sm">Course not found. <Link to="/courses" className="text-[#3478ff] underline">Back</Link></p>;
 
   return (

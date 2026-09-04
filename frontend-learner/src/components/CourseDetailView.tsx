@@ -21,13 +21,16 @@ export function CourseDetailView({
   onOpen,
   onEnroll,
 }: Props) {
+  const curriculum = data.curriculum ?? [];
+  const learn = data.learn ?? [];
+  const lectureCount = curriculum.reduce((a, c) => a + c.lessons.length, 0);
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       {/* LEFT */}
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
           {data.level && <span className="rounded-full border bg-white px-2.5 py-1 text-zinc-700 capitalize">{data.level}</span>}
-          <span className="rounded-full border bg-white px-2.5 py-1 text-zinc-700">{data.curriculum.reduce((a, c) => a + c.lessons.length, 0)} lecture{data.curriculum.reduce((a, c) => a + c.lessons.length, 0) === 1 ? "" : "s"}</span>
+          <span className="rounded-full border bg-white px-2.5 py-1 text-zinc-700">{lectureCount} lecture{lectureCount === 1 ? "" : "s"}</span>
         </div>
 
         <h1 className="mt-4 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[32px]">{data.title}</h1>
@@ -62,11 +65,11 @@ export function CourseDetailView({
         )}
 
         {/* What you'll learn */}
-        {data.learn.length > 0 && (
+        {learn.length > 0 && (
         <div className="mt-6 rounded-2xl border bg-[#fdfdfc] p-5">
           <h3 className="text-sm font-bold">What you’ll learn</h3>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {data.learn.map((l) => (
+            {learn.map((l) => (
               <div key={l} className="flex gap-2 text-xs leading-relaxed text-zinc-700"><span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[10px] text-white">✓</span>{l}</div>
             ))}
           </div>
@@ -74,11 +77,11 @@ export function CourseDetailView({
         )}
 
         {/* Curriculum */}
-        {data.curriculum.length > 0 && (
+        {curriculum.length > 0 && (
         <div className="mt-6">
-          <div className="flex items-center justify-between"><h3 className="text-sm font-bold">Course content</h3><span className="text-xs text-zinc-500">{data.curriculum.length} sections • {data.curriculum.reduce((a, c) => a + c.lessons.length, 0)} lectures</span></div>
+          <div className="flex items-center justify-between"><h3 className="text-sm font-bold">Course content</h3><span className="text-xs text-zinc-500">{curriculum.length} sections • {lectureCount} lectures</span></div>
           <div className="mt-3 overflow-hidden rounded-2xl border bg-white">
-            {data.curriculum.map((sec, i) => (
+            {curriculum.map((sec, i) => (
               <div key={sec.title} className="border-b last:border-0">
                 <button onClick={() => onOpen(open === i ? -1 : i)} className="flex w-full items-center justify-between bg-zinc-50 px-4 py-3 text-left hover:bg-zinc-100">
                   <span className="text-sm font-semibold">{sec.title}</span><span className="flex items-center gap-2 text-xs text-zinc-500">{sec.meta}<span className={`flex h-6 w-6 items-center justify-center rounded-full ${open === i ? "bg-[#3478ff] text-white" : "bg-white text-zinc-700"}`}>{open === i ? <Minus size={12} strokeWidth={2.5} /> : <Plus size={12} strokeWidth={2.5} />}</span></span>
@@ -133,7 +136,7 @@ export function CourseDetailView({
               <p className="text-xs font-bold">This course includes:</p>
               <ul className="mt-2 space-y-1.5 text-xs text-zinc-600">
                 <li className="flex gap-2"><span>●</span> On-demand videos</li>
-                <li className="flex gap-2"><span>●</span> {data.curriculum.length} section{data.curriculum.length === 1 ? "" : "s"} • {data.curriculum.reduce((a, c) => a + c.lessons.length, 0)} lecture{data.curriculum.reduce((a, c) => a + c.lessons.length, 0) === 1 ? "" : "s"}</li>
+                <li className="flex gap-2"><span>●</span> {curriculum.length} section{curriculum.length === 1 ? "" : "s"} • {lectureCount} lecture{lectureCount === 1 ? "" : "s"}</li>
                 <li className="flex gap-2"><span>●</span> Interactive quizzes</li>
                 <li className="flex gap-2"><span>●</span> Certificate of completion</li>
                 <li className="flex gap-2"><span>●</span> Full lifetime access</li>
