@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 import { CourseBuilderHeader } from "../components/CourseBuilderHeader";
 import { CourseCreateStep1 } from "../components/CourseCreateStep1";
 import { CourseCreateStep2 } from "../components/CourseCreateStep2";
@@ -7,6 +9,23 @@ import { LessonTypePicker } from "../components/LessonTypePicker";
 import { StudentPreviewModal } from "../components/StudentPreviewModal";
 import { api, absoluteMediaUrl, uploadFile } from "../lib/api";
 import type { Chapter, CourseStep1, Lesson, LessonKind } from "../types/courseCreate";
+
+const step1Schema = z
+  .object({
+    title: z.string().trim().min(4, "At least 4 characters"),
+    description: z.string().trim().min(10, "Add a short description"),
+    pricingType: z.enum(["free", "one_time"]),
+    price: z.string(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.pricingType === "one_time" && Number(v.price) <= 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["price"],
+        message: "Enter a price for paid course",
+      });
+    }
+  });
 
 const STEP_LABELS = ["Course details", "Build course"];
 
@@ -84,12 +103,11 @@ function StepIndicator({ step, canGoBuilder, onNavigate }: {
 
 export function CourseCreateContainer({ existingId = "" }: { existingId?: string }) {
   const nav = useNavigate();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
   const [courseId, setCourseId] = useState<string | null>(existingId || null);
-  const [loading, setLoading] = useState(Boolean(existingId));
   const [values, setValues] = useState<CourseStep1>(initialState);
   const [errors, setErrors] = useState<Partial<Record<"title" | "description" | "price", string>>>({});
-  const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -104,58 +122,51 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
     setTimeout(() => setToast(null), 2500);
   };
 
+  const existingQuery = useQuery({
+    queryKey: ["instructor-course", existingId],
+    queryFn: () => api<LoadedCourse>(`/courses/${existingId}/`),
+    enabled: Boolean(existingId),
+  });
+
+  // hydrate form state when the existing course loads (UI state only)
   useEffect(() => {
-    if (!existingId) return;
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const c = await api<LoadedCourse>(`/courses/${existingId}/`);
-        if (cancelled) return;
-        setCourseId(String(c.id));
-        setValues({
-          title: c.title ?? "",
-          subtitle: c.subtitle ?? "",
-          description: c.description ?? "",
-          whatYouWillLearn: (c.what_you_will_learn ?? []).join(". "),
-          pricingType: c.pricing_type ?? "free",
-          price: Number(c.price) > 0 ? String(c.price) : "",
-          originalPrice: Number(c.original_price) > 0 ? String(c.original_price) : "",
-          pgFeesToLearner: c.pg_fees_to_learner ?? false,
-        });
-        setCoverImage(c.cover_image ?? "");
-        setChapters((c.sections ?? []).map((s) => ({
-          id: `s${s.id}`,
-          title: s.title,
-          lessons: s.lessons.map((l) => ({
-            id: `l${l.id}`,
-            title: l.title,
-            kind: l.kind,
-            duration: l.duration ?? "",
-            resource_url: l.resource_url ?? "",
-            quiz_data: l.quiz_data ?? [],
-          })),
-        })));
-        setStep(0);
-      } catch {
-        if (!cancelled) showToast("Failed to load course");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [existingId]);
+    const c = existingQuery.data;
+    if (!c) return;
+    setCourseId(String(c.id));
+    setValues({
+      title: c.title ?? "",
+      subtitle: c.subtitle ?? "",
+      description: c.description ?? "",
+      whatYouWillLearn: (c.what_you_will_learn ?? []).join(". "),
+      pricingType: c.pricing_type ?? "free",
+      price: Number(c.price) > 0 ? String(c.price) : "",
+      originalPrice: Number(c.original_price) > 0 ? String(c.original_price) : "",
+      pgFeesToLearner: c.pg_fees_to_learner ?? false,
+    });
+    setCoverImage(c.cover_image ?? "");
+    setChapters((c.sections ?? []).map((s) => ({
+      id: `s${s.id}`,
+      title: s.title,
+      lessons: s.lessons.map((l) => ({
+        id: `l${l.id}`,
+        title: l.title,
+        kind: l.kind,
+        duration: l.duration ?? "",
+        resource_url: l.resource_url ?? "",
+        quiz_data: l.quiz_data ?? [],
+      })),
+    })));
+    setStep(0);
+  }, [existingQuery.data]);
 
-  const onStep1Submit = async () => {
-    const next: typeof errors = {};
-    if (values.title.trim().length < 4) next.title = "At least 4 characters";
-    if (values.description.trim().length < 10) next.description = "Add a short description";
-    if (values.pricingType === "one_time" && Number(values.price) <= 0) next.price = "Enter a price for paid course";
-    setErrors(next);
-    if (Object.keys(next).length > 0) return;
+  useEffect(() => {
+    if (existingQuery.error) showToast("Failed to load course");
+  }, [existingQuery.error]);
 
-    setCreating(true);
-    try {
+  const loading = Boolean(existingId) && existingQuery.isLoading;
+
+  const step1Mutation = useMutation({
+    mutationFn: async () => {
       const price = values.pricingType === "free" ? 0 : Number(values.price);
       const originalPrice = values.pricingType === "free" ? 0 : Number(values.originalPrice || 0);
       const pricing = { price, pricing_type: values.pricingType, original_price: originalPrice, pg_fees_to_learner: values.pgFeesToLearner };
@@ -165,20 +176,38 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
           method: "PATCH",
           body: JSON.stringify({ title: values.title.trim(), subtitle: values.subtitle.trim(), description: values.description.trim(), what_you_will_learn: learn, ...pricing }),
         });
-      } else {
-        const course = await api<{ id: string }>("/courses/", {
-          method: "POST",
-          body: JSON.stringify({ title: values.title.trim(), subtitle: values.subtitle.trim(), description: values.description.trim(), what_you_will_learn: learn, category: "Engineering", level: "beginner", ...pricing }),
-        });
-        setCourseId(String(course.id));
+        return courseId;
       }
+      const course = await api<{ id: string }>("/courses/", {
+        method: "POST",
+        body: JSON.stringify({ title: values.title.trim(), subtitle: values.subtitle.trim(), description: values.description.trim(), what_you_will_learn: learn, category: "Engineering", level: "beginner", ...pricing }),
+      });
+      return String(course.id);
+    },
+    onSuccess: (id) => {
+      setCourseId(id);
+      queryClient.invalidateQueries({ queryKey: ["instructor-courses"] });
       setStep(1);
-    } catch (e) {
-      showToast(String(e));
-    } finally {
-      setCreating(false);
+    },
+    onError: (e) => showToast(String(e)),
+  });
+
+  const onStep1Submit = () => {
+    const parsed = step1Schema.safeParse(values);
+    if (!parsed.success) {
+      const next: typeof errors = {};
+      for (const issue of parsed.error.issues) {
+        const key = String(issue.path[0]) as keyof typeof errors;
+        if (key === "title" || key === "description" || key === "price") next[key] = issue.message;
+      }
+      setErrors(next);
+      return;
     }
+    setErrors({});
+    step1Mutation.mutate();
   };
+
+  const creating = step1Mutation.isPending;
 
   const addChapter = (title = "New section") => {
     const ch: Chapter = { id: `s${Date.now()}`, title, lessons: [] };
