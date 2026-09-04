@@ -96,20 +96,37 @@ function StepIndicator({ step, canGoBuilder, onNavigate }: {
   onNavigate: (step: number) => void;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      {STEP_LABELS.map((label, i) => (
-        <div key={label} className="flex items-center gap-2">
+    <div
+      role="tablist"
+      aria-label="Course setup steps"
+      className="grid grid-cols-2 gap-1 rounded-full border border-zinc-200 bg-white p-1 shadow-sm"
+    >
+      {STEP_LABELS.map((label, i) => {
+        const locked = i === 1 && !canGoBuilder;
+        const active = step === i;
+        return (
           <button
-            onClick={() => { if (i === 0 || canGoBuilder) onNavigate(i); }}
-            disabled={i === 1 && !canGoBuilder}
-            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${i <= step ? "bg-[#0f172a] text-white" : "bg-zinc-200 text-zinc-500"} disabled:cursor-not-allowed`}
+            key={label}
+            role="tab"
+            aria-selected={active}
+            title={locked ? "Save course details first" : `Go to ${label}`}
+            onClick={() => { if (!locked) onNavigate(i); }}
+            disabled={locked}
+            className={`flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              active ? "bg-[#0f172a] text-white shadow" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+            }`}
           >
-            {i + 1}
+            <span
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
+                active ? "bg-white/20 text-white" : "bg-zinc-200 text-zinc-600"
+              }`}
+            >
+              {i + 1}
+            </span>
+            {label}
           </button>
-          <span className={`text-xs font-semibold ${i <= step ? "text-zinc-900" : "text-zinc-400"}`}>{label}</span>
-          {i < STEP_LABELS.length - 1 && <span className="mx-1 h-px w-6 bg-zinc-300" />}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -117,7 +134,8 @@ function StepIndicator({ step, canGoBuilder, onNavigate }: {
 export function CourseCreateContainer({ existingId = "" }: { existingId?: string }) {
   const nav = useNavigate();
   const queryClient = useQueryClient();
-  const [step, setStep] = useState(0);
+  // editing an existing course lands straight on content — details are one click back
+  const [step, setStep] = useState(existingId ? 1 : 0);
   const [courseId, setCourseId] = useState<string | null>(existingId || null);
   const [values, setValues] = useState<CourseStep1>(initialState);
   const [errors, setErrors] = useState<Partial<Record<"title" | "description" | "price", string>>>({});
@@ -208,7 +226,6 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
         quiz_data: l.quiz_data ?? [],
       })),
     })));
-    setStep(0);
   }, [existingQuery.data]);
 
   useEffect(() => {
@@ -377,8 +394,18 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
   return (
     <div className="min-h-screen bg-[#f6f5f1]">
       {step === 0 ? (
-        <div className="w-full px-4 py-6 sm:px-6">
-          <StepIndicator step={0} canGoBuilder={Boolean(courseId)} onNavigate={setStep} />
+        <div className="w-full px-4 py-3 sm:px-6">
+          <CourseBuilderHeader
+            title={values.title}
+            saving={saving || publishing}
+            disabled={!courseId}
+            onPreview={() => setPreviewOpen(true)}
+            onPublish={() => setPublishOpen(true)}
+            onSave={() => saveCourse(false)}
+          />
+          <div className="mt-4">
+            <StepIndicator step={0} canGoBuilder={Boolean(courseId)} onNavigate={setStep} />
+          </div>
           <div className="mt-4">
             <CourseCreateStep1
               values={values}
