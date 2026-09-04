@@ -1,5 +1,5 @@
 import { create } from "zustand";
-type User = { name: string; email: string; mobile: string; age?: number; avatar?: string; role?: string };
+import type { SharedUser as User } from "@masterlms/shared";
 type State = {
   user: User | null;
   isLoading: boolean;

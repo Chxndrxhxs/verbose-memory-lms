@@ -5,5 +5,6 @@ export function Protected({ children }: { children: React.ReactNode }) {
   const isLoading = useAuth((s) => s.isLoading);
   if (isLoading) return null;
   if (!user) return <Navigate to="/login" replace />;
+  if (user.role && user.role !== "instructor") return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
