@@ -29,11 +29,16 @@ class OTP(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     is_used = models.BooleanField(default=False)
+    attempts = models.PositiveSmallIntegerField(default=0)
+
+    MAX_ATTEMPTS = 5
 
     @classmethod
     def create_for(cls, mobile: str) -> "OTP":
         import random
 
+        # resending invalidates older unused codes for this mobile
+        cls.objects.filter(mobile=mobile, is_used=False).update(is_used=True)
         code = f"{random.randint(1000, 9999)}"
         return cls.objects.create(
             mobile=mobile,
@@ -42,7 +47,11 @@ class OTP(models.Model):
         )
 
     def is_valid(self) -> bool:
-        return not self.is_used and timezone.now() < self.expires_at
+        return (
+            not self.is_used
+            and self.attempts < self.MAX_ATTEMPTS
+            and timezone.now() < self.expires_at
+        )
 
     class Meta:
         ordering = ["-created_at"]

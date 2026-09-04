@@ -36,12 +36,9 @@ def tokens_for(user) -> dict:
 
 
 class SendOTPSerializer(serializers.Serializer):
-    mobile = serializers.CharField(max_length=15)
-
-    def validate_mobile(self, value: str) -> str:
-        if not value.isdigit() or len(value) < 10:
-            raise serializers.ValidationError("Invalid mobile")
-        return value
+    mobile = serializers.RegexField(
+        r"^[6-9]\d{9}$", max_length=15, error_messages={"invalid": "Invalid mobile"}
+    )
 
 
 class VerifyOTPSerializer(serializers.Serializer):
@@ -54,6 +51,10 @@ class VerifyOTPSerializer(serializers.Serializer):
         except OTP.DoesNotExist:
             raise serializers.ValidationError("No OTP sent") from None
         if not otp.is_valid() or otp.code != attrs["code"]:
+            otp.attempts += 1
+            if otp.attempts >= OTP.MAX_ATTEMPTS:
+                otp.is_used = True
+            otp.save(update_fields=["attempts", "is_used"])
             raise serializers.ValidationError("Invalid or expired OTP") from None
         otp.is_used = True
         otp.save(update_fields=["is_used"])
