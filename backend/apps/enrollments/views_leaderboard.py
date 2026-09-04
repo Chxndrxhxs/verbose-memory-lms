@@ -40,9 +40,25 @@ def leaderboard_view(request):
     except ValueError:
         page = 1
     page_size = 12
+    my_students = request.query_params.get("my_students") in (
+        "1",
+        "true",
+        "True",
+    ) or request.query_params.get("scope") == "my_students"
+    if my_students:
+        is_inst = (
+            getattr(request.user, "role", "") in ("instructor", "admin") or request.user.is_staff
+        )
+        if not is_inst:
+            return Response({"data": None, "error": "My Students is instructor only"}, status=403)
 
     entries, season_label, _since, _until = compute_leaderboard(
-        city=city, category=category, season=season, ordering=ordering
+        city=city,
+        category=category,
+        season=season,
+        ordering=ordering,
+        my_students=my_students,
+        request_user=request.user,
     )
 
     total = len(entries)
@@ -78,29 +94,30 @@ def leaderboard_view(request):
         )
 
     me = None
-    for e in entries:
-        if e["learner"].id == request.user.id:
-            u = e["learner"]
-            me = {
-                "rank": e["rank"],
-                "rr": e["rr"],
-                "tier": e["tier"],
-                "learner": {
-                    "id": u.id,
-                    "name": u.get_full_name() or u.username,
-                    "avatar": u.avatar or "",
-                    "city": u.city or "",
-                },
-                "breakdown": e["breakdown"],
-                "stats": {
-                    "quiz_accuracy": e["quiz_accuracy"],
-                    "completion_rate": e["completion_rate"],
-                    "certificates": e["certificates"],
-                    "streak": e["streak"],
-                    "lessons_completed": e["lessons_completed"],
-                },
-            }
-            break
+    if not my_students:
+        for e in entries:
+            if e["learner"].id == request.user.id:
+                u = e["learner"]
+                me = {
+                    "rank": e["rank"],
+                    "rr": e["rr"],
+                    "tier": e["tier"],
+                    "learner": {
+                        "id": u.id,
+                        "name": u.get_full_name() or u.username,
+                        "avatar": u.avatar or "",
+                        "city": u.city or "",
+                    },
+                    "breakdown": e["breakdown"],
+                    "stats": {
+                        "quiz_accuracy": e["quiz_accuracy"],
+                        "completion_rate": e["completion_rate"],
+                        "certificates": e["certificates"],
+                        "streak": e["streak"],
+                        "lessons_completed": e["lessons_completed"],
+                    },
+                }
+                break
 
     return Response(
         {
@@ -113,6 +130,8 @@ def leaderboard_view(request):
                 "season": season_label,
                 "cities": _distinct_cities(),
                 "categories": _distinct_categories(),
+                "scope": "my_students" if my_students else "global",
+                "my_students": my_students,
             },
             "me": me,
         }

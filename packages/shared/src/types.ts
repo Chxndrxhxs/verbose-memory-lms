@@ -39,7 +39,7 @@ export interface LeaderboardEntry {
 }
 export interface LeaderboardResponse {
   data: LeaderboardEntry[]; error: null;
-  meta: { page: number; total: number; pages: number; season: string; cities: string[]; categories: string[] };
+  meta: { page: number; total: number; pages: number; season: string; cities: string[]; categories: string[]; scope?: string; my_students?: boolean };
   me: LeaderboardEntry | null;
 }
 

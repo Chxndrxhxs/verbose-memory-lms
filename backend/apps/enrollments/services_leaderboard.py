@@ -1,7 +1,8 @@
 import calendar
+import datetime
 import re
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.db.models import Count
 from django.utils import timezone
@@ -49,14 +50,14 @@ def _season_window(season: str | None):
         else:
             until = since.replace(month=since.month + 1)
         lbl = f"{since.year}-{since.month:02d}"
-        return since.astimezone(timezone.utc), until.astimezone(timezone.utc), lbl
+        return since.astimezone(datetime.UTC), until.astimezone(datetime.UTC), lbl
     if season in ("alltime", "all-time", "all", "All Time"):
         return None, None, "alltime"
     m = re.match(r"^(\d{4})-(\d{2})$", season)
     if m:
         y, mo = int(m.group(1)), int(m.group(2))
         if 1 <= mo <= 12:
-            since = timezone.make_aware(datetime(y, mo, 1))
+            since = timezone.make_aware(datetime.datetime(y, mo, 1))
             last_day = calendar.monthrange(y, mo)[1]
             until = since + timedelta(days=last_day)
             return since, until, season
@@ -66,7 +67,7 @@ def _season_window(season: str | None):
     else:
         until = since.replace(month=since.month + 1)
     lbl = f"{since.year}-{since.month:02d}"
-    return since.astimezone(timezone.utc), until.astimezone(timezone.utc), lbl
+    return since.astimezone(datetime.UTC), until.astimezone(datetime.UTC), lbl
 
 
 def _compute_quiz_accuracy_map(learner_ids, since, until):
@@ -197,7 +198,7 @@ def _streak_map(learner_ids, since, until):
             current = 0
             prev = None
             for ds in sorted_dates:
-                cur = datetime.fromisoformat(ds).date()
+                cur = datetime.datetime.fromisoformat(ds).date()
                 if prev and (cur - prev).days == 1:
                     current += 1
                 else:
@@ -220,9 +221,16 @@ def _earliest_activity_map(learner_ids, since, until):
     return {}
 
 
-def compute_leaderboard(city=None, category=None, season=None, ordering="rank"):
+def compute_leaderboard(
+    city=None, category=None, season=None, ordering="rank", *, my_students=False, request_user=None
+):
     since, until, season_label = _season_window(season)
-    learners = User.objects.filter(role=User.Role.LEARNER)
+    if my_students and request_user is not None:
+        learners = User.objects.filter(
+            role=User.Role.LEARNER, enrollments__course__instructor=request_user
+        ).distinct()
+    else:
+        learners = User.objects.filter(role=User.Role.LEARNER)
     if city:
         c = city.strip()
         if c.lower() not in ("all", "all cities"):

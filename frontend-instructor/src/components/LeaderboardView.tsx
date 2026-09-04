@@ -49,26 +49,31 @@ export function LeaderboardView({
   params,
   meta,
   me,
+  scope,
   onCity,
   onCategory,
   onSeason,
   onOrdering,
   onPage,
+  onScope,
 }: {
   data: LeaderboardEntry[];
   isLoading: boolean;
   params: { city: string; category: string; season: string; ordering: string; page: number };
   meta: LeaderboardResponse["meta"] | undefined;
   me: LeaderboardEntry | null | undefined;
+  scope: "global" | "my_students";
   onCity: (v: string) => void;
   onCategory: (v: string) => void;
   onSeason: (v: string) => void;
   onOrdering: (v: string) => void;
   onPage: (p: number) => void;
+  onScope: (s: "global" | "my_students") => void;
 }) {
   const cities = meta?.cities ?? [];
   const categories = meta?.categories ?? [];
   void TIER_META;
+  const isScoped = scope === "my_students";
   const hl = "text-zinc-900";
   const dim = "text-zinc-500";
 
@@ -77,12 +82,16 @@ export function LeaderboardView({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight">Leaderboard</h1>
-          <p className="mt-1 text-sm text-zinc-500">Top learners — ranked on quiz, completion, certs, and streak.</p>
+          <p className="mt-1 text-sm text-zinc-500">{isScoped ? "Your students — ranked on this month's activity" : "Top learners — ranked on quiz, completion, certs, and streak."}</p>
         </div>
         <div className="flex gap-1 rounded-full bg-zinc-900 p-1 text-xs font-bold">
           <button onClick={() => onSeason("current")} className={`rounded-full px-4 py-1.5 ${params.season === "current" ? "bg-white text-zinc-900" : "text-white hover:bg-white/10"}`}>This Month</button>
           <button onClick={() => onSeason("alltime")} className={`rounded-full px-4 py-1.5 ${params.season === "alltime" ? "bg-white text-zinc-900" : "text-white hover:bg-white/10"}`}>All Time</button>
         </div>
+      </div>
+      <div className="flex gap-1 rounded-full bg-zinc-900 p-1 text-xs font-bold w-fit">
+        <button onClick={() => onScope("global")} className={`rounded-full px-4 py-1.5 ${scope === "global" ? "bg-white text-zinc-900" : "text-white hover:bg-white/10"}`}>All Learners</button>
+        <button onClick={() => onScope("my_students")} className={`rounded-full px-4 py-1.5 ${scope === "my_students" ? "bg-white text-zinc-900" : "text-white hover:bg-white/10"}`}>My Students{meta?.total != null && isScoped ? ` (${meta.total})` : ""}</button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-white p-3 shadow-sm">
@@ -104,7 +113,15 @@ export function LeaderboardView({
           {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-[72px] animate-pulse rounded-2xl bg-white shadow-sm" />)}
         </div>
       ) : data.length === 0 ? (
-        <div className="rounded-2xl border bg-white p-8 text-center text-sm text-zinc-500">No learners match these filters.</div>
+        isScoped ? (
+          <div className="rounded-2xl border border-dashed bg-white p-8 text-center shadow-sm">
+            <p className="text-sm font-bold">No students yet</p>
+            <p className="mt-1 text-xs text-zinc-500">Share your course link to get your first learners.</p>
+            <a href="/courses/create" className="mt-3 inline-block rounded-full bg-zinc-900 px-4 py-2 text-xs font-bold text-white">Create course</a>
+          </div>
+        ) : (
+          <div className="rounded-2xl border bg-white p-8 text-center text-sm text-zinc-500">No learners match these filters.</div>
+        )
       ) : (
         <>
           <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
