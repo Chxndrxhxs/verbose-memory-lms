@@ -58,6 +58,24 @@ def complete_lesson(request, course_id: int):
             status=status.HTTP_404_NOT_FOUND,
         )
     enrollment = mark_lesson_done(request.user, enrollment.course, lesson)
+    if enrollment.progress >= 100:
+        existing = Certificate.objects.filter(learner=request.user, course_id=course_id).first()
+        if not existing:
+            import uuid
+
+            cert_id = f"QTNXT-{uuid.uuid4().hex[:8].upper()}-{course_id}"
+            Certificate.objects.create(
+                learner=request.user,
+                course_id=course_id,
+                enrollment=enrollment,
+                certificate_id=cert_id,
+            )
+            log_event(
+                request.user,
+                ActivityEvent.Verb.EARNED_CERTIFICATE,
+                course=enrollment.course,
+                meta={"certificate_id": cert_id},
+            )
     return Response({"data": EnrollmentSerializer(enrollment).data, "error": None})
 
 

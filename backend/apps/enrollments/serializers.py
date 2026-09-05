@@ -55,3 +55,21 @@ class ActivityEventSerializer(serializers.ModelSerializer):
 
     def get_lesson_title(self, obj) -> str | None:
         return obj.lesson.title if obj.lesson else None
+
+
+class InstructorActivitySerializer(ActivityEventSerializer):
+    learner = serializers.SerializerMethodField()
+
+    class Meta(ActivityEventSerializer.Meta):
+        fields = ActivityEventSerializer.Meta.fields + ("learner",)
+
+    def get_learner(self, obj) -> dict | None:
+        u = obj.learner
+        if not u:
+            return None
+        return {
+            "id": u.id,
+            "name": u.get_full_name() or u.username,
+            "avatar": u.avatar or "",
+            "city": u.city or "",
+        }

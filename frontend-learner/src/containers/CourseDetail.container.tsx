@@ -64,6 +64,7 @@ export function CourseDetailContainer() {
     mutationFn: () => api(`/courses/${data!.id}/enroll`, { method: "POST" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["enrollment", id] });
+      queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
       showToast("Successfully enrolled! Start learning now.");
     },
     onError: (e) => showToast(String(e)),
@@ -82,6 +83,7 @@ export function CourseDetailContainer() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["enrollment", id] });
+      queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
       showToast("Payment successful! You're enrolled.");
     },
     onError: (e) => showToast(String(e)),
@@ -107,6 +109,7 @@ export function CourseDetailContainer() {
 
       if (orderRes.free || orderRes.already_enrolled) {
         queryClient.invalidateQueries({ queryKey: ["enrollment", id] });
+        queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
         showToast(orderRes.already_enrolled ? "Already enrolled." : "Successfully enrolled!");
         return;
       }
@@ -136,6 +139,7 @@ export function CourseDetailContainer() {
                 body: JSON.stringify({ ...res, course_id: Number(data.id) }),
               });
               queryClient.invalidateQueries({ queryKey: ["enrollment", id] });
+              queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
               showToast("Payment successful! You're enrolled.");
               resolve();
             } catch (e) {

@@ -1,6 +1,6 @@
 import logging
 from collections import Counter
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from django.utils import timezone
 
@@ -52,16 +52,22 @@ def mark_lesson_done(learner, course: Course, lesson: Lesson) -> Enrollment:
     return enrollment
 
 
+def _today_ist():
+    return timezone.localtime(timezone.now()).date()
+
+
 def activity_last_six_months(learner) -> list[dict]:
-    start = (timezone.now() - timedelta(days=26 * 7 - 1)).date()
+    today = _today_ist()
+    start = today - timedelta(days=26 * 7 - 1)
+    start_dt = timezone.make_aware(datetime.combine(start, time.min))
     qs = LessonCompletion.objects.filter(
-        learner=learner, completed_at__date__gte=start
+        learner=learner, completed_at__gte=start_dt
     ).values_list("completed_at", flat=True)
-    counts = Counter(ts.date().isoformat() for ts in qs)
+    counts = Counter(timezone.localtime(ts).date().isoformat() for ts in qs)
     return [{"date": d, "count": counts.get(d, 0)} for d in _date_iter(start)]
 
 
 def _date_iter(start):
-    today = timezone.now().date()
+    today = _today_ist()
     days = (today - start).days + 1
     return [(start + timedelta(days=i)).isoformat() for i in range(days)]
