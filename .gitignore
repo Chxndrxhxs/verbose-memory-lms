@@ -58,3 +58,6 @@ db.sqlite3
 
 # user-uploaded media (never commit)
 backend/media/
+
+# local commandcode plans (not committed)
+.commandcode/

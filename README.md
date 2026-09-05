@@ -43,60 +43,162 @@ masterlms/
     │   ├── courses/       # Course / Section / Lesson + Review (rating 1-5, average_rating)
     │   ├── enrollments/   # Enrollment + LessonCompletion + Certificate (QTNXT-XXXX)
     │   └── payments/      # Payment (Razorpay mock/live) + Invoice
-    ├── scripts/seed.py
     └── .env.example
 ```
 
-## Quick start
+## Prerequisites
+
+- **Node.js ≥ 20** and **pnpm ≥ 9** (`npm i -g pnpm` or `corepack enable`)
+- **Python ≥ 3.11** and **[uv](https://docs.astral.sh/uv/)** (fast Python package manager)
+  - Windows: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
+  - macOS/Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+  - Fallback: `pip install uv`
+- **MySQL 8** (optional — without it the backend falls back to `backend/db.sqlite3`)
+- Git
+
+Verify:
 
 ```bash
-# root
-pnpm install
-pnpm --filter frontend-learner dev      # http://localhost:5173
-pnpm --filter frontend-instructor dev   # http://localhost:5174
-
-# Backend setup (Requires Python 3.11+)
-cd backend
-
-# If you don't have 'uv' installed, install it first:
-# macOS/Linux: curl -LsSf https://astral.sh/uv/install.sh | sh
-# Windows (PowerShell): irm https://astral.sh/uv/install.ps1 | iex
-# Or standard pip: pip install uv
-
-uv sync
-uv run python manage.py migrate
-uv run python scripts/seed.py        # 4 sample courses
-uv run python manage.py runserver    # http://localhost:8000
+node --version   # >=20
+pnpm --version   # >=9
+python --version # >=3.11
+uv --version
+mysql --version  # optional
 ```
 
-Other commands:
+## Project setup (do in order)
+
+You need three processes for full local dev: **Backend** (8000), **Learner** (5173), **Instructor** (5174). Set up backend first — frontends will fail with `VITE_API_URL` unreachable otherwise.
+
+### 0. Clone
 
 ```bash
+git clone https://github.com/Chxndrxhxs/verbose-memory-lms.git
+cd masterlms
+```
+
+### 1. Backend — env, DB, migrations
+
+```bash
+cd backend
+
+# 1a. Environment file
+cp .env.example .env
+# Edit .env — see "Backend .env" section below. At minimum set SECRET_KEY, DEBUG, DATABASE_URL.
+
+# 1b. Install Python deps (creates .venv)
+uv sync
+
+# 1c. Create DB (MySQL) — skip if using sqlite fallback
+# mysql -u root -p -e "CREATE DATABASE masterlms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# 1d. Migrate
+uv run python manage.py migrate
+
+# 1e. (Optional) Create admin
+uv run python manage.py createsuperuser
+
+# 1f. Run
+uv run python manage.py runserver 8000
+# → http://localhost:8000/api/v1/courses/
+# → http://localhost:8000/admin/
+# No seed — fresh clones start with no courses ("No courses yet" state).
+```
+
+Backend `.env` (all keys optional — sensible defaults exist, but set these for real dev):
+
+```env
+SECRET_KEY=django-insecure-change-me
+DEBUG=True
+ALLOWED_HOSTS=*
+DATABASE_URL=mysql://root:password@localhost:3306/masterlms
+# or without DATABASE_URL: DB_ENGINE/DB_NAME/DB_USER/DB_PASSWORD/DB_HOST/DB_PORT
+RAZORPAY_KEY_ID=rzp_test_xxx
+RAZORPAY_KEY_SECRET=xxx
+```
+
+- Without `DATABASE_URL` the app uses `backend/db.sqlite3` — fine for quick start.
+- Without Razorpay keys, payments run in **mock** mode (`order_mock_*`, `pay_mock_*`) — enroll still works.
+
+### 2. Shared + Frontend — install once at repo root
+
+Back at repo root (not `backend/`):
+
+```bash
+cd ..            # back to repo root
+pnpm install
+```
+
+This installs `frontend-learner`, `frontend-instructor`, and `packages/shared` via pnpm workspaces.
+
+### 3. Frontend env (optional)
+
+Create `frontend-learner/.env` and/or `frontend-instructor/.env` if your API is not `http://localhost:8000/api/v1`:
+
+```env
+VITE_API_URL=http://localhost:8000/api/v1
+```
+
+Defaults to `http://localhost:8000/api/v1` when not set. Frontends talk cookies (`credentials: include`) so keep the API host in `CORS_ALLOWED_ORIGINS` / `CSRF_TRUSTED_ORIGINS` in `backend/.env`.
+
+### 4. Run frontends (two terminals or one with pnpm -r)
+
+```bash
+# Terminal A — Learner
+pnpm --filter frontend-learner dev
+# → http://localhost:5173
+
+# Terminal B — Instructor
+pnpm --filter frontend-instructor dev
+# → http://localhost:5174
+
+# Or from root (runs both):
+pnpm dev:learner   # same
+pnpm dev:instructor
+```
+
+Login flow: `GET /auth/send-otp` (dev returns `mock_code: "1234"`) → `POST /auth/verify-otp` → httpOnly `access_token`/`refresh_token` cookies + `POST /auth/complete-profile` (avatar via `POST /upload/` → URL).
+
+### 5. Verify setup
+
+```bash
+# Backend health (from another shell)
+curl http://localhost:8000/api/v1/courses/ | head -c 200
+
+# Tests
+cd backend && uv run pytest
+
+# Lint / typecheck
 pnpm -r build
 pnpm --filter frontend-learner exec tsc --noEmit
 pnpm --filter frontend-instructor exec tsc --noEmit
 pnpm --filter frontend-learner exec oxlint
 pnpm --filter frontend-instructor exec oxlint
+cd backend && uv run ruff check . && uv run ruff format .
 ```
+
+If all three pass, you’re good to build.
+
+### Useful commands
 
 ```bash
-cd backend
+# Root
+pnpm install            # install all workspaces
+pnpm build              # pnpm -r build
+pnpm lint               # pnpm -r lint
+pnpm tsc                # pnpm -r exec tsc --noEmit
+
+# Backend (inside backend/)
+uv sync                 # install deps
+uv add <pkg>            # add dep  (e.g. uv add django-filter)
+uv remove <pkg>
+uv run python manage.py makemigrations
+uv run python manage.py migrate
+uv run python manage.py runserver 8000  # or 8000 --noreload
 uv run pytest
-uv run ruff check .
-uv run ruff format .
+uv run pytest apps/courses/tests/test_courses.py -v
+uv run ruff check . && uv run ruff format .
 ```
-
-Configure `backend/.env`:
-
-```env
-DATABASE_URL=mysql://root:password@localhost:3306/masterlms
-SECRET_KEY=replace-me
-DEBUG=True
-RAZORPAY_KEY_ID=rzp_test_xxx
-RAZORPAY_KEY_SECRET=xxx
-```
-
-Without `DATABASE_URL` defaults to `backend/db.sqlite3`. Without Razorpay keys, payments run in **mock** mode (`order_mock_*`, `pay_mock_*`).
 
 ## API overview (`/api/v1/`, JWT Bearer + httpOnly cookies `access_token`/`refresh_token`)
 
@@ -181,3 +283,48 @@ Roles checked in `IsInstructorOrReadOnly` (courses) and `IsAuthenticated` (enrol
 ## Roadmap
 - [x] httpOnly JWT cookies · [x] `/upload/` · [x] `toEmbed` yt/embed+iframe+shorts · [x] 2-step instructor builder (subtitle/description/learn/price ₹) · [x] lean learner cards (₹, subtitle 2 lines, instructor + counts, enrolled→Go to course) · [x] search + grid/list (both apps) · [x] persisted progress (`LessonCompletion` + `completed_lessons`) · [x] QTNXT rebrand + full-width centered nav + gradient hero (bigger/wider, banners removed) + sticky navbar · [x] `Mark course as complete` at 100% → star rating → `average_rating` + `rating_count` on cards/detail · [x] `Review` + `Certificate` (QTNXT-XXXX, enrolled/completed dates, professional print template) in profile + `Payment activity` invoices (Razorpay mock/live, ₹) + `Activity` GitHub heatmap with QTNXT ink scale + profile navbar + full-width instructor routes + profile header redesign
 - [ ] Real Razorpay keys (currently mock when `RAZORPAY_KEY_ID` missing) · [ ] Playwright E2E · [ ] Certificate verification page `qtnxt.com/verify/:id`
+
+## Troubleshooting
+
+### Ports already in use
+- `Port 8000/5173/5174 is already in use`: stop the other dev server or run on a different port:
+  - Backend: `uv run python manage.py runserver 8001`
+  - Learner: `pnpm --filter frontend-learner dev -- --port 5175`
+  - Instructor: `pnpm --filter frontend-instructor dev -- --port 5176`
+- Find who holds the port (Windows): `netstat -ano | findstr :8000` → `taskkill /PID <pid> /F`
+- macOS/Linux: `lsof -i :8000` → `kill <pid>`
+
+### Backend won’t start
+- **`uv` not found**: install `uv` (see Prerequisites) or run with `pip`:
+  ```bash
+  pip install -r requirements.txt  # if you generate one via uv pip compile
+  # or
+  pip install django djangorestframework django-environ django-filter djangorestframework-simplejwt django-cors-headers razorpay mysqlclient
+  python manage.py migrate && python manage.py runserver
+  ```
+- **`No module named 'django'`**: you ran `python` not `uv run python` — use `uv run python manage.py ...` so it picks the project `.venv`.
+- **`Can't connect to MySQL` / `Access denied`**: check `backend/.env` `DATABASE_URL` credentials and that MySQL is running (`mysqladmin ping` or Services). Quick fix: comment `DATABASE_URL` out and use sqlite — `rm backend/db.sqlite3 && uv run python manage.py migrate --run-syncdb`.
+- **`django.db.utils.OperationalError: no such table`**: run `uv run python manage.py migrate`.
+- **`SECRET_KEY` / `DEBUG`**: `DEBUG=True` + `ALLOWED_HOSTS=*` in `.env` is fine for local; set `DEBUG=False` and real `ALLOWED_HOSTS`/`CORS_ALLOWED_ORIGINS` for deploy.
+
+### Frontend shows “Failed to fetch” / CORS / 401
+- **Backend not running**: start it (`uv run python manage.py runserver 8000`). Frontends default to `http://localhost:8000/api/v1`.
+- **`VITE_API_URL` mismatch**: if backend is on 8001, set `VITE_API_URL=http://localhost:8001/api/v1` in `frontend-learner/.env` and `frontend-instructor/.env` (or at repo root). Restart `pnpm dev` after changing `.env`.
+- **CORS blocked**: add your frontend origins to `backend/.env`:
+  ```env
+  CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174
+  CSRF_TRUSTED_ORIGINS=http://localhost:5173,http://localhost:5174
+  ```
+  Restart backend.
+- **401 after login**: cookies are `httpOnly` — ensure you’re using `http://localhost` (not `127.0.0.1` mismatch) and the browser didn’t block third-party cookies. Try `http://localhost:5173` / `http://localhost:5174` exactly.
+
+### pnpm / install issues
+- **`ERR_PNPM_NO_IMPORTER_MANIFEST_FOUND`**: run `pnpm install` from repo root (where `pnpm-workspace.yaml` lives), not inside a package.
+- **`Cannot find module '@masterlms/shared'`**: after pulling, run `pnpm install` (workspace links) then restart dev servers.
+- **`oxlint` / `tsc` fails on fresh pull**: `pnpm --filter frontend-learner exec tsc --noEmit` shows the file; fix type errors, then `pnpm --filter frontend-learner exec oxlint --fix`.
+
+### Payments (Razorpay) in local dev
+- Without `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` in `backend/.env`, the app uses **mock mode** — you’ll see `order_mock_*` and `pay_mock_*` IDs and enroll will succeed. Add real test keys to test live Razorpay Checkout.
+
+### Still stuck?
+- Capture the exact error (full traceback or browser console + Network tab), Node/Python/MySQL versions, and the command you ran, then open a GitHub issue: **Issues → New issue → Bug report** with label `setup`. Paste `pnpm --version`, `uv --version`, `python --version`, and `backend/.env` (without secrets).
