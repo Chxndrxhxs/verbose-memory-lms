@@ -86,7 +86,8 @@ function makeLesson(kind: LessonKind): Lesson {
     duration: kind === "video" || kind === "audio" ? "05:00" : "—",
     resource_url: "",
   };
-  if (kind === "quiz") base.quiz_data = [{ id: `q${Date.now()}`, question: "", options: ["", ""], correct: 0 }];
+  if (kind === "quiz")
+    base.quiz_data = [{ id: `q${Date.now()}`, type: "text", question: "", options: ["", ""], correct: 0 }];
   return base;
 }
 

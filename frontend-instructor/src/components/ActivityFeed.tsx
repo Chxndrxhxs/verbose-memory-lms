@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Award, CheckCircle2, HelpCircle, Shield, Star, Trophy } from "lucide-react";
+import { Award, CheckCircle2, HelpCircle, Shield, Star, Trophy } from "@masterlms/shared";
 import type { InstructorActivityItem } from "../hooks/useInstructorActivity";
 
 function timeAgo(iso: string): string {

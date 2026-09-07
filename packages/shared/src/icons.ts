@@ -46,6 +46,7 @@ export {
   Phone,
   PhoneCall,
   HelpCircle,
+  Shield,
   AlignLeft,
   MessageCircle,
   MessageSquare,

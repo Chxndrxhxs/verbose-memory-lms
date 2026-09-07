@@ -1,5 +1,6 @@
 packages:
   - 'frontend-learner'
   - 'frontend-instructor'
+  - 'frontend-admin'
   - 'packages/*'
 

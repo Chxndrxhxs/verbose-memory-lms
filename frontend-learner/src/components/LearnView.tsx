@@ -4,18 +4,22 @@ import remarkGfm from "remark-gfm";
 import {
   ArrowLeft,
   ArrowUpRight,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   Play,
   Star,
   LESSON_KIND_BADGE,
+  quizOption,
+  toEmbed,
 } from "@masterlms/shared";
-import type { LessonKind } from "@masterlms/shared";
+import type { LessonKind, SharedQuizQ } from "@masterlms/shared";
 import { PdfReader } from "./PdfReader";
 import { cn } from "../lib/utils";
+import { absoluteMediaUrl } from "../lib/api";
+import { quizCorrect } from "../lib/quiz";
 
-export type QuizQ = { id: string; question: string; options: string[]; correct: number };
 export type LearnLesson = {
   id: number;
   title: string;
@@ -23,7 +27,7 @@ export type LearnLesson = {
   preview?: boolean;
   kind: LessonKind;
   resource_url?: string;
-  quiz_data?: QuizQ[];
+  quiz_data?: SharedQuizQ[];
 };
 export type LearnSection = { id: number; title: string; lessons: LearnLesson[] };
 export type LearnTab = "overview" | "notes" | "qna";
@@ -44,7 +48,7 @@ type Props = {
   openSections: Set<number>;
   tab: LearnTab;
   note: string;
-  quizAnswers: Record<number, number>;
+  quizAnswers: Record<number, number | string>;
   quizSubmitted: boolean;
   quizAttempt: number | null;
   quizBest: number | null;
@@ -57,7 +61,7 @@ type Props = {
   onToggleSection: (i: number) => void;
   onTab: (t: LearnTab) => void;
   onNote: (v: string) => void;
-  onAnswer: (qi: number, oi: number) => void;
+  onAnswer: (qi: number, value: number | string) => void;
   onMarkComplete: () => void;
   onSubmitQuiz: () => void;
   onShowRating: () => void;
@@ -123,20 +127,82 @@ export function LearnView(p: Props) {
                   {activeLesson.quiz_data.map((q, qi)=> (
                     <div key={q.id} className="rounded-xl border bg-zinc-50 p-3">
                       <p className="text-sm font-semibold">Q{qi+1}. {q.question}</p>
+                      {q.prompt && <p className="mt-1 text-xs text-zinc-500">{q.prompt}</p>}
+                      {(q.type === "image" || q.type === "video") && q.media_url && (() => {
+                        const raw = q.media_url!.trim();
+                        const isVideo = q.type === "video";
+                        let src: string | null = null;
+                        if (isVideo) {
+                          src = /^<iframe/i.test(raw) ? raw : (toEmbed(raw) ?? (raw.match(/\.(mp4|webm|mov)(\?|$)/) ? absoluteMediaUrl(raw) : null));
+                        } else {
+                          src = raw;
+                        }
+                        return src ? (
+                          isVideo && src ? (
+                            /\.(mp4|webm|mov)(\?|$)/.test(src) ? (
+                              <video src={src} controls className="mt-2 max-h-40 w-full rounded-xl border bg-black object-contain" />
+                            ) : (
+                              <iframe src={src} title={`Q${qi + 1} media`} className="mt-2 aspect-video w-full rounded-xl border" allowFullScreen />
+                            )
+                          ) : (
+                            <img src={src} alt="" className="mt-2 max-h-40 w-full rounded-xl border object-contain bg-white" />
+                          )
+                        ) : null;
+                      })()}
                       <div className="mt-2 grid gap-1.5">
-                        {q.options.map((opt, oi)=> (
-                          <label key={oi} className={cn("flex items-center gap-2 rounded-xl border px-3 py-2 text-sm", quizAnswers[qi]===oi ? "bg-white border-zinc-900" : "bg-white", quizSubmitted && oi===q.correct ? "bg-emerald-50 border-emerald-500" : "")}>
-                            <input type="radio" name={`q-${qi}`} checked={quizAnswers[qi]===oi} onChange={()=> p.onAnswer(qi, oi)} />
-                            {opt}
-                          </label>
-                        ))}
+                        {q.type === "qa" ? (
+                          <input
+                            type="text"
+                            value={typeof quizAnswers[qi] === "string" ? (quizAnswers[qi] as string) : ""}
+                            onChange={(e) => p.onAnswer(qi, e.target.value)}
+                            disabled={quizSubmitted}
+                            placeholder="Type your answer…"
+                            className={cn("w-full rounded-xl border px-3 py-2 text-sm outline-none", quizSubmitted ? (quizCorrect(q, quizAnswers[qi]) ? "border-emerald-500 bg-emerald-50" : "border-red-400 bg-red-50") : "border-zinc-300 bg-white focus:border-zinc-900")}
+                          />
+                        ) : (
+                          q.options.map((optEntry, oi)=> {
+                            const opt = quizOption(optEntry);
+                            const isSel = quizAnswers[qi]===oi;
+                            const oMp4 = (opt.media_url ?? "").match(/\.(mp4|webm|mov)(\?|$)/);
+                            const oSrc = opt.type === "video" ? (oMp4 ? absoluteMediaUrl(opt.media_url) : toEmbed(opt.media_url)) : opt.media_url;
+                            return (
+                              <label key={oi} className={cn("flex items-start gap-2 rounded-xl border px-3 py-2 text-sm", isSel ? "bg-white border-zinc-900" : "bg-white", quizSubmitted && oi===q.correct ? "bg-emerald-50 border-emerald-500" : quizSubmitted && isSel && oi!==q.correct ? "border-red-400 bg-red-50" : "")}>
+                                <input
+                                  type="radio"
+                                  name={`q-${qi}`}
+                                  checked={isSel}
+                                  onChange={()=> p.onAnswer(qi, oi)}
+                                  className="mt-1 shrink-0"
+                                />
+                                <span className="min-w-0 flex-1">
+                                  {opt.type === "image" && opt.media_url && (
+                                    <img src={opt.media_url} alt="" onError={(e) => { const el = e.target as HTMLImageElement; el.parentElement!.style.display = "none"; }} className="mb-1 max-h-28 w-full rounded-lg border object-contain bg-zinc-100" />
+                                  )}
+                                  {opt.type === "video" && opt.media_url && oSrc && (
+                                    oMp4 ? (
+                                      <video src={oSrc} controls className="mb-1 max-h-28 w-full rounded-lg border bg-black object-contain" />
+                                    ) : (
+                                      <iframe src={oSrc} title={`Option ${oi + 1} media`} className="mb-1 aspect-video w-full rounded-lg border" allowFullScreen />
+                                    )
+                                  )}
+                                  {opt.text ? <span>{opt.text}</span> : <span className="text-zinc-400">Option {oi + 1}</span>}
+                                </span>
+                              </label>
+                            );
+                          })
+                        )}
                       </div>
+                      {quizSubmitted && (
+                        <p className={cn("mt-1.5 flex items-center gap-1 text-xs font-semibold", quizCorrect(q, quizAnswers[qi]) ? "text-emerald-600" : "text-red-500")}>
+                          {quizCorrect(q, quizAnswers[qi]) ? (<><Check size={12} strokeWidth={3} /> Correct</>) : q.type === "qa" ? <>Correct answer: <span className="font-bold">{q.answer ?? ""}</span></> : (null)}
+                        </p>
+                      )}
                     </div>
                   ))}
                   {!quizSubmitted ? (
                     <button onClick={p.onSubmitQuiz} className="rounded-full bg-[#0f172a] px-5 py-2 text-sm font-semibold text-white">Submit quiz</button>
                   ) : (
-                    <div className="rounded-xl bg-emerald-500 text-white p-3 text-sm">Score: {activeLesson.quiz_data.filter((q, qi)=> quizAnswers[qi]===q.correct).length}/{activeLesson.quiz_data.length} — {(()=>{ const s = activeLesson.quiz_data!.filter((q, qi)=> quizAnswers[qi]===q.correct).length; return s === activeLesson.quiz_data!.length ? "Perfect! ✓" : "Keep practicing"; })()}{quizAttempt != null && quizBest != null && activeLesson.quiz_data.length > 0 && <span className="mt-1 block text-xs text-white/85">Attempt {quizAttempt} · Best {quizBest}/{activeLesson.quiz_data.length}</span>}</div>
+                    <div className="rounded-xl bg-emerald-500 text-white p-3 text-sm">Score: {activeLesson.quiz_data.filter((q, qi)=> quizCorrect(q, quizAnswers[qi])).length}/{activeLesson.quiz_data.length} — {(()=>{ const s = activeLesson.quiz_data!.filter((q, qi)=> quizCorrect(q, quizAnswers[qi])).length; return s === activeLesson.quiz_data!.length ? "Perfect! ✓" : "Keep practicing"; })()}{quizAttempt != null && quizBest != null && activeLesson.quiz_data.length > 0 && <span className="mt-1 block text-xs text-white/85">Attempt {quizAttempt} · Best {quizBest}/{activeLesson.quiz_data.length}</span>}</div>
                   )}
                 </div>
               </div>

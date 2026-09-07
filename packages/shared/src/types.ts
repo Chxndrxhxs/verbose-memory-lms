@@ -12,7 +12,24 @@ export interface SharedApiCourse {
   average_rating: string; instructor_name: string;
 }
 export interface LessonKinds { kind: string }
-export interface SharedQuizQ { id: string; question: string; options: string[]; correct: number }
+export type QuizOptionKind = "text" | "image" | "video";
+export interface SharedQuizOption {
+  type: QuizOptionKind;
+  text: string;
+  media_url?: string;
+}
+export type SharedQuizOptionInput = string | SharedQuizOption;
+export type QuizQuestionType = "image" | "video" | "text" | "qa";
+export interface SharedQuizQ {
+  id: string;
+  type?: QuizQuestionType;
+  question: string;
+  prompt?: string;
+  media_url?: string;
+  options: SharedQuizOptionInput[];
+  correct: number;
+  answer?: string;
+}
 export interface SharedLesson {
   id: number; title: string; duration: string; kind: LessonKind;
   resource_url?: string; quiz_data?: SharedQuizQ[];

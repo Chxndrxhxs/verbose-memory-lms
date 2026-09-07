@@ -13,7 +13,21 @@ export type CourseStep1 = {
 
 export type LessonKind = "video" | "pdf" | "quiz" | "link" | "audio" | "text";
 
-export type QuizQ = { id: string; question: string; options: string[]; correct: number };
+export type QuizQuestionType = "image" | "video" | "text" | "qa";
+
+export type QuizOptionKind = "text" | "image" | "video";
+export type QuizOption = { type: QuizOptionKind; text: string; media_url?: string };
+
+export type QuizQ = {
+  id: string;
+  type: QuizQuestionType;
+  question: string;
+  prompt?: string;
+  media_url?: string;
+  options: (string | QuizOption)[];
+  correct: number;
+  answer?: string;
+};
 
 export type Lesson = {
   id: string;

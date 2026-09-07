@@ -4,6 +4,14 @@ import { AlignLeft, Award, Crown, Diamond as DiamondIcon, FileText, Gem, HelpCir
 
 export function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
 
+// legacy quizzes store options as plain strings; normalize to rich options
+export function quizOption(opt: string | { type?: string; text?: string; media_url?: string }): {
+  type: "text" | "image" | "video"; text: string; media_url?: string;
+} {
+  if (typeof opt === "string") return { type: "text", text: opt };
+  return { type: opt.type === "image" || opt.type === "video" ? opt.type : "text", text: opt.text ?? "", media_url: opt.media_url };
+}
+
 export type LessonKind = 'video' | 'pdf' | 'quiz' | 'audio' | 'text' | 'link';
 
 export const LESSON_KIND_BADGE: Record<LessonKind, { Icon: LucideIcon; badge: string }> = {

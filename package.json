@@ -6,6 +6,7 @@
   "scripts": {
     "dev:learner": "pnpm --filter frontend-learner dev",
     "dev:instructor": "pnpm --filter frontend-instructor dev",
+    "dev:admin": "pnpm --filter frontend-admin dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "tsc": "pnpm -r exec tsc --noEmit"

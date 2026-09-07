@@ -1,7 +1,19 @@
-import { Check, Plus, Trash2, LESSON_KIND_BADGE, toEmbed } from "@masterlms/shared";
+import {
+  AlignLeft,
+  Check,
+  HelpCircle,
+  ImageIcon,
+  Plus,
+  Trash2,
+  Video,
+  LESSON_KIND_BADGE,
+  quizOption,
+  toEmbed,
+  type LucideIcon,
+} from "@masterlms/shared";
 import { absoluteMediaUrl } from "../lib/api";
 import { cn } from "../lib/utils";
-import type { Chapter, Lesson, LessonKind } from "../types/courseCreate";
+import type { Chapter, Lesson, LessonKind, QuizQ, QuizQuestionType } from "../types/courseCreate";
 
 const KIND_LABEL: Record<LessonKind, string> = {
   video: "Video",
@@ -23,67 +35,289 @@ type Props = {
   onUploadLesson: (lessonId: string, file: File) => void;
 };
 
+const QUIZ_TYPES: { value: QuizQuestionType; label: string; Icon: LucideIcon }[] = [
+  { value: "text", label: "Text", Icon: AlignLeft },
+  { value: "image", label: "Image", Icon: ImageIcon },
+  { value: "video", label: "Video", Icon: Video },
+  { value: "qa", label: "Q&A", Icon: HelpCircle },
+];
+
+function newQuestion(): QuizQ {
+  return {
+    id: `q${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    type: "text",
+    question: "",
+    options: ["", ""],
+    correct: 0,
+  };
+}
+
+const OPTION_TYPES: { value: "text" | "image" | "video"; label: string; Icon: LucideIcon }[] = [
+  { value: "text", label: "Text", Icon: AlignLeft },
+  { value: "image", label: "Image", Icon: ImageIcon },
+  { value: "video", label: "Video", Icon: Video },
+];
+
+function newOption(): QuizQ["options"][number] {
+  return { type: "text", text: "" };
+}
+
+function mediaEmbed(url: string) {
+  const raw = (url ?? "").trim();
+  if (/^<iframe/i.test(raw)) return raw;
+  return (
+    toEmbed(raw) ??
+    (raw.match(/\.(mp4|webm|mov)(\?|$)/) ? absoluteMediaUrl(raw) : null)
+  );
+}
+
 function QuizEditor({ lesson, onUpdate }: { lesson: Lesson; onUpdate: (patch: Partial<Lesson>) => void }) {
   const questions = lesson.quiz_data ?? [];
 
-  const setQuestions = (next: typeof questions) => onUpdate({ quiz_data: next });
+  const setQuestions = (next: QuizQ[]) => onUpdate({ quiz_data: next });
+  const patch = (qi: number, p: Partial<QuizQ>) =>
+    setQuestions(questions.map((x, i) => (i === qi ? { ...x, ...p } : x)));
+
+  const setType = (qi: number, type: QuizQuestionType) =>
+    setQuestions(
+      questions.map((x, i) => {
+        if (i !== qi) return x;
+        if (type === "qa") {
+          return {
+            ...x,
+            type,
+            options: [],
+            answer: x.answer ?? quizOption(x.options[x.correct]).text,
+          };
+        }
+        const options = x.options.length ? x.options : ["", ""];
+        return {
+          ...x,
+          type,
+          options,
+          correct: Math.max(0, Math.min(x.correct, options.length - 1)),
+        };
+      })
+    );
 
   return (
     <div className="mt-2 space-y-3">
-      {questions.map((q, qi) => (
-        <div key={q.id} className="rounded-xl border border-zinc-200 bg-white p-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-zinc-500">Q{qi + 1}</span>
-            <input
-              value={q.question}
-              onChange={(e) => setQuestions(questions.map((x, i) => i === qi ? { ...x, question: e.target.value } : x))}
-              placeholder={`Question ${qi + 1}`}
-              className="flex-1 rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:bg-white"
-            />
-            <button
-              onClick={() => setQuestions(questions.filter((_, i) => i !== qi))}
-              className="text-xs text-zinc-400 hover:text-red-500"
-            >✕</button>
-          </div>
-          <div className="mt-2 grid gap-1.5">
-            {q.options.map((opt, oi) => (
-              <div key={oi} className="flex items-center gap-2">
-                <button
-                  onClick={() => setQuestions(questions.map((x, i) => i === qi ? { ...x, correct: oi } : x))}
-                  title="Mark as correct answer"
-                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${q.correct === oi ? "border-emerald-500 bg-emerald-500 text-white" : "border-zinc-300"}`}
-                >
-                  {q.correct === oi && <Check size={10} strokeWidth={3} />}
-                </button>
-                <input
-                  value={opt}
-                  onChange={(e) => {
-                    const options = [...q.options];
-                    options[oi] = e.target.value;
-                    setQuestions(questions.map((x, i) => i === qi ? { ...x, options } : x));
-                  }}
-                  placeholder={`Option ${oi + 1}`}
-                  className="flex-1 rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:bg-white"
-                />
-                <button
-                  onClick={() => setQuestions(questions.map((x, i) => {
-                    if (i !== qi) return x;
-                    const options = q.options.filter((_, j) => j !== oi);
-                    return { ...x, options, correct: q.correct >= oi && q.correct > 0 ? q.correct - 1 : q.correct };
-                  }))}
-                  className="text-xs text-zinc-400 hover:text-red-500"
-                >✕</button>
+      {questions.map((q, qi) => {
+        const qtype = q.type ?? "text";
+        const embed = q.media_url ? mediaEmbed(q.media_url) : null;
+        const isVideo = /\.(mp4|webm|mov)(\?|$)/.test(embed ?? "") || /^<iframe/i.test((q.media_url ?? "").trim());
+        return (
+          <div key={q.id} className="rounded-xl border border-zinc-200 bg-white p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-zinc-500">Q{qi + 1}</span>
+              <input
+                value={q.question}
+                onChange={(e) => patch(qi, { question: e.target.value })}
+                placeholder={`Question ${qi + 1}`}
+                className="min-w-0 flex-1 rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:bg-white"
+              />
+              <div className="flex rounded-lg border bg-zinc-100 p-0.5">
+                {QUIZ_TYPES.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setType(qi, t.value)}
+                    className={cn(
+                      "flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors",
+                      qtype === t.value ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800"
+                    )}
+                  >
+                    <t.Icon size={11} strokeWidth={2.5} />
+                    {t.label}
+                  </button>
+                ))}
               </div>
-            ))}
-            <button
-              onClick={() => setQuestions(questions.map((x, i) => i === qi ? { ...x, options: [...x.options, ""] } : x))}
-              className="rounded-lg border bg-white py-1 text-xs"
-            >+ Option</button>
+              <button
+                type="button"
+                onClick={() => setQuestions(questions.filter((_, i) => i !== qi))}
+                className="text-xs text-zinc-400 hover:text-red-500"
+              >✕</button>
+            </div>
+
+            {qtype === "image" && (
+              <div className="mt-2">
+                <input
+                  value={q.media_url ?? ""}
+                  onChange={(e) => patch(qi, { media_url: e.target.value })}
+                  placeholder="https://… image URL shown above the options"
+                  className="w-full rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:bg-white"
+                />
+                {q.media_url ? (
+                  <img
+                    src={q.media_url}
+                    alt=""
+                    onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+                    className="mt-2 max-h-40 w-full rounded-lg border border-zinc-200 bg-zinc-50 object-contain"
+                  />
+                ) : null}
+              </div>
+            )}
+
+            {qtype === "video" && (
+              <div className="mt-2">
+                <input
+                  value={q.media_url ?? ""}
+                  onChange={(e) => patch(qi, { media_url: e.target.value })}
+                  placeholder="https://youtu.be/… or upload an mp4"
+                  className="w-full rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:bg-white"
+                />
+                {q.media_url && embed ? (
+                  <div className="mt-2 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
+                    {isVideo ? (
+                      <video src={embed} controls className="max-h-40 w-full object-contain" />
+                    ) : (
+                      <iframe src={embed} title="Question media" className="aspect-video w-full" allowFullScreen />
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {qtype === "qa" ? (
+              <div className="mt-2">
+                <input
+                  value={q.prompt ?? ""}
+                  onChange={(e) => patch(qi, { prompt: e.target.value })}
+                  placeholder="Instruction (optional) — e.g. “Type the output of the command”"
+                  className="w-full rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:bg-white"
+                />
+                <label className="mt-2 flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5">
+                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-zinc-400">Answer</span>
+                  <input
+                    value={q.answer ?? ""}
+                    onChange={(e) => patch(qi, { answer: e.target.value })}
+                    placeholder="Expected answer learners type in"
+                    className="min-w-0 flex-1 bg-transparent text-xs outline-none"
+                  />
+                </label>
+                <p className="mt-1 text-[10px] text-zinc-400">
+                  Checked loosely — the learner’s typed answer is compared case-insensitively.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-2 grid gap-2">
+                {q.options.map((optEntry, oi) => {
+                  const opt = quizOption(optEntry);
+                  const oEmbed = opt.media_url ? mediaEmbed(opt.media_url) : null;
+                  const oIsVideo = /\.(mp4|webm|mov)(\?|$)/.test(oEmbed ?? "") || /^<iframe/i.test((opt.media_url ?? "").trim());
+                  const patchOption = (p: { type?: "text" | "image" | "video"; text?: string; media_url?: string }) => {
+                    const options = [...q.options];
+                    options[oi] = { ...opt, ...p };
+                    patch(qi, { options });
+                  };
+                  return (
+                    <div key={oi} className="flex items-start gap-2">
+                      <button
+                        type="button"
+                        onClick={() => patch(qi, { correct: oi })}
+                        title="Mark as correct answer"
+                        className={cn("mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border", q.correct === oi ? "border-emerald-500 bg-emerald-500 text-white" : "border-zinc-300")}
+                      >
+                        {q.correct === oi && <Check size={10} strokeWidth={3} />}
+                      </button>
+                      <div className="flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5">
+                        <div className="flex items-center gap-1">
+                          <div className="flex rounded-md border bg-white p-0.5">
+                            {OPTION_TYPES.map((t) => (
+                              <button
+                                key={t.value}
+                                type="button"
+                                onClick={() => patchOption({ type: t.value, media_url: t.value === "text" ? undefined : opt.media_url })}
+                                title={t.label}
+                                className={cn("rounded p-1 transition-colors", opt.type === t.value ? "bg-zinc-900 text-white" : "text-zinc-400 hover:text-zinc-700")}
+                              >
+                                <t.Icon size={12} strokeWidth={2.5} />
+                              </button>
+                            ))}
+                          </div>
+                          {opt.type !== "text" && (
+                            <span className="text-[9px] font-bold uppercase tracking-wide text-zinc-400">
+                              {opt.type === "image" ? "Image option" : "Video option"}
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          value={opt.text}
+                          onChange={(e) => patchOption({ text: e.target.value })}
+                          placeholder={opt.type === "text" ? `Option ${oi + 1}` : "Label (optional, shown under media)"}
+                          className="mt-1 w-full bg-transparent text-xs outline-none placeholder:text-zinc-400"
+                        />
+                        {opt.type === "image" && (
+                          <>
+                            <input
+                              value={opt.media_url ?? ""}
+                              onChange={(e) => patchOption({ media_url: e.target.value })}
+                              placeholder="https://… image URL"
+                              className="mt-1 w-full rounded-md border bg-white px-1.5 py-1 text-xs outline-none"
+                            />
+                            {opt.media_url ? (
+                              <img
+                                src={opt.media_url}
+                                alt=""
+                                onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+                                className="mt-1 max-h-24 w-full rounded-md border border-zinc-200 bg-zinc-100 object-contain"
+                              />
+                            ) : null}
+                          </>
+                        )}
+                        {opt.type === "video" && (
+                          <>
+                            <input
+                              value={opt.media_url ?? ""}
+                              onChange={(e) => patchOption({ media_url: e.target.value })}
+                              placeholder="https://youtu.be/… or mp4 URL"
+                              className="mt-1 w-full rounded-md border bg-white px-1.5 py-1 text-xs outline-none"
+                            />
+                            {opt.media_url && oEmbed ? (
+                              <div className="mt-1 overflow-hidden rounded-md border border-zinc-200 bg-zinc-100">
+                                {oIsVideo ? (
+                                  <video src={oEmbed} controls className="max-h-24 w-full object-contain" />
+                                ) : (
+                                  <iframe src={oEmbed} title={`Option ${oi + 1} media`} className="aspect-video w-full" allowFullScreen />
+                                )}
+                              </div>
+                            ) : null}
+                          </>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setQuestions(
+                            questions.map((x, i) => {
+                              if (i !== qi) return x;
+                              const options = x.options.filter((_, j) => j !== oi);
+                              let correct = x.correct;
+                              if (oi < correct) correct -= 1;
+                              if (oi === correct) correct = 0;
+                              correct = Math.max(0, Math.min(correct, Math.max(options.length - 1, 0)));
+                              return { ...x, options, correct };
+                            })
+                          )
+                        }
+                        className="mt-1 text-xs text-zinc-400 hover:text-red-500"
+                      >✕</button>
+                    </div>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => patch(qi, { options: [...q.options, newOption()] })}
+                  className={cn("rounded-lg border bg-white py-1 text-xs")}
+                >+ Option</button>
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
       <button
-        onClick={() => setQuestions([...questions, { id: `q${Date.now()}`, question: "", options: ["", ""], correct: 0 }])}
+        type="button"
+        onClick={() => setQuestions([...questions, newQuestion()])}
         className="w-full rounded-lg border border-zinc-200 bg-white py-1.5 text-xs font-semibold hover:bg-zinc-50"
       >+ Add question</button>
     </div>

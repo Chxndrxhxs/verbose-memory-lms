@@ -5,6 +5,7 @@ import { ArrowLeft } from "@masterlms/shared";
 import type { SharedApiCourseDetail } from "@masterlms/shared";
 import { toEmbed } from "@masterlms/shared";
 import { absoluteMediaUrl, api } from "../lib/api";
+import { quizCorrect } from "../lib/quiz";
 import { LearnView } from "../components/LearnView";
 
 type ApiCourse = SharedApiCourseDetail;
@@ -17,7 +18,7 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
   const [openSections, setOpenSections] = useState<Set<number>>(() => new Set([0]));
   const [tab, setTab] = useState<"overview" | "notes" | "qna">("overview");
   const [note, setNote] = useState("");
-  const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
+  const [quizAnswers, setQuizAnswers] = useState<Record<number, number | string>>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
@@ -131,7 +132,7 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
 
   const submitQuiz = () => {
     if (active == null || !activeLesson?.quiz_data?.length) return;
-    const correct = activeLesson.quiz_data.filter((q, qi) => quizAnswers[qi] === q.correct).length;
+    const correct = activeLesson.quiz_data.filter((q, qi) => quizCorrect(q, quizAnswers[qi])).length;
     if (correct === activeLesson.quiz_data.length) {
       markComplete();
     }
@@ -184,7 +185,7 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
       onToggleSection={toggleSection}
       onTab={setTab}
       onNote={setNote}
-      onAnswer={(qi, oi) => setQuizAnswers((m) => ({ ...m, [qi]: oi }))}
+      onAnswer={(qi, value) => setQuizAnswers((m) => ({ ...m, [qi]: value }))}
       onMarkComplete={markComplete}
       onSubmitQuiz={submitQuiz}
       onShowRating={() => setShowRating(true)}
