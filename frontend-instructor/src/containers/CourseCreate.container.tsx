@@ -14,24 +14,39 @@ import type { Chapter, CourseStep1, Lesson, LessonKind } from "../types/courseCr
 const step1Schema = z
   .object({
     title: z.string().trim().min(4, "At least 4 characters"),
+    subtitle: z.string().trim().max(255, "Subtitle can't exceed 255 characters"),
     description: z.string().trim().min(10, "Add a short description"),
     pricingType: z.enum(["free", "one_time"]),
     price: z.string(),
     originalPrice: z.string(),
+    discountPercent: z.string(),
   })
   .superRefine((v, ctx) => {
-    if (v.pricingType === "one_time" && Number(v.price) <= 0) {
+    if (v.pricingType !== "one_time") return;
+    const price = Number(v.price);
+    const original = Number(v.originalPrice || 0);
+    if (price <= 0) {
       ctx.addIssue({
         code: "custom",
         path: ["price"],
         message: "Enter a price for paid course",
       });
     }
-    if (
-      v.pricingType === "one_time" &&
-      Number(v.originalPrice) > 0 &&
-      Number(v.price) > Number(v.originalPrice)
-    ) {
+    if (price > 99999.99) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["price"],
+        message: "Price can't exceed ₹99,999.99",
+      });
+    }
+    if (original > 99999.99) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["originalPrice"],
+        message: "MRP can't exceed ₹99,999.99",
+      });
+    }
+    if (original > 0 && price > original) {
       ctx.addIssue({
         code: "custom",
         path: ["price"],
@@ -50,6 +65,7 @@ const initialState: CourseStep1 = {
   pricingType: "free",
   price: "",
   originalPrice: "",
+  discountPercent: "",
   pgFeesToLearner: false,
 };
 
@@ -139,7 +155,9 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
   const [step, setStep] = useState(existingId ? 1 : 0);
   const [courseId, setCourseId] = useState<string | null>(existingId || null);
   const [values, setValues] = useState<CourseStep1>(initialState);
-  const [errors, setErrors] = useState<Partial<Record<"title" | "description" | "price", string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<"title" | "subtitle" | "description" | "price" | "originalPrice", string>>
+  >({});
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [toastAction, setToastAction] = useState<{ label: string; run: () => void } | null>(null);
@@ -212,6 +230,10 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
       pricingType: c.pricing_type ?? "free",
       price: Number(c.price) > 0 ? String(c.price) : "",
       originalPrice: Number(c.original_price) > 0 ? String(c.original_price) : "",
+      discountPercent:
+        Number(c.original_price) > 0 && Number(c.price) > 0
+          ? String(Math.max(0, Math.round((1 - Number(c.price) / Number(c.original_price)) * 100)))
+          : "",
       pgFeesToLearner: c.pg_fees_to_learner ?? false,
     });
     setCoverImage(c.cover_image ?? "");
@@ -237,6 +259,14 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
 
   const step1Mutation = useMutation({
     mutationFn: async () => {
+      if (values.pricingType === "one_time") {
+        const price = Number(values.price);
+        const original = Number(values.originalPrice || 0);
+        if (!Number.isFinite(price) || price <= 0) throw new Error("Enter a price for paid course");
+        if (price > 99999.99) throw new Error("Price can't exceed ₹99,999.99");
+        if (original > 99999.99) throw new Error("MRP can't exceed ₹99,999.99");
+        if (original > 0 && price > original) throw new Error("Selling price can't exceed MRP");
+      }
       const price = values.pricingType === "free" ? 0 : Number(values.price);
       const originalPrice = values.pricingType === "free" ? 0 : Number(values.originalPrice || 0);
       const pricing = { price, pricing_type: values.pricingType, original_price: originalPrice, pg_fees_to_learner: values.pgFeesToLearner };
@@ -268,7 +298,8 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
       const next: typeof errors = {};
       for (const issue of parsed.error.issues) {
         const key = String(issue.path[0]) as keyof typeof errors;
-        if (key === "title" || key === "description" || key === "price") next[key] = issue.message;
+        if (key === "title" || key === "subtitle" || key === "description" || key === "price" || key === "originalPrice")
+          next[key] = issue.message;
       }
       setErrors(next);
       return;
@@ -320,6 +351,11 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
     } finally {
       setUploadingId(null);
     }
+  };
+
+  const uploadQuizMedia = async (file: File): Promise<string> => {
+    const { url } = await uploadFile(file);
+    return absoluteMediaUrl(url) ?? url;
   };
 
   const saveCourse = async (publish: boolean) => {
@@ -439,6 +475,7 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
             onUpdateLesson={updateLesson}
             onDeleteLesson={deleteLesson}
             onUploadLesson={uploadLessonFile}
+            onUploadQuizMedia={uploadQuizMedia}
           />
         </div>
       )}

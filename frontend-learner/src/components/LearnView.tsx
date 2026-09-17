@@ -135,7 +135,7 @@ export function LearnView(p: Props) {
                         if (isVideo) {
                           src = /^<iframe/i.test(raw) ? raw : (toEmbed(raw) ?? (raw.match(/\.(mp4|webm|mov)(\?|$)/) ? absoluteMediaUrl(raw) : null));
                         } else {
-                          src = raw;
+                          src = absoluteMediaUrl(raw);
                         }
                         return src ? (
                           isVideo && src ? (
@@ -176,7 +176,7 @@ export function LearnView(p: Props) {
                                 />
                                 <span className="min-w-0 flex-1">
                                   {opt.type === "image" && opt.media_url && (
-                                    <img src={opt.media_url} alt="" onError={(e) => { const el = e.target as HTMLImageElement; el.parentElement!.style.display = "none"; }} className="mb-1 max-h-28 w-full rounded-lg border object-contain bg-zinc-100" />
+                                    <img src={absoluteMediaUrl(opt.media_url) ?? opt.media_url} alt="" onError={(e) => { const el = e.target as HTMLImageElement; el.parentElement!.style.display = "none"; }} className="mb-1 max-h-28 w-full rounded-lg border object-contain bg-zinc-100" />
                                   )}
                                   {opt.type === "video" && opt.media_url && oSrc && (
                                     oMp4 ? (

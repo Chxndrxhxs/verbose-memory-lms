@@ -49,7 +49,10 @@ class VerifyOTPSerializer(serializers.Serializer):
         try:
             otp = OTP.objects.filter(mobile=attrs["mobile"], is_used=False).latest("created_at")
         except OTP.DoesNotExist:
-            raise serializers.ValidationError("No OTP sent") from None
+            if OTP.objects.filter(mobile=attrs["mobile"]).exists():
+                msg = "OTP already used or expired — request a new one"
+                raise serializers.ValidationError(msg) from None
+            raise serializers.ValidationError("No OTP sent for this mobile") from None
         if not otp.is_valid() or otp.code != attrs["code"]:
             otp.attempts += 1
             if otp.attempts >= OTP.MAX_ATTEMPTS:

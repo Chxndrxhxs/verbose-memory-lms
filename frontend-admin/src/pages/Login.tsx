@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,6 +23,7 @@ export default function Login() {
   const { setUser } = useAuth();
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [toast, setToast] = useState<string | null>(null);
+  const verifyDone = useRef(false);
 
   const phoneForm = useForm<z.infer<typeof phoneSchema>>({
     resolver: zodResolver(phoneSchema),
@@ -45,6 +46,7 @@ export default function Login() {
         body: JSON.stringify({ mobile }),
       }),
     onSuccess: (res) => {
+      verifyDone.current = false;
       showToast(`OTP sent (demo): ${res.mock_code}`);
       setStep("otp");
     },
@@ -52,22 +54,25 @@ export default function Login() {
   });
 
   const verify = useMutation({
-    mutationFn: ({ mobile, code }: { mobile: string; code: string }) =>
-      api<{ user: VerifyUser; is_new: boolean }>("/auth/verify-otp", {
+    mutationFn: async ({ mobile, code }: { mobile: string; code: string }) => {
+      const data = await api<{ user: VerifyUser; is_new: boolean }>("/auth/verify-otp", {
         method: "POST",
         body: JSON.stringify({ mobile, code }),
-      }),
-    onSuccess: (data) => {
+      });
       if (data.user.role !== "admin") {
-        showToast(`This account is a ${data.user.role}, not an admin.`);
-        return;
+        await api("/auth/become-admin", { method: "POST" });
       }
+      const me = await api<VerifyUser>("/users/me");
+      return { me, isNew: data.is_new };
+    },
+    onSuccess: ({ me }) => {
+      verifyDone.current = true;
       setUser({
-        name: data.user.name || "Admin",
-        email: data.user.email,
-        mobile: data.user.mobile,
-        role: data.user.role,
-        avatar: data.user.avatar,
+        name: me.name || "Admin",
+        email: me.email,
+        mobile: me.mobile,
+        role: "admin",
+        avatar: me.avatar,
       });
       nav("/");
     },
@@ -130,11 +135,18 @@ export default function Login() {
               </p>
             </form>
           ) : (
-            <form onSubmit={otpForm.handleSubmit((v) => verify.mutate({ mobile: phone, code: v.otp }))} className="mt-6 space-y-5">
+            <form
+              onSubmit={otpForm.handleSubmit((v) => {
+                if (verifyDone.current || verify.isPending) return;
+                verify.mutate({ mobile: phone, code: v.otp });
+              })}
+              className="mt-6 space-y-5"
+            >
               <div>
                 <label className="text-xs font-semibold text-zinc-700">Enter OTP</label>
                 <input
                   {...otpForm.register("otp")}
+                  disabled={verify.isPending || verifyDone.current}
                   onChange={(e) => otpForm.setValue("otp", e.target.value.replace(/\D/g, "").slice(0, 4), { shouldValidate: true })}
                   placeholder="1 2 3 4"
                   className="mt-1.5 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3.5 text-center text-xl tracking-[0.7em] outline-none focus:border-zinc-900 focus:bg-white"
@@ -152,7 +164,7 @@ export default function Login() {
               </button>
               <button
                 type="button"
-                onClick={() => setStep("phone")}
+                onClick={() => { verifyDone.current = false; setStep("phone"); }}
                 className="w-full rounded-full border border-zinc-200 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
               >
                 Change number

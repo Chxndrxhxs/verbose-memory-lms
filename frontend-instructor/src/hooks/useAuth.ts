@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { SharedUser as User } from "@masterlms/shared";
+import { api, type SharedUser as User } from "@masterlms/shared";
 type State = {
   user: User | null;
   isLoading: boolean;
@@ -30,17 +30,14 @@ export const useAuth = create<State>((set) => ({
     set({ user });
   },
   logout: async () => {
-    try { await fetch(`${import.meta.env.VITE_API_URL ?? "http://localhost:8000/api/v1"}/auth/logout`, { method: "POST", credentials: "include" }); } catch {}
+    try { await api("/auth/logout", { method: "POST" }); } catch {}
     try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
     set({ user: null });
   },
   fetchMe: async () => {
     set({ isLoading: true });
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL ?? "http://localhost:8000/api/v1"}/users/me`, { credentials: "include" });
-      if (!res.ok) throw new Error();
-      const json = await res.json();
-      const user = json.data as User;
+      const user = await api<User>("/users/me");
       try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user)); } catch {}
       set({ user, isLoading: false });
     } catch {

@@ -10,6 +10,7 @@ urlpatterns = [
     path("api/v1/", include("apps.enrollments.urls")),
     path("api/v1/", include("apps.payments.urls")),
     path("api/v1/", include("apps.adminpanel.urls")),
+    path("api/v1/", include("apps.assignments.urls")),
 ]
 
 if settings.DEBUG:

@@ -8,6 +8,7 @@ export type CourseStep1 = {
   pricingType: PricingType;
   price: string;
   originalPrice: string;
+  discountPercent: string;
   pgFeesToLearner: boolean;
 };
 

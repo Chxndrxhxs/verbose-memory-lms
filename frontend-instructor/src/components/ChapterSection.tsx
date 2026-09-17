@@ -5,12 +5,14 @@ import {
   ImageIcon,
   Plus,
   Trash2,
+  Upload,
   Video,
   LESSON_KIND_BADGE,
   quizOption,
   toEmbed,
   type LucideIcon,
 } from "@masterlms/shared";
+import { useState } from "react";
 import { absoluteMediaUrl } from "../lib/api";
 import { cn } from "../lib/utils";
 import type { Chapter, Lesson, LessonKind, QuizQ, QuizQuestionType } from "../types/courseCreate";
@@ -33,6 +35,7 @@ type Props = {
   onUpdateLesson: (lessonId: string, patch: Partial<Lesson>) => void;
   onDeleteLesson: (lessonId: string) => void;
   onUploadLesson: (lessonId: string, file: File) => void;
+  onUploadQuizMedia: (file: File) => Promise<string>;
 };
 
 const QUIZ_TYPES: { value: QuizQuestionType; label: string; Icon: LucideIcon }[] = [
@@ -62,6 +65,32 @@ function newOption(): QuizQ["options"][number] {
   return { type: "text", text: "" };
 }
 
+function UploadMediaButton({ accept, uploading, onFile }: {
+  accept: string;
+  uploading: boolean;
+  onFile: (file: File) => void;
+}) {
+  return (
+    <label className={cn("shrink-0 cursor-pointer rounded-lg border bg-white px-2.5 py-1.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-50", uploading && "opacity-60")}>
+      {uploading ? (
+        "Uploading…"
+      ) : (
+        <span className="inline-flex items-center gap-1"><Upload size={11} /> Upload</span>
+      )}
+      <input
+        type="file"
+        accept={accept}
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onFile(f);
+          e.currentTarget.value = "";
+        }}
+      />
+    </label>
+  );
+}
+
 function mediaEmbed(url: string) {
   const raw = (url ?? "").trim();
   if (/^<iframe/i.test(raw)) return raw;
@@ -71,12 +100,29 @@ function mediaEmbed(url: string) {
   );
 }
 
-function QuizEditor({ lesson, onUpdate }: { lesson: Lesson; onUpdate: (patch: Partial<Lesson>) => void }) {
+function QuizEditor({ lesson, onUpdate, onUploadMedia }: {
+  lesson: Lesson;
+  onUpdate: (patch: Partial<Lesson>) => void;
+  onUploadMedia: (file: File) => Promise<string>;
+}) {
   const questions = lesson.quiz_data ?? [];
+  const [busy, setBusy] = useState<string | null>(null);
 
   const setQuestions = (next: QuizQ[]) => onUpdate({ quiz_data: next });
   const patch = (qi: number, p: Partial<QuizQ>) =>
     setQuestions(questions.map((x, i) => (i === qi ? { ...x, ...p } : x)));
+
+  const uploadMedia = async (file: File, key: string, apply: (url: string) => void) => {
+    if (busy) return;
+    setBusy(key);
+    try {
+      apply(await onUploadMedia(file));
+    } catch {
+      alert("Upload failed — try again");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const setType = (qi: number, type: QuizQuestionType) =>
     setQuestions(
@@ -141,15 +187,22 @@ function QuizEditor({ lesson, onUpdate }: { lesson: Lesson; onUpdate: (patch: Pa
 
             {qtype === "image" && (
               <div className="mt-2">
-                <input
-                  value={q.media_url ?? ""}
-                  onChange={(e) => patch(qi, { media_url: e.target.value })}
-                  placeholder="https://… image URL shown above the options"
-                  className="w-full rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:bg-white"
-                />
+                <div className="flex gap-1.5">
+                  <input
+                    value={q.media_url ?? ""}
+                    onChange={(e) => patch(qi, { media_url: e.target.value })}
+                    placeholder="Image URL (or upload a file)"
+                    className="min-w-0 flex-1 rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:bg-white"
+                  />
+                  <UploadMediaButton
+                    accept="image/*"
+                    uploading={busy === `q${qi}-media`}
+                    onFile={(f) => uploadMedia(f, `q${qi}-media`, (url) => patch(qi, { media_url: url }))}
+                  />
+                </div>
                 {q.media_url ? (
                   <img
-                    src={q.media_url}
+                    src={absoluteMediaUrl(q.media_url) ?? q.media_url}
                     alt=""
                     onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
                     className="mt-2 max-h-40 w-full rounded-lg border border-zinc-200 bg-zinc-50 object-contain"
@@ -160,12 +213,19 @@ function QuizEditor({ lesson, onUpdate }: { lesson: Lesson; onUpdate: (patch: Pa
 
             {qtype === "video" && (
               <div className="mt-2">
-                <input
-                  value={q.media_url ?? ""}
-                  onChange={(e) => patch(qi, { media_url: e.target.value })}
-                  placeholder="https://youtu.be/… or upload an mp4"
-                  className="w-full rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:bg-white"
-                />
+                <div className="flex gap-1.5">
+                  <input
+                    value={q.media_url ?? ""}
+                    onChange={(e) => patch(qi, { media_url: e.target.value })}
+                    placeholder="https://youtu.be/… or upload an mp4"
+                    className="min-w-0 flex-1 rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:bg-white"
+                  />
+                  <UploadMediaButton
+                    accept="video/*"
+                    uploading={busy === `q${qi}-media`}
+                    onFile={(f) => uploadMedia(f, `q${qi}-media`, (url) => patch(qi, { media_url: url }))}
+                  />
+                </div>
                 {q.media_url && embed ? (
                   <div className="mt-2 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
                     {isVideo ? (
@@ -249,15 +309,22 @@ function QuizEditor({ lesson, onUpdate }: { lesson: Lesson; onUpdate: (patch: Pa
                         />
                         {opt.type === "image" && (
                           <>
-                            <input
-                              value={opt.media_url ?? ""}
-                              onChange={(e) => patchOption({ media_url: e.target.value })}
-                              placeholder="https://… image URL"
-                              className="mt-1 w-full rounded-md border bg-white px-1.5 py-1 text-xs outline-none"
-                            />
+                            <div className="mt-1 flex gap-1.5">
+                              <input
+                                value={opt.media_url ?? ""}
+                                onChange={(e) => patchOption({ media_url: e.target.value })}
+                                placeholder="Image URL (or upload a file)"
+                                className="min-w-0 flex-1 rounded-md border bg-white px-1.5 py-1 text-xs outline-none"
+                              />
+                              <UploadMediaButton
+                                accept="image/*"
+                                uploading={busy === `o${qi}-${oi}-media`}
+                                onFile={(f) => uploadMedia(f, `o${qi}-${oi}-media`, (url) => patchOption({ media_url: url }))}
+                              />
+                            </div>
                             {opt.media_url ? (
                               <img
-                                src={opt.media_url}
+                                src={absoluteMediaUrl(opt.media_url) ?? opt.media_url}
                                 alt=""
                                 onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
                                 className="mt-1 max-h-24 w-full rounded-md border border-zinc-200 bg-zinc-100 object-contain"
@@ -267,12 +334,19 @@ function QuizEditor({ lesson, onUpdate }: { lesson: Lesson; onUpdate: (patch: Pa
                         )}
                         {opt.type === "video" && (
                           <>
-                            <input
-                              value={opt.media_url ?? ""}
-                              onChange={(e) => patchOption({ media_url: e.target.value })}
-                              placeholder="https://youtu.be/… or mp4 URL"
-                              className="mt-1 w-full rounded-md border bg-white px-1.5 py-1 text-xs outline-none"
-                            />
+                            <div className="mt-1 flex gap-1.5">
+                              <input
+                                value={opt.media_url ?? ""}
+                                onChange={(e) => patchOption({ media_url: e.target.value })}
+                                placeholder="https://youtu.be/… or upload mp4"
+                                className="min-w-0 flex-1 rounded-md border bg-white px-1.5 py-1 text-xs outline-none"
+                              />
+                              <UploadMediaButton
+                                accept="video/*"
+                                uploading={busy === `o${qi}-${oi}-media`}
+                                onFile={(f) => uploadMedia(f, `o${qi}-${oi}-media`, (url) => patchOption({ media_url: url }))}
+                              />
+                            </div>
                             {opt.media_url && oEmbed ? (
                               <div className="mt-1 overflow-hidden rounded-md border border-zinc-200 bg-zinc-100">
                                 {oIsVideo ? (
@@ -324,11 +398,12 @@ function QuizEditor({ lesson, onUpdate }: { lesson: Lesson; onUpdate: (patch: Pa
   );
 }
 
-function LessonEditor({ lesson, onUpdate, uploading, onUpload }: {
+function LessonEditor({ lesson, onUpdate, uploading, onUpload, onUploadMedia }: {
   lesson: Lesson;
   onUpdate: (patch: Partial<Lesson>) => void;
   uploading: boolean;
   onUpload: (file: File) => void;
+  onUploadMedia: (file: File) => Promise<string>;
 }) {
   switch (lesson.kind) {
     case "text":
@@ -349,7 +424,7 @@ function LessonEditor({ lesson, onUpdate, uploading, onUpload }: {
         </>
       );
     case "quiz":
-      return <QuizEditor lesson={lesson} onUpdate={onUpdate} />;
+      return <QuizEditor lesson={lesson} onUpdate={onUpdate} onUploadMedia={onUploadMedia} />;
     case "video": {
       const isEmbedCode = /^<iframe/i.test(lesson.resource_url.trim());
       const embedUrl = toEmbed(lesson.resource_url) ?? (
@@ -437,7 +512,7 @@ function LessonEditor({ lesson, onUpdate, uploading, onUpload }: {
   }
 }
 
-export function ChapterSection({ chapter, uploadingId, onRename, onDelete, onAddLesson, onUpdateLesson, onDeleteLesson, onUploadLesson }: Props) {
+export function ChapterSection({ chapter, uploadingId, onRename, onDelete, onAddLesson, onUpdateLesson, onDeleteLesson, onUploadLesson, onUploadQuizMedia }: Props) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
       <div className="flex items-center justify-between gap-2">
@@ -490,6 +565,7 @@ export function ChapterSection({ chapter, uploadingId, onRename, onDelete, onAdd
                     onUpdate={(patch) => onUpdateLesson(l.id, patch)}
                     uploading={uploadingId === l.id}
                     onUpload={(file) => onUploadLesson(l.id, file)}
+                    onUploadMedia={onUploadQuizMedia}
                   />
                 </div>
                 <button onClick={() => onDeleteLesson(l.id)} className="text-xs text-zinc-400 hover:text-red-500">

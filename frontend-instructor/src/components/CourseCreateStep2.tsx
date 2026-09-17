@@ -18,6 +18,7 @@ type Props = {
   onUpdateLesson: (chapterId: string, lessonId: string, patch: Partial<Lesson>) => void;
   onDeleteLesson: (chapterId: string, lessonId: string) => void;
   onUploadLesson: (chapterId: string, lessonId: string, file: File) => void;
+  onUploadQuizMedia: (file: File) => Promise<string>;
 };
 
 export function CourseCreateStep2(props: Props) {
@@ -35,6 +36,7 @@ export function CourseCreateStep2(props: Props) {
     onUpdateLesson,
     onDeleteLesson,
     onUploadLesson,
+    onUploadQuizMedia,
   } = props;
 
   const empty = chapters.length === 0;
@@ -48,6 +50,7 @@ export function CourseCreateStep2(props: Props) {
     onUpdateLesson: (lid: string, patch: Partial<Lesson>) => onUpdateLesson(ch.id, lid, patch),
     onDeleteLesson: (lid: string) => onDeleteLesson(ch.id, lid),
     onUploadLesson: (lid: string, file: File) => onUploadLesson(ch.id, lid, file),
+    onUploadQuizMedia,
   });
 
   return (

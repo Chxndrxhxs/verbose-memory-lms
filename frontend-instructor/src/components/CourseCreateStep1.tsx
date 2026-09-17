@@ -4,7 +4,7 @@ import type { CourseStep1, PricingType } from "../types/courseCreate";
 
 type Props = {
   values: CourseStep1;
-  errors: Partial<Record<"title" | "description" | "price", string>>;
+  errors: Partial<Record<"title" | "subtitle" | "description" | "price" | "originalPrice", string>>;
   isSubmitting: boolean;
   editing?: boolean;
   onAiClick: () => void;
@@ -15,18 +15,21 @@ type Props = {
 const FREE: PricingType = "free";
 const ONE_TIME: PricingType = "one_time";
 
-function discountPct(original: string, price: string): number {
+function finalAmount(original: string, pctInput: number): string {
   const o = Number(original);
-  const p = Number(price);
-  if (!o || !p || o <= 0 || p <= 0) return 0;
-  const pct = Math.round(((o - p) / o) * 100);
-  return pct > 0 && pct < 100 ? pct : 0;
+  if (!o || o <= 0) return "";
+  const pct = Math.max(0, Math.min(99, Number(pctInput) || 0));
+  return String(Number((o * (1 - pct / 100)).toFixed(2)));
 }
 
 export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiClick, onChange, onSubmit }: Props) {
-  const pct = discountPct(values.originalPrice, values.price);
+  const pct = Math.min(99, Math.max(0, Number(values.discountPercent) || 0));
   const priceNum = Number(values.price) || 0;
   const keep = Math.round(priceNum * 0.85);
+
+  const setOriginal = (v: string) => onChange({ originalPrice: v, price: finalAmount(v, pct) });
+  const setDiscount = (v: string) =>
+    onChange({ discountPercent: v, price: finalAmount(values.originalPrice, Number(v)) });
 
   return (
     <div className="rounded-[20px] bg-white p-6 shadow-sm sm:p-8">
@@ -47,14 +50,19 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
         </div>
 
         <div>
-          <label htmlFor="subtitle" className="mb-2 block text-sm font-semibold text-zinc-900">Subtitle</label>
+          <div className="mb-2 flex items-center justify-between">
+            <label htmlFor="subtitle" className="block text-sm font-semibold text-zinc-900">Subtitle</label>
+            <span className="text-[10px] font-semibold text-zinc-400">{values.subtitle.length}/255</span>
+          </div>
           <input
             id="subtitle"
             value={values.subtitle}
+            maxLength={255}
             onChange={(e) => onChange({ subtitle: e.target.value })}
             placeholder="Short tagline — shown on course cards"
-            className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3.5 text-sm outline-none transition-colors focus:border-[#3478ff]"
+            className={cn("w-full rounded-xl border bg-white px-4 py-3.5 text-sm outline-none transition-colors focus:border-[#3478ff]", errors.subtitle ? "border-red-400" : "border-zinc-200")}
           />
+          {errors.subtitle && <p className="mt-1 text-xs text-red-500">{errors.subtitle}</p>}
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#eef1ff] p-4">
@@ -118,7 +126,7 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
               <input
                 type="radio"
                 checked={values.pricingType === FREE}
-                onChange={() => onChange({ pricingType: FREE, price: "", originalPrice: "" })}
+                onChange={() => onChange({ pricingType: FREE, price: "", originalPrice: "", discountPercent: "" })}
                 className="mt-1 h-4 w-4 accent-[#3478ff]"
               />
               <div>
@@ -145,37 +153,56 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
                 <div className="mt-4 space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-zinc-900">Total price *</label>
+                      <label className="mb-2 block text-sm font-medium text-zinc-900">Actual amount *</label>
                       <div className="flex items-center overflow-hidden rounded-xl border border-zinc-200 bg-white focus-within:border-[#3478ff]">
                         <span className="flex items-center self-stretch border-r border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-600">₹</span>
                         <input
                           type="number"
                           min="0"
+                          max="99999.99"
+                          step="0.01"
                           value={values.originalPrice}
-                          onChange={(e) => onChange({ originalPrice: e.target.value })}
-                          placeholder="Enter price"
+                          onChange={(e) => setOriginal(e.target.value)}
+                          placeholder="Enter amount before discount"
                           className="w-full px-4 py-3 text-sm outline-none"
                         />
                       </div>
+                      {errors.originalPrice && <p className="mt-1 text-xs text-red-500">{errors.originalPrice}</p>}
                     </div>
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-zinc-900">
-                        Discounted price <span className="text-zinc-400">({pct > 0 ? `${pct}% off` : "0% off"})</span> *
-                      </label>
+                      <label className="mb-2 block text-sm font-medium text-zinc-900">Discount % <span className="text-zinc-400">(0–99)</span></label>
                       <div className="flex items-center overflow-hidden rounded-xl border border-zinc-200 bg-white focus-within:border-[#3478ff]">
-                        <span className="flex items-center self-stretch border-r border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-600">₹</span>
                         <input
                           type="number"
                           min="0"
-                          value={values.price}
-                          onChange={(e) => onChange({ price: e.target.value })}
-                          placeholder="Enter discounted price"
+                          max="99"
+                          step="1"
+                          value={values.discountPercent}
+                          onChange={(e) => setDiscount(e.target.value)}
+                          placeholder="e.g. 20"
                           className="w-full px-4 py-3 text-sm outline-none"
                         />
+                        <span className="flex items-center self-stretch bg-zinc-50 px-3 text-sm text-zinc-600">%</span>
                       </div>
                       {errors.price && <p className="mt-1 text-xs text-red-500">{errors.price}</p>}
                     </div>
                   </div>
+
+                  {Number(values.originalPrice) > 0 && (
+                    <div className="flex items-center justify-between rounded-xl bg-zinc-50 px-4 py-3">
+                      <span className="text-sm text-zinc-600">
+                        Final amount{" "}
+                        {pct > 0 ? (
+                          <span className="text-emerald-700">({pct}% off ₹{Number(values.originalPrice).toLocaleString("en-IN")})</span>
+                        ) : (
+                          <span className="text-zinc-400">(no discount)</span>
+                        )}
+                      </span>
+                      <span className="text-lg font-bold tabular-nums">
+                        {priceNum > 0 ? `₹${priceNum.toLocaleString("en-IN")}` : "—"}
+                      </span>
+                    </div>
+                  )}
 
                   <label className="flex cursor-pointer items-center gap-2.5 text-sm text-zinc-700">
                     <input

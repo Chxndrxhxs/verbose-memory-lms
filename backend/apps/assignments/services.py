@@ -1,0 +1,721 @@
+import logging
+
+from django.db import transaction
+from django.utils import timezone
+
+from .models import (
+    Assignment,
+    AssignmentAttempt,
+    AssignmentModel,
+    AssignmentModelStep,
+    AssignmentQuestion,
+    AssignmentResult,
+)
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_SECURITY = {
+    "fullscreen": False,
+    "camera": True,
+    "microphone": False,
+    "block_tab_switch": True,
+    "block_copy": True,
+    "block_paste": True,
+    "block_right_click": True,
+    "block_shortcuts": True,
+    "violations_before_auto_submit": 3,
+}
+
+DEFAULT_RESULTS = {
+    "instant_result": True,
+    "show_marks": True,
+    "show_correct_answers": True,
+    "show_explanations": True,
+}
+
+# ---------------------------------------------------------------------------
+# Duration calculation
+# ---------------------------------------------------------------------------
+
+
+def node_duration_seconds(node: AssignmentModelStep) -> int:
+    """Duration of one step. Leaf steps use their explicit duration; parents sum (sequential)
+    or take the max (parallel) over children according to the model execution mode."""
+    children = list(node.children.all())
+    if not children:
+        return max(1, node.duration_seconds)
+    child_durations = [node_duration_seconds(c) for c in children]
+    mode = node.model.execution_mode
+    if mode == AssignmentModel.ExecutionMode.PARALLEL:
+        return max(child_durations)
+    return sum(child_durations)
+
+
+def model_duration_seconds(model: AssignmentModel) -> int:
+    root_steps = list(model.steps.filter(parent__isnull=True))
+    durations = [node_duration_seconds(step) for step in root_steps]
+    if model.execution_mode == AssignmentModel.ExecutionMode.PARALLEL:
+        return max(durations, default=0)
+    return sum(durations)
+
+
+def format_duration_hms(total_seconds: int) -> str:
+    hours, rem = divmod(int(total_seconds), 3600)
+    minutes, seconds = divmod(rem, 60)
+    if hours and minutes:
+        return f"{hours}h {minutes}m"
+    if hours:
+        return f"{hours}h"
+    if minutes:
+        return f"{minutes}m"
+    return f"{seconds}s"
+
+
+# ---------------------------------------------------------------------------
+# Assignment structure management
+# ---------------------------------------------------------------------------
+
+
+@transaction.atomic
+def replace_assignment_structure(assignment: Assignment, models_payload: list[dict]) -> None:
+    """Replace all models/steps/questions of an assignment from the wizard payload.
+
+    Each model payload is:
+      {code, name, description, execution_mode, is_published,
+       steps: [{kind, name, description, duration_seconds, children: [...], questions: [...]}]}
+    Leaf steps carry questions; question payloads include correct_answer etc.
+    """
+    assignment.models.all().delete()
+    for position, model_payload in enumerate(models_payload):
+        model = AssignmentModel.objects.create(
+            assignment=assignment,
+            code=model_payload.get("code", f"Model {position + 1}"),
+            name=model_payload.get("name", f"Model {position + 1}"),
+            description=model_payload.get("description", ""),
+            execution_mode=model_payload.get(
+                "execution_mode", AssignmentModel.ExecutionMode.SEQUENTIAL
+            ),
+            is_published=bool(model_payload.get("is_published", True)),
+            position=position,
+        )
+        _replace_steps(model, None, model_payload.get("steps", []))
+
+
+def _replace_steps(
+    model: AssignmentModel, parent: AssignmentModelStep | None, steps_payload: list[dict]
+) -> None:
+    for index, step_payload in enumerate(steps_payload):
+        step = AssignmentModelStep.objects.create(
+            model=model,
+            parent=parent,
+            kind=step_payload.get("kind", AssignmentModelStep.Kind.TEST),
+            name=step_payload.get("name", f"Step {index + 1}"),
+            description=step_payload.get("description", ""),
+            duration_seconds=int(step_payload.get("duration_seconds", 900)),
+            position=index,
+        )
+        for q_index, q_payload in enumerate(step_payload.get("questions", [])):
+            AssignmentQuestion.objects.create(
+                assignment=model.assignment,
+                step=step,
+                question=q_payload.get("question", ""),
+                options=list(q_payload.get("options", ["", "", "", ""])),
+                correct_answer=int(q_payload.get("correct_answer", 0)),
+                explanation=q_payload.get("explanation", ""),
+                marks=q_payload.get("marks", 1),
+                difficulty=q_payload.get("difficulty", "medium"),
+                topic=q_payload.get("topic", ""),
+                position=q_index,
+            )
+        _replace_steps(model, step, step_payload.get("children", []))
+
+
+def save_assignment_fields(assignment: Assignment | None, payload: dict, user) -> Assignment:
+    """Create or update an assignment (top-level fields only - not models)."""
+    defaults = {k: payload[k] for k in payload if k not in ("models", "steps", "questions")}
+    if defaults.get("access") is None:
+        defaults["access"] = {}
+    if not assignment:
+        assignment = Assignment(created_by=user, **defaults)
+    else:
+        for key, value in defaults.items():
+            setattr(assignment, key, value)
+    assignment.save()
+    return assignment
+
+
+# ---------------------------------------------------------------------------
+# Canonical JSON payloads for the frontends
+# ---------------------------------------------------------------------------
+
+
+def step_builder(step: AssignmentModelStep) -> dict:
+    """Serialise a step with its computed duration for the UI."""
+    children = [step_builder(c) for c in step.children.all()]
+    return {
+        "id": step.id,
+        "kind": step.kind,
+        "name": step.name,
+        "description": step.description,
+        "duration_seconds": node_duration_seconds(step),
+        "position": step.position,
+        "children": children,
+        "questions": [
+            {
+                "id": q.id,
+                "question": q.question,
+                "options": q.options,
+                "correct_answer": q.correct_answer,
+                "explanation": q.explanation,
+                "marks": str(q.marks),
+                "difficulty": q.difficulty,
+                "topic": q.topic,
+            }
+            for q in step.questions.order_by("position", "id")
+        ],
+    }
+
+
+def model_payload(model: AssignmentModel, include_questions: bool = True) -> dict:
+    total_questions = sum(len(step.questions.all()) for step in collect_leaf_steps(model))
+    return {
+        "id": model.id,
+        "code": model.code,
+        "name": model.name,
+        "description": model.description,
+        "execution_mode": model.execution_mode,
+        "is_published": model.is_published,
+        "position": model.position,
+        "duration_seconds": model_duration_seconds(model),
+        "total_questions": total_questions,
+        "steps": [step_builder(step) for step in model.steps.all()],
+    }
+
+
+def model_preview(model: AssignmentModel) -> dict:
+    """Compact model summary for list cards / model picker (no heavy steps)."""
+    return {
+        "id": model.id,
+        "code": model.code,
+        "name": model.name,
+        "description": model.description,
+        "execution_mode": model.execution_mode,
+        "is_published": model.is_published,
+        "duration_seconds": model_duration_seconds(model),
+        "duration_label": format_duration_hms(model_duration_seconds(model)),
+        "total_questions": sum(len(step.questions.all()) for step in collect_leaf_steps(model)),
+    }
+
+
+def assignment_payload(assignment: Assignment, include_models: bool = True) -> dict:
+    data = {
+        "id": assignment.id,
+        "title": assignment.title,
+        "description": assignment.description,
+        "instructions": assignment.instructions,
+        "difficulty": assignment.difficulty,
+        "status": assignment.status,
+        "access_type": assignment.access_type,
+        "access": assignment.access,
+        "security": assignment.security or dict(DEFAULT_SECURITY),
+        "results": assignment.results or dict(DEFAULT_RESULTS),
+        "marks_per_correct": str(assignment.marks_per_correct),
+        "negative_marking": assignment.negative_marking,
+        "negative_marks_per_wrong": str(assignment.negative_marks_per_wrong),
+        "marks_unanswered": str(assignment.marks_unanswered),
+        "passing_percentage": str(assignment.passing_percentage),
+        "max_attempts": assignment.max_attempts,
+        "randomize_questions": assignment.randomize_questions,
+        "randomize_options": assignment.randomize_options,
+        "start_date": assignment.start_date.isoformat() if assignment.start_date else None,
+        "end_date": assignment.end_date.isoformat() if assignment.end_date else None,
+        "created_by": {
+            "id": assignment.created_by_id,
+            "name": getattr(assignment.created_by, "username", ""),
+            "role": getattr(assignment.created_by, "role", ""),
+        }
+        if assignment.created_by
+        else None,
+        "created_at": assignment.created_at.isoformat(),
+        "updated_at": assignment.updated_at.isoformat(),
+        "published_at": assignment.published_at.isoformat() if assignment.published_at else None,
+        "source_document": assignment.source_document,
+        "source_document_name": assignment.source_document_name,
+        "draft_data": assignment.draft_data,
+        "inter_category": {
+            "id": assignment.inter_category.id,
+            "name": assignment.inter_category.name,
+            "sub_category": {
+                "id": assignment.inter_category.sub_category.id,
+                "name": assignment.inter_category.sub_category.name,
+                "category": {
+                    "id": assignment.inter_category.sub_category.category.id,
+                    "name": assignment.inter_category.sub_category.category.name,
+                },
+            },
+        }
+        if assignment.inter_category
+        else None,
+        "course": None,
+        "questions_count": assignment.questions.count(),
+    }
+    if assignment.course_id:
+        data["course"] = {"id": assignment.course.id, "title": assignment.course.title}
+    assignment_models = list(assignment.models.all())
+    models = [model_payload(model) for model in assignment_models]
+    if include_models:
+        data["models"] = models
+    data["models_preview"] = [model_preview(model) for model in assignment_models]
+    published_durations = [
+        model_duration_seconds(model) for model in assignment_models if model.is_published
+    ]
+    data["duration_seconds"] = max(published_durations) if published_durations else 0
+    data["duration_label"] = format_duration_hms(data["duration_seconds"])
+    return data
+
+
+def category_tree_payload(include_assignments: bool = False) -> list[dict]:
+    """Active category tree for the learner catalog: Category -> Sub Category -> Inter Category."""
+    from .models import Category
+
+    tree = []
+    for cat in Category.objects.filter(is_active=True).order_by("position", "name"):
+        subs = []
+        for sub in cat.subcategories.filter(is_active=True).order_by("position", "name"):
+            inters = []
+            for inter in sub.intercategories.filter(is_active=True).order_by("position", "name"):
+                item = {
+                    "id": inter.id,
+                    "name": inter.name,
+                    "position": inter.position,
+                    "assignments_count": Assignment.objects.filter(
+                        inter_category=inter, status=Assignment.Status.PUBLISHED
+                    ).count(),
+                }
+                if include_assignments:
+                    items = Assignment.objects.filter(
+                        inter_category=inter, status=Assignment.Status.PUBLISHED
+                    ).select_related("created_by")
+                    item["assignments"] = [
+                        assignment_payload(a, include_models=False) for a in items
+                    ]
+                inters.append(item)
+            subs.append(
+                {
+                    "id": sub.id,
+                    "name": sub.name,
+                    "position": sub.position,
+                    "intercategories": inters,
+                }
+            )
+        tree.append(
+            {"id": cat.id, "name": cat.name, "position": cat.position, "subcategories": subs}
+        )
+    return tree
+
+
+# ---------------------------------------------------------------------------
+# Question generation (deterministic template bank - no external AI dependency)
+# ---------------------------------------------------------------------------
+
+_TOPIC_TEMPLATES = {
+    "default": [
+        (
+            "Which statement best describes the core idea of {topic}?",
+            [
+                "It focuses on practical applications only",
+                "It establishes foundational concepts and their relationships",
+                "It is unrelated to real-world usage",
+                "It only applies to small problems",
+            ],
+            1,
+        ),
+        (
+            "What is a key benefit of understanding {topic}?",
+            [
+                "Improved problem-solving accuracy",
+                "Longer code",
+                "No practical advantages",
+                "Reduced readability",
+            ],
+            0,
+        ),
+        (
+            "Which of the following is a common misconception about {topic}?",
+            [
+                "It has no learning curve",
+                "It requires discipline to master",
+                "it has structured concepts",
+                "It builds on previous knowledge",
+            ],
+            0,
+        ),
+        (
+            "In the context of {topic}, which approach is generally preferred?",
+            [
+                "Following well-established patterns",
+                "Skipping fundamentals",
+                "Avoiding best practices",
+                "Random experimentation",
+            ],
+            0,
+        ),
+        (
+            "What should you do first when learning {topic}?",
+            [
+                "Master the fundamentals",
+                "Ignore theory completely",
+                "Memorize without practice",
+                "Jump to advanced cases",
+            ],
+            0,
+        ),
+        (
+            "Which tool best supports hands-on practice of {topic}?",
+            [
+                "Documentation and small exercises",
+                "Guessing answers",
+                "Delaying all practice",
+                "Avoiding feedback",
+            ],
+            0,
+        ),
+    ],
+}
+
+
+def generate_questions(config: dict) -> list[dict]:
+    """Return generated MCQ questions (not persisted)."""
+    count = max(1, min(100, int(config.get("numberOfQuestions", 10))))
+    difficulty = config.get("difficulty", "medium")
+    marks = config.get("marksPerQuestion", 1)
+    options_count = int(config.get("numberOfOptions", 4))
+    explanations = bool(config.get("generateExplanations", True))
+
+    distribution = config.get("topicDistribution") or {}
+    topic_names = [
+        t for t, n in sorted(distribution.items(), key=lambda kv: kv[1], reverse=True) if n > 0
+    ]
+    generated: list[dict] = []
+    cursor = 0
+    while len(generated) < count:
+        topic = (
+            topic_names[cursor % max(1, len(topic_names))]
+            if topic_names
+            else f"Topic {cursor % 4 + 1}"
+        )
+        cursor += 1
+        templates = _TOPIC_TEMPLATES.get("default")
+        template = templates[len(generated) % len(templates)]
+        text, options, correct = template
+        options = options[:options_count]
+        while len(options) < options_count:  # pad if a model wants more choices
+            options.append(f"Option {len(options) + 1}")
+        qid = f"q_{len(generated) + 1}"
+        if explanations:
+            explanation = (
+                f"{text} {options[correct]} is the correct choice because it aligns "
+                "with the key concept."
+            )
+        else:
+            explanation = ""
+        generated.append(
+            {
+                "id": qid,
+                "question": text.format(topic=topic),
+                "options": options,
+                "correct_answer": correct,
+                "explanation": explanation,
+                "marks": marks,
+                "difficulty": difficulty,
+                "topic": topic,
+            }
+        )
+    return generated
+
+
+def regenerate_question(source: dict) -> dict:
+    config = {
+        "numberOfQuestions": 1,
+        "difficulty": source.get("difficulty", "medium"),
+        "marksPerQuestion": 1,
+        "numberOfOptions": max(3, len(source.get("options", []))),
+        "generateExplanations": bool(source.get("explanation")),
+        "topicDistribution": {source.get("topic", "Topic"): 1} if source.get("topic") else {},
+    }
+    return generate_questions(config)[0]
+
+
+def regenerate_options(source: dict) -> dict:
+    base = regenerate_question(source)
+    new_options = base["options"]
+    return {**source, "options": new_options, "correct_answer": base["correct_answer"]}
+
+
+# ---------------------------------------------------------------------------
+# Attempt lifecycle
+# ---------------------------------------------------------------------------
+
+
+def build_attempt_snapshot(assignment: Assignment, model: AssignmentModel) -> dict:
+    """Freeze exactly what the learner sees: served options/shuffled order and the
+    correct index *as displayed*. Grading always compares against this snapshot, so
+    instructors may edit questions mid-attempt without breaking scoring, and
+    question/option randomisation stays consistent end to end."""
+    import random
+
+    snapshot: dict[str, dict] = {}
+    steps = collect_leaf_steps(model)
+    for step in steps:
+        qs = list(step.questions.order_by("position", "id"))
+        in_order = qs
+        if assignment.randomize_questions:
+            in_order = list(qs)
+            random.shuffle(in_order)
+        step_snap: dict[str, dict] = {}
+        for q in in_order:
+            options = list(q.options)
+            correct_index = int(q.correct_answer)
+            if assignment.randomize_options:
+                correct_text = options[correct_index]
+                shuffled = list(options)
+                random.shuffle(shuffled)
+                options = shuffled
+                correct_index = shuffled.index(correct_text)
+            step_snap[str(q.id)] = {
+                "options": options,
+                "correct_answer": correct_index,
+                "marks": float(q.marks),
+            }
+        snapshot[str(step.id)] = step_snap
+    return snapshot
+
+
+def take_structure(attempt: AssignmentAttempt) -> list[dict]:
+    """The screen the learner answers against. Uses the snapshot order + options,
+    and hides correct answers/explanations."""
+    model = attempt.model
+    snapshot = attempt.questions_snapshot or {}
+    structure = []
+    for step in model.steps.filter(parent__isnull=True):
+        _append_take_step(structure, step, snapshot)
+    return structure
+
+
+def _append_take_step(structure: list, step: AssignmentModelStep, snapshot: dict) -> None:
+    children = list(step.children.all())
+    if children:
+        for child in children:
+            _append_take_step(structure, child, snapshot)
+        return
+    step_snap = snapshot.get(str(step.id), {})
+    questions = []
+    for q in step.questions.order_by("position", "id"):
+        meta = step_snap.get(str(q.id))
+        if meta is None:
+            meta = {
+                "options": list(q.options),
+                "correct_answer": int(q.correct_answer),
+                "marks": float(q.marks),
+            }
+        questions.append(
+            {
+                "id": q.id,
+                "question": q.question,
+                "options": meta["options"],
+                "marks": meta["marks"],
+                "difficulty": q.difficulty,
+                "topic": q.topic,
+            }
+        )
+    structure.append(
+        {
+            "step_id": step.id,
+            "name": step.name,
+            "kind": step.kind,
+            "duration_seconds": step.duration_seconds,
+            "questions": questions,
+        }
+    )
+
+
+def start_attempt(learner, assignment: Assignment, model: AssignmentModel) -> AssignmentAttempt:
+    """Create a server-side attempt with a real server expiry time."""
+    model = assignment.models.get(id=model.id, is_published=True)
+    total_seconds = model_duration_seconds(model)
+    attempt = AssignmentAttempt.objects.create(
+        learner=learner,
+        assignment=assignment,
+        model=model,
+        expires_at=timezone.now() + timezone.timedelta(seconds=total_seconds),
+        total_questions=sum(len(step.questions.all()) for step in collect_leaf_steps(model)),
+        questions_snapshot=build_attempt_snapshot(assignment, model),
+    )
+    logger.info("Attempt %s started for user %s", attempt.id, learner.mobile)
+    return attempt
+
+
+def save_attempt_answers(attempt: AssignmentAttempt, answers: dict) -> AssignmentAttempt:
+    """Persist in-progress answers so a refresh/reconnect can restore them."""
+    attempt.answers = answers or {}
+    attempt.save(update_fields=["answers", "updated_at"])
+    return attempt
+
+
+def collect_leaf_steps(model: AssignmentModel) -> list[AssignmentModelStep]:
+    leaves: list[AssignmentModelStep] = []
+
+    def walk(node: AssignmentModelStep):
+        children = list(node.children.all())
+        if not children:
+            leaves.append(node)
+        else:
+            for child in children:
+                walk(child)
+
+    for root in model.steps.filter(parent__isnull=True):
+        root_children = list(root.children.all())
+        if not root_children:
+            leaves.append(root)
+        else:
+            for child in root_children:
+                walk(child)
+    return leaves
+
+
+def compute_outcome(attempt: AssignmentAttempt, answers: dict) -> None:
+    """Score answers (step_id -> {question_id: selected_index}) against the attempt
+    snapshot (what the learner actually saw) and build the transcript."""
+    assignment = attempt.assignment
+    snapshot = attempt.questions_snapshot or {}
+    steps = collect_leaf_steps(attempt.model)
+    questions_by_step = {step.id: list(step.questions.order_by("position", "id")) for step in steps}
+
+    per_step: dict[int, dict] = {}
+    total_questions = 0
+    answered = 0
+    correct = 0
+    wrong = 0
+    positive = 0
+    negative = 0
+    max_score = 0
+
+    for step in steps:
+        qs = questions_by_step.get(step.id) or []
+        step_answers = (answers or {}).get(str(step.id), {})
+        step_snap = snapshot.get(str(step.id), {})
+        correct_in_step = 0
+        attempted_in_step = 0
+        for q in qs:
+            meta = step_snap.get(str(q.id)) or {
+                "correct_answer": int(q.correct_answer),
+                "marks": float(q.marks),
+            }
+            marks = meta["marks"]
+            total_questions += 1
+            max_score += marks
+            selected = step_answers.get(str(q.id))
+            if selected is None:
+                continue
+            answered += 1
+            attempted_in_step += 1
+            if int(selected) == meta["correct_answer"]:
+                correct += 1
+                correct_in_step += 1
+                positive += marks
+            else:
+                wrong += 1
+                if assignment.negative_marking:
+                    negative += float(assignment.negative_marks_per_wrong)
+        per_step[step.id] = {
+            "step_id": step.id,
+            "name": step.name,
+            "kind": step.kind,
+            "questions": len(qs),
+            "attempted": attempted_in_step,
+            "correct": correct_in_step,
+            "time_seconds": step.duration_seconds,
+        }
+
+    unanswered = total_questions - answered
+    final_score = positive - negative
+    max_total = max(max_score, 1)
+    percentage = round((final_score / max_total) * 100, 2)
+
+    attempt.total_questions = total_questions
+    attempt.answered = answered
+    attempt.correct = correct
+    attempt.wrong = wrong
+    attempt.unanswered = unanswered
+    attempt.positive_marks = positive
+    attempt.negative_marks = negative
+    attempt.final_score = final_score
+    attempt.max_score = max_score
+    attempt.percentage = max(0.0, min(percentage, 100.0))
+    attempt.passed = attempt.percentage >= float(assignment.passing_percentage)
+    attempt.answers = answers or {}
+
+    transcript = {
+        "assignment": assignment.title,
+        "category": getattr(assignment.inter_category.sub_category.category, "name", "")
+        if assignment.inter_category
+        else "",
+        "sub_category": getattr(assignment.inter_category.sub_category, "name", "")
+        if assignment.inter_category
+        else "",
+        "inter_category": assignment.inter_category.name if assignment.inter_category else "",
+        "model": attempt.model.name,
+        "model_code": attempt.model.code,
+        "execution_mode": attempt.model.execution_mode,
+        "model_duration_seconds": model_duration_seconds(attempt.model),
+        "started_at": attempt.started_at.isoformat(),
+        "steps": list(per_step.values()),
+        "passed": attempt.passed,
+    }
+    attempt.transcript = transcript
+
+
+def _finish(attempt: AssignmentAttempt, status: str, is_auto_submitted: bool) -> AssignmentAttempt:
+    """Lock an attempt at its final state: compute outcome + persist transcript/result."""
+    attempt.status = status
+    attempt.is_auto_submitted = is_auto_submitted
+    attempt.ended_at = attempt.ended_at or timezone.now()
+    compute_outcome(attempt, attempt.answers)
+    transcript = dict(attempt.transcript)
+    transcript["ended_at"] = attempt.ended_at.isoformat()
+    time_taken = max(0, int((attempt.ended_at - attempt.started_at).total_seconds()))
+    transcript["time_taken_seconds"] = time_taken
+    attempt.transcript = transcript
+    attempt.save()
+    AssignmentResult.objects.update_or_create(attempt=attempt, defaults={"transcript": transcript})
+    return attempt
+
+
+def submit_attempt(attempt: AssignmentAttempt, answers: dict) -> AssignmentAttempt:
+    """Server-authoritative submission. Expired attempts are locked, never extended."""
+    if attempt.status != AssignmentAttempt.Status.IN_PROGRESS:
+        return attempt
+
+    attempt.answers = answers or {}
+    now = timezone.now()
+    if now > attempt.expires_at:
+        attempt.ended_at = attempt.expires_at
+        status = AssignmentAttempt.Status.EXPIRED
+        is_auto = True
+    else:
+        status = AssignmentAttempt.Status.COMPLETED
+        is_auto = False
+    return _finish(attempt, status, is_auto)
+
+
+def grade_expired_attempts() -> int:
+    """Grade all in-progress attempts whose server expiry passed (called by timer expiry path)."""
+    expired_qs = AssignmentAttempt.objects.filter(
+        status=AssignmentAttempt.Status.IN_PROGRESS, expires_at__lt=timezone.now()
+    )
+    count = 0
+    for attempt in expired_qs:
+        attempt.ended_at = attempt.expires_at
+        _finish(attempt, AssignmentAttempt.Status.EXPIRED, True)
+        count += 1
+    return count

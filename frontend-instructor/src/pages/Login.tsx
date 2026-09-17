@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,6 +31,7 @@ export default function Login() {
   const queryClient = useQueryClient();
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [toast, setToast] = useState<string | null>(null);
+  const verifyDone = useRef(false);
 
   const phoneForm = useForm<z.infer<typeof phoneSchema>>({
     resolver: zodResolver(phoneSchema),
@@ -53,6 +54,7 @@ export default function Login() {
         body: JSON.stringify({ mobile }),
       }),
     onSuccess: (res) => {
+      verifyDone.current = false;
       showToast(`OTP sent: ${res.mock_code}`, 4000);
       setStep("otp");
     },
@@ -65,6 +67,7 @@ export default function Login() {
         method: "POST",
         body: JSON.stringify({ mobile, code }),
       });
+      verifyDone.current = true;
       if (data.user.role !== "instructor") {
         try {
           await api("/auth/become-instructor", { method: "POST" });
@@ -94,10 +97,7 @@ export default function Login() {
       }
       queryClient.invalidateQueries({ queryKey: ["instructor-courses"] });
       if (isNew) nav("/complete-profile");
-      else {
-        showToast("Welcome back!");
-        setTimeout(() => nav("/dashboard"), 400);
-      }
+      else nav("/dashboard");
     },
     onError: (e) => showToast(String(e)),
   });
@@ -165,11 +165,17 @@ export default function Login() {
                 <p className="text-center text-xs text-zinc-500">Demo: OTP will appear in the toast below</p>
               </form>
             ) : (
-              <form onSubmit={otpForm.handleSubmit((v) => verify.mutate({ mobile: phone, code: v.otp }))} className="mt-8 space-y-5">
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700">Enter OTP</label>
-                  <input
-                    {...otpForm.register("otp")}
+              <form onSubmit={otpForm.handleSubmit((v) => {
+  if (verifyDone.current || verify.isPending) return;
+  verify.mutate({ mobile: phone, code: v.otp });
+})}
+                  className="mt-8 space-y-5"
+                >
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-700">Enter OTP</label>
+                    <input
+                      {...otpForm.register("otp")}
+                      disabled={verify.isPending || verifyDone.current}
                     onChange={(e) => otpForm.setValue("otp", e.target.value.replace(/\D/g, "").slice(0, 4), { shouldValidate: true })}
                     placeholder="1 2 3 4"
                     className="mt-1.5 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3.5 text-center text-xl tracking-[0.7em] outline-none transition focus:border-zinc-900 focus:bg-white"
@@ -179,7 +185,7 @@ export default function Login() {
                 <button type="submit" disabled={loading} className="w-full rounded-full bg-[#0f172a] py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-60">
                   {verify.isPending ? "Verifying…" : "Verify OTP"}
                 </button>
-                <button type="button" onClick={()=>setStep("phone")} className="w-full rounded-full border border-zinc-200 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">Change number</button>
+                <button type="button" onClick={() => { verifyDone.current = false; setStep("phone"); }} className="w-full rounded-full border border-zinc-200 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">Change number</button>
               </form>
             )}
           </div>

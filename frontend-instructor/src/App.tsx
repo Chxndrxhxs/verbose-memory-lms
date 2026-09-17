@@ -3,6 +3,9 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Activity from "./pages/Activity";
 import Analytics from "./pages/Analytics";
+import AssignmentCreate from "./pages/AssignmentCreate";
+import AssignmentEdit from "./pages/AssignmentEdit";
+import AssignmentPreviewPage from "./pages/AssignmentPreviewPage";
 import Assignments from "./pages/Assignments";
 import CompleteProfile from "./pages/CompleteProfile";
 import Leaderboard from "./pages/Leaderboard";
@@ -16,6 +19,7 @@ import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import { Protected } from "./components/Protected";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { RouteError } from "./components/RouteError";
 import { useAuth } from "./hooks/useAuth";
 
 const qc = new QueryClient();
@@ -35,7 +39,15 @@ const router = createBrowserRouter([
   { path: "/activity", element: <Protected><Activity /></Protected> },
   { path: "/leaderboard", element: <Protected><Leaderboard /></Protected> },
   { path: "/analytics", element: <Protected><Analytics /></Protected> },
-  { path: "/assignments", element: <Protected><Assignments /></Protected> },
+  { path: "/assignments",
+    errorElement: <RouteError />,
+    children: [
+      { index: true, element: <Protected><Assignments /></Protected> },
+      { path: "new", element: <Protected><AssignmentCreate /></Protected> },
+      { path: ":id/edit", element: <Protected><AssignmentEdit /></Protected> },
+      { path: ":id/preview", element: <Protected><AssignmentPreviewPage /></Protected> },
+    ],
+  },
   { path: "/profile", element: <Protected><Profile /></Protected> },
 ]);
 

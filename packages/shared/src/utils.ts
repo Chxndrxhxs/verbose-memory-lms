@@ -4,6 +4,16 @@ import { AlignLeft, Award, Crown, Diamond as DiamondIcon, FileText, Gem, HelpCir
 
 export function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
 
+export function formatAssignmentDuration(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h`;
+  if (minutes > 0) return `${minutes}m`;
+  return `${seconds}s`;
+}
+
 // legacy quizzes store options as plain strings; normalize to rich options
 export function quizOption(opt: string | { type?: string; text?: string; media_url?: string }): {
   type: "text" | "image" | "video"; text: string; media_url?: string;

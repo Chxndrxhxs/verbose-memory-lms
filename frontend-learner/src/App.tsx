@@ -12,6 +12,9 @@ import Leaderboard from "./pages/Leaderboard";
 import Learn from "./pages/Learn";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
+import AssignmentDetail from "./pages/AssignmentDetail";
+import AssignmentResult from "./pages/AssignmentResult";
+import AssignmentTake from "./pages/AssignmentTake";
 import { Protected } from "./components/Protected";
 import { useAuth } from "./hooks/useAuth";
 
@@ -27,6 +30,9 @@ const router = createBrowserRouter([
   { path: "/activity", element: <Protected><Activity /></Protected> },
   { path: "/leaderboard", element: <Protected><Leaderboard /></Protected> },
   { path: "/assignments", element: <Protected><Assignments /></Protected> },
+  { path: "/assignments/:id", element: <Protected><AssignmentDetail /></Protected> },
+  { path: "/assignments/take/:attemptId", element: <Protected><AssignmentTake /></Protected> },
+  { path: "/assignments/transcript/:assignmentId", element: <Protected><AssignmentResult /></Protected> },
   { path: "/profile", element: <Protected><Profile /></Protected> },
 ]);
 

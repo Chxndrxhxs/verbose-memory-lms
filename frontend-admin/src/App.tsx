@@ -12,6 +12,8 @@ import CourseDetail from "./pages/CourseDetail";
 import Enrollments from "./pages/Enrollments";
 import Payments from "./pages/Payments";
 import Login from "./pages/Login";
+import Assignments from "./pages/Assignments";
+import Categories from "./pages/Categories";
 import { useAuth } from "./hooks/useAuth";
 
 const qc = new QueryClient();
@@ -33,6 +35,8 @@ const router = createBrowserRouter([
       { path: "courses/:id", element: <CourseDetail /> },
       { path: "enrollments", element: <Enrollments /> },
       { path: "payments", element: <Payments /> },
+      { path: "assignments", element: <Assignments /> },
+      { path: "categories", element: <Categories /> },
     ],
   },
 ]);

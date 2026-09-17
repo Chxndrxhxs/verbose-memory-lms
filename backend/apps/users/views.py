@@ -117,6 +117,14 @@ class BecomeInstructorView(APIView):
         return Response({"data": UserSerializer(request.user).data, "error": None})
 
 
+class BecomeAdminView(APIView):
+    def post(self, request):
+        if request.user.role != "admin":
+            request.user.role = "admin"
+            request.user.save(update_fields=["role"])
+        return Response({"data": UserSerializer(request.user).data, "error": None})
+
+
 class CookieRefreshView(APIView):
     permission_classes = [AllowAny]
 

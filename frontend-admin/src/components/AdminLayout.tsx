@@ -2,7 +2,9 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   FileText,
   LayoutGrid,
+  ListChecks,
   LogOut,
+  Network,
   Receipt,
   UserPlus,
   Users,
@@ -17,6 +19,8 @@ const NAV: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
   { to: "/courses", label: "Courses", icon: FileText },
   { to: "/enrollments", label: "Enrollments", icon: UserPlus },
   { to: "/payments", label: "Payments", icon: Receipt },
+  { to: "/assignments", label: "Assignments", icon: ListChecks },
+  { to: "/categories", label: "Categories", icon: Network },
 ];
 
 export function AdminLayout() {

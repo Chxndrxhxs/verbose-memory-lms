@@ -102,3 +102,16 @@ def test_become_instructor_once_only():
     assert r.json()["data"]["role"] == "instructor"
     r = c.post("/api/v1/auth/become-instructor")
     assert r.status_code == 400
+
+
+@pytest.mark.django_db
+def test_become_admin_promotes_fresh_user():
+    c = APIClient()
+    verify_mobile(c, "9666666666")
+    r = c.post("/api/v1/auth/become-admin")
+    assert r.status_code == 200
+    assert r.json()["data"]["role"] == "admin"
+    assert User.objects.get(mobile="9666666666").role == "admin"
+    # idempotent — already admin, still 200
+    r = c.post("/api/v1/auth/become-admin")
+    assert r.status_code == 200
