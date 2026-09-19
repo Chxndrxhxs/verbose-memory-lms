@@ -11,6 +11,9 @@ dependencies = [
     "mysqlclient>=2.2.8",
     "django-cors-headers>=4.3.0",
     "razorpay>=2.0.1",
+    "pypdf>=6.19.0",
+    "python-docx>=1.2.0",
+    "httpx>=0.28.1",
 ]
 
 [dependency-groups]

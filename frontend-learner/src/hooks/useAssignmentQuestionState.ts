@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AssignmentTakeStep } from "@masterlms/shared";
+import type { AssignmentOption, AssignmentTakeStep } from "@masterlms/shared";
 import { saveAssignmentAttemptAnswers } from "@masterlms/shared";
 
 const SENTINEL_REVIEW_NO_ANSWER = -999;
@@ -14,7 +14,8 @@ export type QuestionRow = {
   selected: number | undefined;
   markedForReview: boolean;
   question: string;
-  options: string[];
+  questionImage: string;
+  options: AssignmentOption[];
   marks: number;
   difficulty: string;
   topic: string;
@@ -35,6 +36,7 @@ function flattenQuestions(steps: AssignmentTakeStep[]): QuestionRow[] {
         selected: undefined,
         markedForReview: false,
         question: q.question,
+        questionImage: q.question_image ?? "",
         options: q.options,
         marks: q.marks,
         difficulty: q.difficulty,

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Clock, ChevronLeft, ChevronRight, AlertTriangle } from "@masterlms/shared";
+import { absoluteMediaUrl, optionImage, optionText } from "@masterlms/shared";
 import { cn } from "../lib/utils";
 import type { Assignment } from "../types/assignment";
 import { MODEL_LABELS, getTotalQuestions, getTotalMarks } from "../types/assignment";
@@ -41,40 +42,61 @@ function PreviewQuestionCard({
           {index + 1}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-zinc-900">{question.question}</p>
-          <p className="mt-1 text-[10px] text-zinc-400">
-            {question.marks} mark{question.marks !== 1 ? "s" : ""}
-          </p>
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-zinc-900">{question.question}</p>
+              <p className="mt-1 text-[10px] text-zinc-400">
+                {question.marks} mark{question.marks !== 1 ? "s" : ""}
+              </p>
+            </div>
+            {question.questionImage && (
+              <img
+                src={absoluteMediaUrl(question.questionImage) ?? question.questionImage}
+                alt="Question figure"
+                className="h-16 w-24 shrink-0 rounded-lg border border-zinc-200 object-cover"
+              />
+            )}
+          </div>
 
           <div className="mt-3 space-y-2">
-            {question.options.map((opt, i) => (
-              <button
-                key={i}
-                onClick={() => setSelected(i)}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors",
-                  selected === i
-                    ? "border-[#3478ff] bg-blue-50 text-zinc-900"
-                    : "border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
-                )}
-              >
-                <span
+            {question.options.map((opt, i) => {
+              const img = optionImage(opt);
+              return (
+                <button
+                  key={i}
+                  onClick={() => setSelected(i)}
                   className={cn(
-                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold",
+                    "flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors",
                     selected === i
-                      ? "border-[#3478ff] bg-[#3478ff] text-white"
-                      : "border-zinc-300 text-zinc-500"
+                      ? "border-[#3478ff] bg-blue-50 text-zinc-900"
+                      : "border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
                   )}
                 >
-                  {selected === i ? (
-                    <span className="text-[10px]">✓</span>
-                  ) : (
-                    letterFor(i)
+                  <span
+                    className={cn(
+                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold",
+                      selected === i
+                        ? "border-[#3478ff] bg-[#3478ff] text-white"
+                        : "border-zinc-300 text-zinc-500"
+                    )}
+                  >
+                    {selected === i ? (
+                      <span className="text-[10px]">✓</span>
+                    ) : (
+                      letterFor(i)
+                    )}
+                  </span>
+                  {img && (
+                    <img
+                      src={absoluteMediaUrl(img) ?? img}
+                      alt={optionText(opt)}
+                      className="h-12 w-16 shrink-0 rounded-md border border-zinc-200 object-cover"
+                    />
                   )}
-                </span>
-                {opt}
-              </button>
-            ))}
+                  <span className="min-w-0">{optionText(opt)}</span>
+                </button>
+              );
+            })}
           </div>
 
           {question.explanation && (

@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {
     ".pdf",
+    ".docx",
+    ".txt",
+    ".md",
     ".png",
     ".jpg",
     ".jpeg",
@@ -19,8 +22,6 @@ ALLOWED_EXTENSIONS = {
     ".mp4",
     ".mp3",
     ".wav",
-    ".txt",
-    ".md",
 }
 MAX_BYTES = 25 * 1024 * 1024
 

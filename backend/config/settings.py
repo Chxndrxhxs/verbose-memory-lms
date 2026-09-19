@@ -134,3 +134,8 @@ SIMPLE_JWT = {
 
 RAZORPAY_KEY_ID = env("RAZORPAY_KEY_ID", default="")
 RAZORPAY_KEY_SECRET = env("RAZORPAY_KEY_SECRET", default="")
+
+# LLM provider for document-based question generation (any OpenAI-compatible API).
+LLM_API_KEY = env("LLM_API_KEY", default="")
+LLM_BASE_URL = env("LLM_BASE_URL", default="https://api.openai.com/v1")
+LLM_MODEL = env("LLM_MODEL", default="gpt-4o-mini")

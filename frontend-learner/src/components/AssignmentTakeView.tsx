@@ -13,6 +13,7 @@ import {
   Lock,
   type AssignmentAttemptBrief,
 } from "@masterlms/shared";
+import { absoluteMediaUrl, optionImage, optionText } from "@masterlms/shared";
 import type { QuestionRow } from "../hooks/useAssignmentQuestionState";
 import { LiveCamera } from "./LiveCamera";
 import { SubmitConfirmModal } from "./SubmitConfirmModal";
@@ -189,6 +190,13 @@ export function AssignmentTakeView({
                     )}
                   </div>
                 </div>
+                {current.questionImage && (
+                  <img
+                    src={absoluteMediaUrl(current.questionImage) ?? current.questionImage}
+                    alt="Question figure"
+                    className="mt-3 h-44 w-full rounded-xl border border-zinc-200 object-contain"
+                  />
+                )}
                 {current.topic && (
                   <p className="ml-8 mt-1 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
                     {current.topic} · {current.difficulty}
@@ -197,6 +205,7 @@ export function AssignmentTakeView({
                 <div className="mt-4 space-y-2">
                   {current.options.map((option, oi) => {
                     const checked = current.selected === oi;
+                    const image = optionImage(option);
                     return (
                       <button
                         key={oi}
@@ -214,8 +223,15 @@ export function AssignmentTakeView({
                         >
                           {String.fromCharCode(65 + oi)}
                         </span>
-                        {option}
-                        {checked && <Check size={16} className="ml-auto" />}
+                        {image && (
+                          <img
+                            src={absoluteMediaUrl(image) ?? image}
+                            alt={optionText(option)}
+                            className="h-12 w-16 shrink-0 rounded-md border border-zinc-200 object-cover"
+                          />
+                        )}
+                        <span className="min-w-0">{optionText(option)}</span>
+                        {checked && <Check size={16} className="ml-auto shrink-0" />}
                       </button>
                     );
                   })}

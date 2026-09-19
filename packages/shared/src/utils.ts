@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import type { AssignmentOption } from './types';
 import { AlignLeft, Award, Crown, Diamond as DiamondIcon, FileText, Gem, HelpCircle, LinkIcon, Medal, Music, Shield, Sparkles, Star, Trophy, Video, type LucideIcon } from 'lucide-react';
 
 export function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
@@ -20,6 +21,28 @@ export function quizOption(opt: string | { type?: string; text?: string; media_u
 } {
   if (typeof opt === "string") return { type: "text", text: opt };
   return { type: opt.type === "image" || opt.type === "video" ? opt.type : "text", text: opt.text ?? "", media_url: opt.media_url };
+}
+
+// assignment options may be a plain string OR { text, image } (PDF figures) —
+// these helpers normalise both so presenters never branch on the raw shape.
+export function optionText(opt: AssignmentOption): string {
+  if (typeof opt === "string") return opt;
+  return opt.text ?? "";
+}
+
+export function optionImage(opt: AssignmentOption): string {
+  if (typeof opt === "string") return "";
+  return opt.image ?? "";
+}
+
+export function isImageOption(opt: AssignmentOption): boolean {
+  return typeof opt === "object" && Boolean(opt?.image);
+}
+
+export function toStoredOption(opt: AssignmentOption): string | { text?: string; image?: string } {
+  if (typeof opt === "string") return opt;
+  if (opt?.image) return { text: opt.text ?? "", image: opt.image };
+  return opt?.text ?? "";
 }
 
 export type LessonKind = 'video' | 'pdf' | 'quiz' | 'audio' | 'text' | 'link';

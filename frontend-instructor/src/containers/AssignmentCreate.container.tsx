@@ -8,6 +8,8 @@ import {
   getTotalMarks,
   ensureModelsCollectPool,
   poolQuestionIdsChanged,
+  buildModel2FromQuestions,
+  buildModel3FromQuestions,
   type Assignment,
   type AssignmentValidationError,
 } from "../types/assignment";
@@ -49,11 +51,38 @@ export function AssignmentCreateContainer({ existingId }: { existingId?: string 
   }, [assignment]);
 
   const handleAssignmentChange = (next: Assignment) => {
-    if (poolQuestionIdsChanged(assignment.questions, next.questions)) {
-      setAssignment(ensureModelsCollectPool(next));
-      return;
+    let built = next;
+    const poolChanged = poolQuestionIdsChanged(
+      assignment.questions,
+      next.questions
+    );
+    if (poolChanged || next.modelType !== assignment.modelType) {
+      built = ensureModelsCollectPool(next);
     }
-    setAssignment(next);
+    // Switching to a multi-stage model with no tests/sets yet builds them
+    // automatically from the question pool so the wizard never shows an empty
+    // configuration screen.
+    if (next.modelType !== assignment.modelType) {
+      if (next.modelType !== "model_1") {
+        if (built.tests.length === 0 && built.questions.length > 0) {
+          built = {
+            ...built,
+            tests: buildModel2FromQuestions(built.questions, built.duration),
+          };
+        }
+        if (
+          next.modelType === "model_3" &&
+          built.model3Tests.length === 0 &&
+          built.questions.length > 0
+        ) {
+          built = {
+            ...built,
+            model3Tests: buildModel3FromQuestions(built.questions, built.duration),
+          };
+        }
+      }
+    }
+    setAssignment(built);
   };
 
   const persistDraft = async (): Promise<string | null> => {
@@ -176,6 +205,7 @@ function buildAssignmentModels(assignment: Assignment): unknown[] {
   const byId = new Map(assignment.questions.map((question) => [question.id, question]));
   const questionPayload = (question: Assignment["questions"][number]) => ({
     question: question.question,
+    question_image: question.questionImage,
     options: question.options,
     correct_answer: question.correctAnswer,
     explanation: question.explanation,
@@ -188,11 +218,53 @@ function buildAssignmentModels(assignment: Assignment): unknown[] {
       (question) => questionPayload(question as Assignment["questions"][number])
     );
 
-  if (assignment.modelType === "model_1") {
-    return [{ code: "model_1", name: "Direct MCQ", steps: [{ name: "MCQ", duration_seconds: assignment.duration * 60, questions: assignment.questions.map(questionPayload) }] }];
-  }
-  if (assignment.modelType === "model_2") {
-    return [{ code: "model_2", name: "Tests", steps: assignment.tests.map((test) => ({ name: test.title, description: test.description, duration_seconds: test.duration * 60, questions: questionsFor(test.questionIds, test.questions) })) }];
-  }
-  return [{ code: "model_3", name: "Tests & Sets", steps: assignment.model3Tests.map((test) => ({ name: test.title, description: test.description, duration_seconds: test.duration * 60, children: test.sets.map((set) => ({ kind: "set", name: set.title, description: set.description, duration_seconds: set.duration * 60, questions: questionsFor(set.questionIds, set.questions) })) })) }];
+  const tests =
+    assignment.tests.length > 0
+      ? assignment.tests
+      : buildModel2FromQuestions(assignment.questions, assignment.duration);
+  const testSteps = tests.map((test) => ({
+    name: test.title,
+    description: test.description,
+    duration_seconds: test.duration * 60,
+    questions: questionsFor(test.questionIds, test.questions),
+  }));
+
+  const model3Tests =
+    assignment.model3Tests.length > 0
+      ? assignment.model3Tests
+      : buildModel3FromQuestions(assignment.questions, assignment.duration);
+  const model3Steps = model3Tests.map((test) => ({
+    name: test.title,
+    description: test.description,
+    duration_seconds: test.duration * 60,
+    children: test.sets.map((set) => ({
+      kind: "set",
+      name: set.title,
+      description: set.description,
+      duration_seconds: set.duration * 60,
+      questions: questionsFor(set.questionIds, set.questions),
+    })),
+  }));
+
+  return [
+    {
+      code: "model_1",
+      name: "Direct MCQ",
+      description: "All questions in one direct MCQ paper.",
+      steps: [
+        {
+          name: "MCQ",
+          duration_seconds: assignment.duration * 60,
+          questions: assignment.questions.map(questionPayload),
+        },
+      ],
+    },
+    { code: "model_2", name: "Tests", description: "Questions split into timed tests.", steps: testSteps },
+    {
+      code: "model_3",
+      name: "Tests & Sets",
+      description: "Timed tests containing question sets.",
+      steps: model3Steps,
+    },
+  ];
 }

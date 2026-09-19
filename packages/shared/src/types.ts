@@ -123,10 +123,15 @@ export interface AssignmentAttemptBrief {
   total_questions: number;
 }
 
+export type AssignmentOption =
+  | string
+  | { text?: string; image?: string };
+
 export interface AssignmentTakeQuestion {
   id: number;
   question: string;
-  options: string[];
+  question_image?: string;
+  options: AssignmentOption[];
   marks: number;
   difficulty: AssignmentDifficulty;
   topic: string;
@@ -277,7 +282,8 @@ export interface AssignmentReviewItem {
   step_name: string;
   question_id: number;
   question: string;
-  options: string[];
+  question_image?: string;
+  options: AssignmentOption[];
   selected: number | null;
   correct_answer: number;
   is_correct: boolean | null;

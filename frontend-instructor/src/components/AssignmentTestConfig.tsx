@@ -10,6 +10,7 @@ import {
   ArrowUp,
   ArrowDown,
 } from "@masterlms/shared";
+import { optionImage, optionText } from "@masterlms/shared";
 import type {
   Assignment,
   AssignmentSet,
@@ -163,7 +164,7 @@ function SetPanel({
                 )}
               </span>
               <span className="text-[10px] text-zinc-400">
-                {q.options.filter((o) => o.trim()).length} opts
+                {q.options.filter((o) => optionText(o).trim() || Boolean(optionImage(o))).length} opts
               </span>
               <button
                 onClick={() => moveQuestion(q.id, "up")}

@@ -29,7 +29,7 @@ from .services import (
     assignment_payload,
     category_tree_payload,
     collect_leaf_steps,
-    generate_questions,
+    generate_questions_from_document,
     grade_expired_attempts,
     model_preview,
     regenerate_options,
@@ -376,6 +376,7 @@ def _append_review(reviews: list, step, snapshot: dict, answers: dict) -> None:
                 "step_name": step.name,
                 "question_id": q.id,
                 "question": q.question,
+                "question_image": q.question_image,
                 "options": meta["options"],
                 "selected": selected,
                 "correct_answer": meta["correct_answer"],
@@ -549,7 +550,7 @@ def admin_duplicate(request, assignment_id: int):
 @api_view(["POST", "PUT"])
 @permission_classes([IsInstructor])
 def admin_generate_questions(request):
-    return ok(generate_questions(request.data))
+    return ok(generate_questions_from_document(request.data))
 
 
 @api_view(["POST"])

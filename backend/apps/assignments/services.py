@@ -1,8 +1,11 @@
 import logging
+import re
 
 from django.db import transaction
 from django.utils import timezone
 
+from .extraction import extract_document_pages
+from .llm import generate_questions_from_text, is_llm_configured
 from .models import (
     Assignment,
     AssignmentAttempt,
@@ -13,6 +16,10 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Bound the number of LLM calls per generation request; pages beyond this are
+# grouped into chunks so image-to-question mapping stays deterministic.
+MAX_GENERATION_CHUNKS = 12
 
 DEFAULT_SECURITY = {
     "fullscreen": False,
@@ -119,6 +126,7 @@ def _replace_steps(
                 assignment=model.assignment,
                 step=step,
                 question=q_payload.get("question", ""),
+                question_image=q_payload.get("question_image", ""),
                 options=list(q_payload.get("options", ["", "", "", ""])),
                 correct_answer=int(q_payload.get("correct_answer", 0)),
                 explanation=q_payload.get("explanation", ""),
@@ -164,6 +172,7 @@ def step_builder(step: AssignmentModelStep) -> dict:
             {
                 "id": q.id,
                 "question": q.question,
+                "question_image": q.question_image,
                 "options": q.options,
                 "correct_answer": q.correct_answer,
                 "explanation": q.explanation,
@@ -423,6 +432,7 @@ def generate_questions(config: dict) -> list[dict]:
             {
                 "id": qid,
                 "question": text.format(topic=topic),
+                "question_image": "",
                 "options": options,
                 "correct_answer": correct,
                 "explanation": explanation,
@@ -443,7 +453,158 @@ def regenerate_question(source: dict) -> dict:
         "generateExplanations": bool(source.get("explanation")),
         "topicDistribution": {source.get("topic", "Topic"): 1} if source.get("topic") else {},
     }
-    return generate_questions(config)[0]
+    question = generate_questions(config)[0]
+    return {**question, "question_image": source.get("question_image", "")}
+
+
+def generate_questions_from_document(config: dict) -> list[dict]:
+    """Generate questions from the uploaded source document.
+
+    Works page-by-page so images extracted from the PDF stay attached to the
+    questions they came from:
+      * every question picks up a ``question_image`` (media URL) from its page,
+      * a page with two or more figures contributes an image-choice question
+        whose options ARE those figures.
+
+    Uses the configured LLM when a source document is provided (one call per
+    chunk of pages). Falls back to the deterministic template bank when there is
+    no document, no LLM key, or the LLM/extraction fails, so generation never
+    breaks the instructor flow.
+    """
+    source_document = str(config.get("source_document") or "").strip()
+    if not source_document:
+        return generate_questions(config)
+
+    try:
+        pages = extract_document_pages(source_document)
+    except Exception:
+        logger.warning("Document extraction failed; using template bank", exc_info=True)
+        return generate_questions(config)
+    text_pages = [p for p in pages if p["text"].strip()]
+    if not text_pages:
+        return generate_questions(config)
+
+    chunks = _group_pages(text_pages)
+    total_count = max(1, min(100, int(config.get("numberOfQuestions", 10))))
+    weights = [len(c["text"]) for c in chunks]
+    counts = _distribute_counts(len(chunks), total_count, weights)
+
+    generated: list[dict] = []
+    for chunk, count in zip(chunks, counts, strict=False):
+        if count <= 0:
+            continue
+        for question in _generate_for_chunk(chunk, count, config):
+            generated.append(question)
+    return generated
+
+
+def _group_pages(pages: list[dict]) -> list[dict]:
+    """Group adjacent PDF pages so at most MAX_GENERATION_CHUNKS LLM calls run.
+
+    Pages are joined text-first; the images of every page in the group are kept
+    in reading order so image attachment stays deterministic.
+    """
+    if len(pages) <= MAX_GENERATION_CHUNKS:
+        return [{"page": p["page"], "text": p["text"], "images": p["images"]} for p in pages]
+    chunk_size = -(-len(pages) // MAX_GENERATION_CHUNKS)
+    chunks: list[dict] = []
+    for start in range(0, len(pages), chunk_size):
+        group = pages[start : start + chunk_size]
+        chunks.append(
+            {
+                "page": group[0]["page"],
+                "text": "\n".join(p["text"] for p in group),
+                "images": [img for p in group for img in p["images"]],
+            }
+        )
+    return chunks
+
+
+def _generate_for_chunk(chunk: dict, count: int, config: dict) -> list[dict]:
+    topic = _chunk_topic(chunk["text"])
+    page_config = {
+        **config,
+        "numberOfQuestions": count,
+        "topicDistribution": {topic: count},
+    }
+    questions: list[dict] = []
+    if is_llm_configured():
+        try:
+            questions = generate_questions_from_text(chunk["text"], config)[:count]
+        except Exception:
+            logger.warning("LLM generation failed; using template bank", exc_info=True)
+    if not questions:
+        questions = generate_questions(page_config)
+    return _attach_images(questions, chunk, topic)
+
+
+def _attach_images(questions: list[dict], chunk: dict, topic: str) -> list[dict]:
+    """Attach this page's figures to its questions (and turn one into figure options)."""
+    images = [img["url"] for img in chunk.get("images", [])]
+    if not images:
+        return [{**q, "question_image": ""} for q in questions]
+    if len(images) >= 2 and questions:
+        base = questions[-1]
+        questions = questions[:-1]
+        questions.append(
+            {
+                **base,
+                "topic": topic[:120] or base.get("topic", ""),
+                "question": f"Which of the following figures best represents “{topic[:60]}”?",
+                "question_image": images[0],
+                "options": [
+                    {"text": f"Figure {i + 1}", "image": url} for i, url in enumerate(images)
+                ],
+                "correct_answer": 0,
+                "explanation": (
+                    "The first figure is the diagram that appears in the source "
+                    "material for this topic."
+                ),
+            }
+        )
+    return [
+        {**q, "question_image": images[index % len(images)]} for index, q in enumerate(questions)
+    ]
+
+
+def _chunk_topic(text: str) -> str:
+    clean = re.sub(r"\s+", " ", text).strip()
+    if not clean:
+        return "Source Passage"
+    sentence = re.split(r"[.?!\n]", clean)[0].strip()
+    if len(sentence) > 60:
+        sentence = sentence[:57].rstrip() + "..."
+    return sentence or "Source Passage"
+
+
+def _distribute_counts(total_pages: int, total_count: int, weights: list[int]) -> list[int]:
+    """Split a question count across pages, weighted by text length."""
+    counts = [0] * total_pages
+    if total_pages <= 0 or total_count <= 0:
+        return counts
+    safe = weights if len(weights) == total_pages else [1] * total_pages
+    total_weight = sum(safe)
+    if total_weight <= 0:
+        safe = [1] * total_pages
+        total_weight = total_pages
+    raw = [total_count * w / total_weight for w in safe]
+    counts = [int(share) for share in raw]
+    diff = total_count - sum(counts)
+    order = sorted(range(total_pages), key=lambda i: raw[i] - counts[i], reverse=True)
+    cursor = 0
+    while diff > 0:
+        counts[order[cursor % total_pages]] += 1
+        diff -= 1
+        cursor += 1
+    diff = total_count - sum(counts)
+    cursor = 0
+    while diff < 0:
+        if sum(counts) == 0:
+            break
+        index = max(range(total_pages), key=lambda i: counts[i])
+        counts[index] -= 1
+        diff += 1
+    return counts
 
 
 def regenerate_options(source: dict) -> dict:
@@ -522,6 +683,7 @@ def _append_take_step(structure: list, step: AssignmentModelStep, snapshot: dict
             {
                 "id": q.id,
                 "question": q.question,
+                "question_image": q.question_image,
                 "options": meta["options"],
                 "marks": meta["marks"],
                 "difficulty": q.difficulty,

@@ -10,7 +10,11 @@ type Props = {
 };
 
 const MAX_SIZE_MB = 25;
-const ALLOWED_TYPES = ["application/pdf"];
+const ALLOWED_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+];
 
 export function AssignmentPdfUploadStep({ assignment, onChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -29,7 +33,7 @@ export function AssignmentPdfUploadStep({ assignment, onChange }: Props) {
       setUploadSuccess(false);
 
       if (!ALLOWED_TYPES.includes(file.type)) {
-        setError("Only PDF files are accepted.");
+        setError("Only PDF, DOCX, or TXT files are accepted.");
         return;
       }
       if (file.size > MAX_SIZE_MB * 1024 * 1024) {
@@ -98,9 +102,9 @@ export function AssignmentPdfUploadStep({ assignment, onChange }: Props) {
 
   return (
     <div className="rounded-2xl bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-bold text-zinc-900">Upload PDF</h2>
+      <h2 className="text-lg font-bold text-zinc-900">Upload Source Document</h2>
       <p className="mt-1 text-sm text-zinc-500">
-        Upload the source document for AI question generation.
+        Upload the PDF, DOCX, or TXT file that AI will use to generate questions.
       </p>
 
       <div className="mt-6">
@@ -158,10 +162,10 @@ export function AssignmentPdfUploadStep({ assignment, onChange }: Props) {
               <Upload size={20} className="text-zinc-500" />
             </div>
             <p className="mt-3 text-sm font-semibold text-zinc-700">
-              Drop your PDF here, or click to browse
+              Drop your PDF, DOCX, or TXT here, or click to browse
             </p>
             <p className="mt-1 text-xs text-zinc-400">
-              PDF files up to {MAX_SIZE_MB}MB
+              PDF, DOCX, or TXT files up to {MAX_SIZE_MB}MB
             </p>
           </div>
         )}
@@ -169,7 +173,7 @@ export function AssignmentPdfUploadStep({ assignment, onChange }: Props) {
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf"
+          accept=".pdf,.docx,.txt"
           className="hidden"
           onChange={(e) => handleFiles(e.target.files)}
         />

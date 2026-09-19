@@ -1,3 +1,5 @@
+import { optionImage, optionText, type AssignmentOption } from "@masterlms/shared";
+
 export type AssignmentModelType = "model_1" | "model_2" | "model_3";
 
 export type AssignmentStatus = "draft" | "published" | "archived";
@@ -9,7 +11,8 @@ export type QuestionType = "mcq";
 export interface AssignmentQuestion {
   id: string;
   question: string;
-  options: string[];
+  questionImage: string;
+  options: AssignmentOption[];
   correctAnswer: number;
   explanation: string;
   marks: number;
@@ -153,6 +156,7 @@ export function createEmptyQuestion(marks = 1): AssignmentQuestion {
   return {
     id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     question: "",
+    questionImage: "",
     options: ["", "", "", ""],
     correctAnswer: 0,
     explanation: "",
@@ -334,6 +338,7 @@ export function buildModel2FromQuestions(
     chunkArray(group, MAX_TEST_QUESTIONS).forEach((chunk, i) => {
       const test = createEmptyTest(i === 0 ? topic : `${topic} (${i + 1})`);
       test.questionIds = chunk.map((q) => q.id);
+      test.questions = chunk;
       tests.push(test);
     });
   }
@@ -357,6 +362,7 @@ export function buildModel3FromQuestions(
     test.sets = chunkArray(group, MAX_SET_QUESTIONS).map((chunk, i) => {
       const set = createEmptySet(`Set ${i + 1}`);
       set.questionIds = chunk.map((q) => q.id);
+      set.questions = chunk;
       return set;
     });
     const setDurations = proportionalDurations(
@@ -372,17 +378,21 @@ export function buildModel3FromQuestions(
 
 export function ensureModelsCollectPool(assignment: Assignment): Assignment {
   const poolIds = new Set(assignment.questions.map((q) => q.id));
+  const pool = assignment.questions;
 
-  let tests = assignment.tests.map((t) => ({
-    ...t,
-    questionIds: t.questionIds.filter((id) => poolIds.has(id)),
-  }));
+  const syncTest = (t: AssignmentTest): AssignmentTest => {
+    const questionIds = t.questionIds.filter((id) => poolIds.has(id));
+    return { ...t, questionIds, questions: getQuestionsByIds(pool, questionIds) };
+  };
+  const syncSet = (s: AssignmentSet): AssignmentSet => {
+    const questionIds = s.questionIds.filter((id) => poolIds.has(id));
+    return { ...s, questionIds, questions: getQuestionsByIds(pool, questionIds) };
+  };
+
+  let tests = assignment.tests.map(syncTest);
   let model3Tests = assignment.model3Tests.map((t) => ({
     ...t,
-    sets: t.sets.map((s) => ({
-      ...s,
-      questionIds: s.questionIds.filter((id) => poolIds.has(id)),
-    })),
+    sets: t.sets.map(syncSet),
   }));
 
   const model2Placed = new Set(tests.flatMap((t) => t.questionIds));
@@ -395,27 +405,37 @@ export function ensureModelsCollectPool(assignment: Assignment): Assignment {
     if (tests.length === 0 && assignment.questions.length > 0) {
       tests = buildModel2FromQuestions(assignment.questions, assignment.duration);
     } else if (tests.length > 0) {
-      tests = tests.map((t, i) =>
-        i === 0 ? { ...t, questionIds: [...t.questionIds, ...newIds] } : t
-      );
+      const first = tests[0];
+      const merged: AssignmentTest = {
+        ...first,
+        questionIds: [...first.questionIds, ...newIds],
+        questions: [...first.questions, ...getQuestionsByIds(pool, newIds)],
+      };
+      tests = [merged, ...tests.slice(1)];
     }
 
     if (model3Tests.length === 0 && assignment.questions.length > 0) {
       model3Tests = buildModel3FromQuestions(assignment.questions, assignment.duration);
     } else if (model3Tests.length > 0 && model3Tests[0].sets.length > 0) {
-      model3Tests = model3Tests.map((t, i) =>
-        i === 0
-          ? {
-              ...t,
-              sets: t.sets.map((s, si) =>
-                si === 0 ? { ...s, questionIds: [...s.questionIds, ...newIds] } : s
-              ),
-            }
-          : t
-      );
+      model3Tests = model3Tests.map((t, i) => {
+        if (i !== 0) return t;
+        const firstSet = t.sets[0];
+        return {
+          ...t,
+          sets: [
+            {
+              ...firstSet,
+              questionIds: [...firstSet.questionIds, ...newIds],
+              questions: [...firstSet.questions, ...getQuestionsByIds(pool, newIds)],
+            },
+            ...t.sets.slice(1),
+          ],
+        };
+      });
     } else if (model3Tests.length > 0) {
       const set = createEmptySet("Set 1");
       set.questionIds = newIds;
+      set.questions = getQuestionsByIds(pool, newIds);
       model3Tests = model3Tests.map((t, i) => (i === 0 ? { ...t, sets: [set] } : t));
     }
   }
@@ -446,15 +466,17 @@ function pushQuestionErrors(
   if (!q.question.trim()) {
     errors.push({ field: `question_${q.id}`, message: "Question text cannot be empty" });
   }
-  const validOptions = q.options.filter((o) => o.trim());
+  const validOptions = q.options.filter((o) => optionText(o).trim() || o.image);
   if (validOptions.length < 2) {
     errors.push({ field: `options_${q.id}`, message: "At least 2 options are required" });
   }
-  if (
-    q.correctAnswer < 0 ||
-    q.correctAnswer >= q.options.length ||
-    !q.options[q.correctAnswer]?.trim()
-  ) {
+  const correct = q.options[q.correctAnswer];
+  const correctValid =
+    q.correctAnswer >= 0 &&
+    q.correctAnswer < q.options.length &&
+    typeof correct !== "undefined" &&
+    (optionText(correct).trim() || Boolean(optionImage(correct)));
+  if (!correctValid) {
     errors.push({ field: `correct_${q.id}`, message: "A valid correct answer is required" });
   }
   if (q.marks <= 0) {

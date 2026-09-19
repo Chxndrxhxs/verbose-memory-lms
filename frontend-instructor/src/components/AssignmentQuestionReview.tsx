@@ -9,7 +9,9 @@ import {
   ChevronDown,
   ChevronUp,
   GripVertical,
+  Image as ImageIcon,
 } from "@masterlms/shared";
+import { absoluteMediaUrl, optionImage, optionText } from "@masterlms/shared";
 import { cn } from "../lib/utils";
 import type { Assignment, AssignmentQuestion, QuestionDifficulty } from "../types/assignment";
 import { createEmptyQuestion, DIFFICULTY_LABELS } from "../types/assignment";
@@ -46,7 +48,11 @@ function QuestionCard({
 
   const updateOption = (idx: number, value: string) => {
     const newOptions = [...question.options];
-    newOptions[idx] = value;
+    const prev = question.options[idx];
+    newOptions[idx] =
+      typeof prev === "object" && prev.image
+        ? { text: value, image: prev.image }
+        : value;
     onUpdate({ options: newOptions });
   };
 
@@ -209,11 +215,20 @@ function QuestionCard({
                 className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-zinc-900 focus:bg-white resize-none"
               />
             ) : (
-              <p className="text-sm text-zinc-800">
-                {question.question || (
-                  <span className="text-zinc-400 italic">Click edit to add question text</span>
+              <div className="flex items-start gap-3">
+                {question.questionImage && (
+                  <img
+                    src={absoluteMediaUrl(question.questionImage) ?? question.questionImage}
+                    alt="Question figure"
+                    className="h-20 w-28 shrink-0 rounded-lg border border-zinc-200 object-cover"
+                  />
                 )}
-              </p>
+                <p className="text-sm text-zinc-800">
+                  {question.question || (
+                    <span className="text-zinc-400 italic">Click edit to add question text</span>
+                  )}
+                </p>
+              </div>
             )}
           </div>
 
@@ -246,7 +261,7 @@ function QuestionCard({
                 {editing ? (
                   <input
                     type="text"
-                    value={opt}
+                    value={optionText(opt)}
                     onChange={(e) => updateOption(i, e.target.value)}
                     placeholder={`Option ${letterFor(i)}`}
                     className="flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-zinc-900 focus:bg-white"
@@ -254,14 +269,26 @@ function QuestionCard({
                 ) : (
                   <span
                     className={cn(
-                      "flex-1 rounded-lg border border-zinc-100 px-3 py-2 text-sm",
+                      "flex flex-1 items-center gap-2.5 rounded-lg border border-zinc-100 px-3 py-2 text-sm",
                       question.correctAnswer === i
                         ? "bg-emerald-50 font-medium text-emerald-800"
                         : "text-zinc-700"
                     )}
                   >
-                    {opt || (
+                    {optionImage(opt) && (
+                      <img
+                        src={absoluteMediaUrl(optionImage(opt)) ?? optionImage(opt)}
+                        alt={optionText(opt)}
+                        className="h-10 w-14 shrink-0 rounded-md border border-zinc-200 object-cover"
+                      />
+                    )}
+                    {optionText(opt) || (
                       <span className="text-zinc-400 italic">Empty</span>
+                    )}
+                    {optionImage(opt) && !optionText(opt) && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-zinc-400">
+                        <ImageIcon size={11} /> Figure
+                      </span>
                     )}
                   </span>
                 )}

@@ -245,6 +245,7 @@ class AssignmentQuestion(models.Model):
         AssignmentModelStep, on_delete=models.CASCADE, related_name="questions"
     )
     question = models.TextField()
+    question_image = models.CharField(max_length=500, blank=True, default="")
     options = models.JSONField(default=list)
     correct_answer = models.PositiveIntegerField(default=0)
     explanation = models.TextField(blank=True, default="")

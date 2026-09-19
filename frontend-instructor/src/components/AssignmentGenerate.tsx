@@ -63,9 +63,9 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
       const questions = raw.map((q: Record<string, unknown>) => ({
         id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         question: String(q.question ?? ""),
-        options: Array.isArray(q.options)
-          ? q.options.map(String)
-          : ["", "", "", ""],
+        questionImage:
+          String(q.questionImage ?? q.question_image ?? "") || "",
+        options: Array.isArray(q.options) ? q.options : ["", "", "", ""],
         correctAnswer: Number(q.correctAnswer ?? q.correct_answer ?? 0),
         explanation: String(q.explanation ?? ""),
         marks: Number(q.marks ?? config.marksPerQuestion),

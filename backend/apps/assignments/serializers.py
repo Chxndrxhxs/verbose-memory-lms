@@ -47,13 +47,16 @@ class AssignmentWriteSerializer(serializers.ModelSerializer):
 
 
 class QuestionPayloadSerializer(serializers.Serializer):
-    """A single question in a structure payload (frontend/generated JSON)."""
+    """A single question in a structure payload (frontend/generated JSON).
+
+    Options may be plain strings or ``{"text", "image"}`` objects so PDF figures
+    can appear inside options.
+    """
 
     id = serializers.CharField(required=False, allow_blank=True)
     question = serializers.CharField(allow_blank=True)
-    options = serializers.ListField(
-        child=serializers.CharField(allow_blank=True), allow_empty=False
-    )
+    question_image = serializers.CharField(required=False, allow_blank=True, default="")
+    options = serializers.ListField(child=serializers.JSONField(), allow_empty=False)
     correct_answer = serializers.IntegerField(min_value=0)
     explanation = serializers.CharField(required=False, allow_blank=True, default="")
     marks = serializers.FloatField(required=False, min_value=0, default=1)
