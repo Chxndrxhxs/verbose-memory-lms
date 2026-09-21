@@ -16,7 +16,7 @@ export function Header() {
         <NavLink to="/activity" className={({ isActive }) => (isActive ? "text-zinc-900" : "hover:text-zinc-900")}>Activity</NavLink>
         <NavLink to="/leaderboard" className={({ isActive }) => (isActive ? "text-zinc-900" : "hover:text-zinc-900")}>Leaderboard</NavLink>
         <NavLink to="/assignments" className={({ isActive }) => (isActive ? "text-zinc-900" : "hover:text-zinc-900")}>Assignments</NavLink>
-        <a href="#faq" className="hover:text-zinc-900">About</a>
+        <NavLink to="/about" className={({ isActive }) => (isActive ? "text-zinc-900" : "hover:text-zinc-900")}>About</NavLink>
       </nav>
       <div className="flex items-center gap-2">
         {user ? (

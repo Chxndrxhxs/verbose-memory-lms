@@ -135,7 +135,12 @@ SIMPLE_JWT = {
 RAZORPAY_KEY_ID = env("RAZORPAY_KEY_ID", default="")
 RAZORPAY_KEY_SECRET = env("RAZORPAY_KEY_SECRET", default="")
 
-# LLM provider for document-based question generation (any OpenAI-compatible API).
+# LLM provider for document-based question generation.
+# Google AI Studio (Gemini) exposes an OpenAI-compatible endpoint, so the same
+# client works: LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+# LLM_MODEL=gemini-2.0-flash LLM_API_KEY=<ai-studio-key>
 LLM_API_KEY = env("LLM_API_KEY", default="")
 LLM_BASE_URL = env("LLM_BASE_URL", default="https://api.openai.com/v1")
 LLM_MODEL = env("LLM_MODEL", default="gpt-4o-mini")
+# Retries per Gemini page before the extract endpoint pauses with 429 resume state.
+LLM_EXTRACT_MAX_RETRIES = env.int("LLM_EXTRACT_MAX_RETRIES", default=6)

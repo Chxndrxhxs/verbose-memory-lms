@@ -7,6 +7,16 @@ interface AssignmentListResponse {
   meta: { page: number; total: number };
 }
 
+export interface ExtractQuestionsResult {
+  questions: Assignment["questions"];
+  done_pages: number[];
+  pending_pages: number[];
+  skipped_pages: number[];
+  total_pages: number;
+  rate_limited: boolean;
+  error?: string;
+}
+
 export const assignmentService = {
   async list(page = 1, search = "", status?: AssignmentStatus): Promise<AssignmentListResponse> {
     const params = new URLSearchParams({ page: String(page) });
@@ -80,6 +90,19 @@ export const assignmentService = {
     }
   ): Promise<{ questions: Assignment["questions"] }> {
     return api(`/admin/assignments/generate-questions`, {
+      method: "POST",
+      body: JSON.stringify(config),
+    });
+  },
+
+  async extractQuestions(config: {
+    source_document: string;
+    difficulty: string;
+    marksPerQuestion: number;
+    pending_pages?: number[];
+    done_pages?: number[];
+  }): Promise<ExtractQuestionsResult> {
+    return api(`/admin/assignments/extract-questions`, {
       method: "POST",
       body: JSON.stringify(config),
     });

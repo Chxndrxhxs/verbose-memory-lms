@@ -34,6 +34,11 @@ admin_patterns = [
         name="assignment-generate",
     ),
     path(
+        "admin/assignments/extract-questions",
+        views.admin_extract_questions,
+        name="assignment-extract",
+    ),
+    path(
         "admin/assignments/regenerate-question",
         views.admin_regenerate_question,
         name="assignment-regenerate",

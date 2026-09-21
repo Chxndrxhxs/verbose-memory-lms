@@ -25,17 +25,75 @@ def document_path_from_url(url: str) -> Path:
     """Resolve a stored media URL back to its on-disk path under MEDIA_ROOT.
 
     `source_document` may be a relative URL ("media/lessons/<name>") or an absolute
-    one ("http://host/media/lessons/<name>"); only the stored file name matters.
+    one ("http://host/media/lessons/<name>"); the path after the media prefix
+    is preserved so subdirectories like ``lessons/`` still resolve.
     """
     media_url = str(settings.MEDIA_URL or "media/").lstrip("/")
     clean = str(url).split("?", 1)[0]
     if media_url and media_url in clean:
-        name = clean.split(media_url, 1)[1].split("/", 1)[-1]
+        name = clean.split(media_url, 1)[1].lstrip("/")
     else:
         name = Path(clean).name
     if not name:
         raise ValueError("Could not resolve document path from source URL")
     return Path(settings.MEDIA_ROOT) / name
+
+
+def extract_document_markdown(url: str) -> str:
+    """Convert the document at `url` to markdown via MarkItDown.
+
+    Markdown preserves question numbering, option lists, and tables far
+    better than raw pypdf text, so it is the preferred input for the
+    verbatim Q&A extractor. Raises when MarkItDown is unavailable or fails.
+    """
+    from markitdown import MarkItDown
+
+    path = document_path_from_url(url)
+    if not path.exists():
+        raise FileNotFoundError(f"Source document not found on disk: {path}")
+    result = MarkItDown().convert(str(path))
+    markdown = (result.text_content or "").strip()
+    logger.info("MarkItDown extracted %s chars from %s", len(markdown), path.name)
+    return markdown[:MAX_EXTRACT_CHARS]
+
+
+def split_markdown_pages(markdown: str) -> list[str]:
+    """Split MarkItDown output into per-page chunks.
+
+    Handles MarkItDown page-break markers as well as printed "Page N of M"
+    footers, which is what question-paper PDFs usually contain.
+    """
+    import re
+
+    text = markdown or ""
+    markers = list(
+        re.finditer(
+            r"(?im)^[ \t]*(?:<!--\s*page\s*\d+.*?-->|---\s*page\s*\d+.*?|"
+            r"page\s+\d+\s+of\s+\d+|\\f)\s*$",
+            text,
+        )
+    )
+    if len(markers) <= 1:
+        chunks = [text] if text.strip() else []
+        return chunks
+    chunks = []
+    for i in range(len(markers)):
+        start = markers[i].end()
+        end = markers[i + 1].start() if i + 1 < len(markers) else len(text)
+        chunk = text[start:end].strip()
+        header = text[markers[i].start() : markers[i].end()].strip()
+        chunks.append(f"{header}\n{chunk}".strip())
+    return chunks
+
+
+def split_answer_key(markdown: str) -> tuple[str, str]:
+    """Split off a trailing answer-key section so it can ride along per page."""
+    import re
+
+    match = re.search(r"(?im)^[ \t]*.{0,20}answer\s*key.{0,20}$", markdown or "")
+    if not match:
+        return markdown, ""
+    return markdown[: match.start()].strip(), markdown[match.start() :].strip()
 
 
 def extract_document_text(url: str) -> str:
@@ -49,10 +107,10 @@ def extract_document_text(url: str) -> str:
 def extract_document_pages(url: str) -> list[dict]:
     """Extract per-page content: text plus any embedded images (saved to disk).
 
-    Returns a list of ``{"page": int, "text": str, "images": [{"name", "url"}]}``.
-    Images are persisted under MEDIA_ROOT/assignment_images/<doc-slug>/ and each
-    image's URL is relative to MEDIA_URL (the same shape as source_document), so
-    the client resolves them with absoluteMediaUrl().
+    Returns a list of ``{"page": int, "text": str, "images": [{"name", "url",
+    "path"}]}``. Images are persisted under MEDIA_ROOT/assignment_images/<doc-slug>/
+    and each image's URL is relative to MEDIA_URL (the same shape as
+    source_document), so the client resolves them with absoluteMediaUrl().
     """
     path = document_path_from_url(url)
     if not path.exists():
@@ -110,11 +168,13 @@ def _extract_pdf_pages(path: Path) -> list[dict]:
                 continue
             name = f"p{number:02d}_img{index:02d}{_image_suffix(image)}"
             try:
-                (target / name).write_bytes(bytes(payload))
+                disk_path = target / name
+                disk_path.write_bytes(bytes(payload))
                 images.append(
                     {
                         "name": name,
                         "url": f"{settings.MEDIA_URL}assignment_images/{slug}/{name}",
+                        "path": str(disk_path),
                     }
                 )
             except Exception:

@@ -29,6 +29,7 @@ from .services import (
     assignment_payload,
     category_tree_payload,
     collect_leaf_steps,
+    extract_document_questions,
     generate_questions_from_document,
     grade_expired_attempts,
     model_preview,
@@ -551,6 +552,20 @@ def admin_duplicate(request, assignment_id: int):
 @permission_classes([IsInstructor])
 def admin_generate_questions(request):
     return ok(generate_questions_from_document(request.data))
+
+
+@api_view(["POST"])
+@permission_classes([IsInstructor])
+def admin_extract_questions(request):
+    try:
+        result = extract_document_questions(request.data)
+    except FileNotFoundError as exc:
+        return Response({"data": None, "error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    except ValueError as exc:
+        return Response({"data": None, "error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    if result.get("rate_limited"):
+        return Response({"data": result, "error": None}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+    return ok(result)
 
 
 @api_view(["POST"])

@@ -4,8 +4,18 @@ import re
 from django.db import transaction
 from django.utils import timezone
 
-from .extraction import extract_document_pages
-from .llm import generate_questions_from_text, is_llm_configured
+from .extraction import (
+    extract_document_markdown,
+    extract_document_pages,
+    split_answer_key,
+    split_markdown_pages,
+)
+from .llm import (
+    GeminiRateLimitedError,
+    extract_page_questions,
+    generate_questions_from_text,
+    is_llm_configured,
+)
 from .models import (
     Assignment,
     AssignmentAttempt,
@@ -611,6 +621,103 @@ def regenerate_options(source: dict) -> dict:
     base = regenerate_question(source)
     new_options = base["options"]
     return {**source, "options": new_options, "correct_answer": base["correct_answer"]}
+
+
+def extract_document_questions(config: dict) -> dict:
+    """Copy the MCQs already printed in the uploaded document, verbatim.
+
+    Pipeline: MarkItDown markdown (structure) + pypdf figures (pixels) ->
+    Gemini verbatim structuring per page, with figures as vision inputs so
+    figure stems and image options survive. Questions without a printed
+    answer are flagged ``needs_review`` instead of guessing.
+
+    Returns an envelope so the UI can resume after rate limits:
+    ``{"questions": [...], "done_pages": [...], "pending_pages": [...],
+    "total_pages": N}``. Pass ``done_pages``/``pending_pages`` back in
+    ``config`` to continue a partial run instead of starting over.
+    """
+    source_document = str(config.get("source_document") or "").strip()
+    if not source_document:
+        raise ValueError("Upload a question paper first")
+    if not is_llm_configured():
+        raise ValueError("Connect a Gemini API key to extract PDF questions")
+    try:
+        markdown = extract_document_markdown(source_document)
+    except FileNotFoundError:
+        raise
+    except Exception as exc:
+        raise ValueError(f"Could not read the uploaded document: {exc}") from exc
+    if not markdown.strip():
+        raise ValueError("No readable text found in the uploaded document")
+    try:
+        pages = extract_document_pages(source_document)
+    except FileNotFoundError:
+        raise
+    except Exception as exc:
+        raise ValueError(f"Could not read the uploaded document: {exc}") from exc
+    markdown, answer_key = split_answer_key(markdown)
+    body_pages = [page for page in pages if "answer key" not in page["text"].lower()]
+    ordered = body_pages or pages
+    md_body_pages = split_markdown_pages(markdown)
+    if len(md_body_pages) == len(ordered):
+        source_pages = md_body_pages
+    else:
+        logger.warning(
+            "MarkItDown returned %s chunks for %s pages; using pypdf text",
+            len(md_body_pages),
+            len(ordered),
+        )
+        source_pages = [page["text"] for page in ordered]
+    if answer_key:
+        markdown_pages = [
+            f"{text}\n\n{answer_key}" if text.strip() else text for text in source_pages
+        ]
+    else:
+        markdown_pages = source_pages
+    questions: list[dict] = []
+    done_pages: list[int] = []
+    skipped_pages: list[int] = []
+    resume_pages = config.get("pending_pages") or config.get("done_pages")
+    only_pages = {int(page) for page in resume_pages} if resume_pages is not None else None
+    for index, page in enumerate(ordered):
+        if only_pages is not None and page["page"] not in only_pages:
+            continue
+        page_markdown = (markdown_pages[index] or page["text"]).strip()
+        if not page_markdown and not page["images"]:
+            continue
+        try:
+            questions.extend(
+                extract_page_questions(page_markdown, page["page"], page["images"], config)
+            )
+            done_pages.append(page["page"])
+        except GeminiRateLimitedError as exc:
+            pending = [p["page"] for p in ordered[index:]]
+            logger.warning("Gemini rate-limited; pausing with %s pages pending", len(pending))
+            return {
+                "questions": questions,
+                "done_pages": done_pages,
+                "pending_pages": pending,
+                "skipped_pages": skipped_pages,
+                "total_pages": len(ordered),
+                "rate_limited": True,
+                "error": str(exc),
+            }
+        except Exception:
+            skipped_pages.append(page["page"])
+            logger.warning("Verbatim extraction failed for page %s", page["page"], exc_info=True)
+    if not questions and not done_pages and not skipped_pages:
+        raise ValueError(
+            "No numbered questions with options found. "
+            "Check the file has Q1, Q2... with (a)-(d) options, or use Generate mode."
+        )
+    return {
+        "questions": questions,
+        "done_pages": done_pages,
+        "pending_pages": [],
+        "skipped_pages": skipped_pages,
+        "total_pages": len(ordered),
+        "rate_limited": False,
+    }
 
 
 # ---------------------------------------------------------------------------
