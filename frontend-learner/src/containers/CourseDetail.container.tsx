@@ -51,12 +51,14 @@ export function CourseDetailContainer() {
   const { data: enrollmentList = [] } = useQuery({
     queryKey: ["enrollment", id],
     queryFn: async () => {
-      const res = await api<{ course: { id: number } }[] | { results: { course: { id: number } }[] }>("/me/courses");
+      const res = await api<{ course: { id: number }; progress: number }[] | { results: { course: { id: number }; progress: number }[] }>("/me/courses");
       return Array.isArray(res) ? res : (res.results ?? []);
     },
     enabled: !!id && !!data,
   });
-  const enrolled = enrollmentList.some((e) => String(e.course.id) === String(id));
+  const enrollment = enrollmentList.find((e) => String(e.course.id) === String(id));
+  const enrolled = Boolean(enrollment);
+  const progress = enrollment?.progress ?? 0;
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2600); };
 
@@ -176,6 +178,7 @@ export function CourseDetailContainer() {
     <CourseDetailView
       data={data}
       enrolled={enrolled}
+      progress={progress}
       processing={processing}
       open={open}
       toast={toast}

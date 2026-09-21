@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowUpRight, Cloud, Eye } from "@masterlms/shared";
 type Props = {
   title: string;
   saving: boolean;
+  saveStatus?: string;
   disabled?: boolean;
   disabledHint?: string;
   onPreview: () => void;
@@ -11,7 +12,7 @@ type Props = {
   onSave: () => void;
 };
 
-export function CourseBuilderHeader({ title, saving, disabled = false, disabledHint = "Save course details first", onPreview, onPublish, onSave }: Props) {
+export function CourseBuilderHeader({ title, saving, saveStatus, disabled = false, disabledHint = "Save course details first", onPreview, onPublish, onSave }: Props) {
   const nav = useNavigate();
   return (
     <div className="sticky top-3 z-30 rounded-full bg-white px-3 py-2 shadow-lg">
@@ -25,6 +26,7 @@ export function CourseBuilderHeader({ title, saving, disabled = false, disabledH
         </button>
         <p className="min-w-0 flex-1 truncate text-center text-sm font-bold text-zinc-900 sm:text-base">
           {title || "Untitled course"}
+          {saveStatus && <span className="ml-2 hidden text-[11px] font-medium text-zinc-400 sm:inline">{saveStatus}</span>}
         </p>
         <div className="flex items-center gap-1.5 sm:gap-2">
           <button

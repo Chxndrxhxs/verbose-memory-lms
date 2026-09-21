@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Activity from "./pages/Activity";
 import Analytics from "./pages/Analytics";
@@ -11,7 +11,6 @@ import CompleteProfile from "./pages/CompleteProfile";
 import Leaderboard from "./pages/Leaderboard";
 import CourseCreate from "./pages/CourseCreate";
 import CourseEdit from "./pages/CourseEdit";
-import CourseNew from "./pages/CourseNew";
 import Courses from "./pages/Courses";
 import Dashboard from "./pages/Dashboard";
 import InstructorLanding from "./pages/InstructorLanding";
@@ -31,7 +30,8 @@ const router = createBrowserRouter([
   { path: "/courses",
     children: [
       { index: true, element: <Protected><Courses /></Protected> },
-      { path: "new", element: <Protected><CourseNew /></Protected> },
+      // single creation flow — /new redirects to canonical /create
+      { path: "new", element: <Navigate to="/courses/create" replace /> },
       { path: "create", element: <Protected><CourseCreate /></Protected> },
       { path: ":id", element: <Protected><CourseEdit /></Protected> },
     ],

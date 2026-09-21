@@ -17,7 +17,25 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
   const [active, setActive] = useState<number | null>(null);
   const [openSections, setOpenSections] = useState<Set<number>>(() => new Set([0]));
   const [tab, setTab] = useState<"overview" | "notes" | "qna">("overview");
-  const [note, setNote] = useState("");
+  const notesKey = `lms:notes:${courseId}`;
+  const [notes, setNotes] = useState<Record<number, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(notesKey) ?? "{}") as Record<number, string>;
+    } catch {
+      return {};
+    }
+  });
+  const note = active != null ? (notes[active] ?? "") : "";
+  const setNote = (value: string) => {
+    if (active == null) return;
+    setNotes((prev) => {
+      const next = { ...prev, [active]: value };
+      try {
+        localStorage.setItem(notesKey, JSON.stringify(next));
+      } catch { /* storage unavailable */ }
+      return next;
+    });
+  };
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number | string>>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [showRating, setShowRating] = useState(false);
@@ -44,11 +62,25 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
     enabled: !!courseId,
   });
   const [completed, setCompleted] = useState<Set<number>>(new Set());
+  const lastKey = `lms:last-lesson:${courseId}`;
 
-  // init default lesson + saved progress once queries resolve (UI state only)
+  // init resume lesson once sections + progress resolve (UI state only)
   useEffect(() => {
-    if (sections[0]?.lessons[0] && active == null) setActive(sections[0].lessons[0].id);
-  }, [sections, active]);
+    if (active != null || sections.length === 0) return;
+    const all = sections.flatMap((s) => s.lessons);
+    let initial: number | null = null;
+    try {
+      const saved = Number(localStorage.getItem(lastKey));
+      if (saved && all.some((l) => l.id === saved)) initial = saved;
+    } catch { /* storage unavailable */ }
+    if (initial == null) {
+      const done = new Set(progressQuery.data?.completed_lessons ?? []);
+      initial = all.find((l) => !done.has(l.id))?.id ?? all[0]?.id ?? null;
+    }
+    setActive(initial);
+    const idx = sections.findIndex((s) => s.lessons.some((l) => l.id === initial));
+    if (idx >= 0) setOpenSections((prev) => new Set(prev).add(idx));
+  }, [sections, active, lastKey, progressQuery.data]);
   useEffect(() => {
     const mine = progressQuery.data;
     if (mine && Array.isArray(mine.completed_lessons)) setCompleted(new Set(mine.completed_lessons));
@@ -113,8 +145,16 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
     },
   });
 
+  const selectLesson = (lessonId: number) => {
+    setActive(lessonId);
+    setQuizSubmitted(false);
+    setQuizResult(null);
+    try {
+      localStorage.setItem(lastKey, String(lessonId));
+    } catch { /* storage unavailable */ }
+  };
   const allLessons = useMemo(() => sections.flatMap((s) => s.lessons), [sections]);
-  const activeLesson = sections.flatMap((s) => s.lessons).find((l) => l.id === active);
+  const activeLesson = allLessons.find((l) => l.id === active);
   const total = allLessons.length;
   const progress = total ? Math.round((completed.size / total) * 100) : 0;
 
@@ -181,7 +221,7 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
       submittingRating={rateMutation.isPending}
       userRating={userRating}
       toast={toast}
-      onSelectLesson={(lessonId) => { setActive(lessonId); setQuizSubmitted(false); setQuizResult(null); }}
+      onSelectLesson={selectLesson}
       onToggleSection={toggleSection}
       onTab={setTab}
       onNote={setNote}
