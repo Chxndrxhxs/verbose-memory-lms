@@ -10,4 +10,7 @@ export default defineConfig({
       "@masterlms/shared": fileURLToPath(new URL("../packages/shared/src/index.ts", import.meta.url)),
     },
   },
+  server: {
+    port: 5174,
+  },
 });

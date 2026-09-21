@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "packageManager": "pnpm@9.0.0",
   "scripts": {
+    "dev": "pnpm --parallel --filter frontend-learner --filter frontend-instructor --filter frontend-admin dev",
     "dev:learner": "pnpm --filter frontend-learner dev",
     "dev:instructor": "pnpm --filter frontend-instructor dev",
     "dev:admin": "pnpm --filter frontend-admin dev",
