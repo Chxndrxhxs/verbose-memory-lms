@@ -466,7 +466,7 @@ function pushQuestionErrors(
   if (!q.question.trim()) {
     errors.push({ field: `question_${q.id}`, message: "Question text cannot be empty" });
   }
-  const validOptions = q.options.filter((o) => optionText(o).trim() || o.image);
+  const validOptions = q.options.filter((o) => optionText(o).trim() || optionImage(o));
   if (validOptions.length < 2) {
     errors.push({ field: `options_${q.id}`, message: "At least 2 options are required" });
   }

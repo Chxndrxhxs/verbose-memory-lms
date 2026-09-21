@@ -9,7 +9,7 @@ import {
   ChevronDown,
   ChevronUp,
   GripVertical,
-  Image as ImageIcon,
+  ImageIcon,
 } from "@masterlms/shared";
 import { absoluteMediaUrl, optionImage, optionText } from "@masterlms/shared";
 import { cn } from "../lib/utils";
