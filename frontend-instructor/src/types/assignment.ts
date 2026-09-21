@@ -51,6 +51,9 @@ export interface AssignmentModel3Test {
   passingPercentage: number;
 }
 
+/** @deprecated model_3 now reuses AssignmentTest/tests; kept for old drafts. */
+export type LegacyModel3Tests = AssignmentModel3Test[];
+
 export interface Assignment {
   id: string;
   modelType: AssignmentModelType;
@@ -68,6 +71,7 @@ export interface Assignment {
   endDate: string;
   questions: AssignmentQuestion[];
   tests: AssignmentTest[];
+  /** @deprecated use tests[].sets for model_3; read for old drafts only. */
   model3Tests: AssignmentModel3Test[];
   randomizeQuestions: boolean;
   randomizeOptions: boolean;
@@ -253,7 +257,21 @@ export function getModel2Questions(assignment: Assignment): AssignmentQuestion[]
 }
 
 export function getModel3Questions(assignment: Assignment): AssignmentQuestion[] {
-  return assignment.model3Tests.flatMap((t) =>
+  const tests =
+    assignment.tests.length > 0
+      ? assignment.tests
+      : assignment.model3Tests.map((t) => ({
+          id: t.id,
+          title: t.title,
+          description: t.description,
+          duration: t.duration,
+          questionIds: [] as string[],
+          questions: [] as AssignmentQuestion[],
+          sets: t.sets,
+          randomizeQuestions: t.randomizeQuestions,
+          passingPercentage: t.passingPercentage,
+        }));
+  return tests.flatMap((t) =>
     t.sets.flatMap((s) => getQuestionsByIds(assignment.questions, s.questionIds))
   );
 }
@@ -272,9 +290,11 @@ export function countModel2Questions(assignment: Assignment): number {
 }
 
 export function countModel3Questions(assignment: Assignment): number {
-  return assignment.model3Tests.reduce(
-    (sum, t) => sum + t.sets.reduce((s, set) => s + set.questionIds.length, 0),
-    0
+  const tests = assignment.tests.length > 0 ? assignment.tests : [];
+  const legacy = tests.length === 0 ? assignment.model3Tests : [];
+  return (
+    tests.reduce((sum, t) => sum + t.sets.reduce((s, set) => s + set.questionIds.length, 0), 0) +
+    legacy.reduce((sum, t) => sum + t.sets.reduce((s, set) => s + set.questionIds.length, 0), 0)
   );
 }
 
@@ -285,11 +305,15 @@ export function countQuestions(assignment: Assignment, model: AssignmentModelTyp
 }
 
 export function getTotalQuestions(assignment: Assignment): number {
-  return assignment.questions.length;
+  if (assignment.modelType === "model_1") return assignment.questions.length;
+  return countQuestions(assignment, assignment.modelType);
 }
 
 export function getTotalMarks(assignment: Assignment): number {
-  return assignment.questions.reduce((sum, q) => sum + q.marks, 0);
+  if (assignment.modelType === "model_1") {
+    return assignment.questions.reduce((sum, q) => sum + q.marks, 0);
+  }
+  return getModelTotalMarks(assignment, assignment.modelType);
 }
 
 export function getModelTotalMarks(
@@ -389,14 +413,26 @@ export function ensureModelsCollectPool(assignment: Assignment): Assignment {
     return { ...s, questionIds, questions: getQuestionsByIds(pool, questionIds) };
   };
 
-  let tests = assignment.tests.map(syncTest);
-  let model3Tests = assignment.model3Tests.map((t) => ({
-    ...t,
-    sets: t.sets.map(syncSet),
+  let tests: AssignmentTest[] = assignment.tests.map((t) => ({
+    ...syncTest(t),
+    sets: (t.sets ?? []).map(syncSet),
   }));
+  if (tests.length === 0 && assignment.model3Tests.length > 0) {
+    tests = assignment.model3Tests.map((t) => ({
+      id: t.id,
+      title: t.title,
+      description: t.description,
+      duration: t.duration,
+      questionIds: [],
+      questions: [],
+      sets: t.sets.map(syncSet),
+      randomizeQuestions: t.randomizeQuestions,
+      passingPercentage: t.passingPercentage,
+    }));
+  }
 
   const model2Placed = new Set(tests.flatMap((t) => t.questionIds));
-  const model3Placed = new Set(model3Tests.flatMap((t) => t.sets.flatMap((s) => s.questionIds)));
+  const model3Placed = new Set(tests.flatMap((t) => t.sets.flatMap((s) => s.questionIds)));
   const newIds = assignment.questions
     .map((q) => q.id)
     .filter((id) => !model2Placed.has(id) && !model3Placed.has(id));
@@ -413,34 +449,9 @@ export function ensureModelsCollectPool(assignment: Assignment): Assignment {
       };
       tests = [merged, ...tests.slice(1)];
     }
-
-    if (model3Tests.length === 0 && assignment.questions.length > 0) {
-      model3Tests = buildModel3FromQuestions(assignment.questions, assignment.duration);
-    } else if (model3Tests.length > 0 && model3Tests[0].sets.length > 0) {
-      model3Tests = model3Tests.map((t, i) => {
-        if (i !== 0) return t;
-        const firstSet = t.sets[0];
-        return {
-          ...t,
-          sets: [
-            {
-              ...firstSet,
-              questionIds: [...firstSet.questionIds, ...newIds],
-              questions: [...firstSet.questions, ...getQuestionsByIds(pool, newIds)],
-            },
-            ...t.sets.slice(1),
-          ],
-        };
-      });
-    } else if (model3Tests.length > 0) {
-      const set = createEmptySet("Set 1");
-      set.questionIds = newIds;
-      set.questions = getQuestionsByIds(pool, newIds);
-      model3Tests = model3Tests.map((t, i) => (i === 0 ? { ...t, sets: [set] } : t));
-    }
   }
 
-  return { ...assignment, tests, model3Tests };
+  return { ...assignment, tests, model3Tests: [] };
 }
 
 export function poolQuestionIdsChanged(
@@ -511,27 +522,23 @@ export function validateAssignment(assignment: Assignment): AssignmentValidation
         message: "Test duration must be greater than 0",
       });
     }
-    if (test.questionIds.length === 0) {
+    if (assignment.modelType === "model_2" && test.questionIds.length === 0) {
       errors.push({ field: `test_questions_${test.id}`, message: "Test must contain at least one question" });
     }
-  }
-
-  for (const test of assignment.model3Tests) {
-    if (!test.title.trim()) {
-      errors.push({ field: `test_title_${test.id}`, message: "Test title is required" });
-    }
-    if (test.sets.length === 0) {
-      errors.push({ field: `test_sets_${test.id}`, message: "Test must contain at least one set" });
-    }
-    for (const set of test.sets) {
-      if (!set.title.trim()) {
-        errors.push({ field: `set_title_${set.id}`, message: "Set title is required" });
+    if (assignment.modelType === "model_3") {
+      if (test.sets.length === 0) {
+        errors.push({ field: `test_sets_${test.id}`, message: "Test must contain at least one set" });
       }
-      if (set.duration <= 0) {
-        errors.push({ field: `set_duration_${set.id}`, message: "Set duration must be greater than 0" });
-      }
-      if (set.questionIds.length === 0) {
-        errors.push({ field: `set_questions_${set.id}`, message: "Set must contain at least one question" });
+      for (const set of test.sets) {
+        if (!set.title.trim()) {
+          errors.push({ field: `set_title_${set.id}`, message: "Set title is required" });
+        }
+        if (set.duration <= 0) {
+          errors.push({ field: `set_duration_${set.id}`, message: "Set duration must be greater than 0" });
+        }
+        if (set.questionIds.length === 0) {
+          errors.push({ field: `set_questions_${set.id}`, message: "Set must contain at least one question" });
+        }
       }
     }
   }

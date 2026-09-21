@@ -36,6 +36,8 @@ export async function api<T>(path: string, init: RequestInit & { auth?: boolean 
   return handle<T>(await request(path, rest));
 }
 
+/** Alias kept for leaderboard/activity callers: same refresh-on-401 behavior, raw envelope. */
+
 export class ApiError extends Error {
   status: number;
   payload: unknown;

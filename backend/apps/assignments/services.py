@@ -2,6 +2,7 @@ import logging
 import re
 
 from django.db import transaction
+from django.db.models import Count
 from django.utils import timezone
 
 from .extraction import (
@@ -132,12 +133,23 @@ def _replace_steps(
             position=index,
         )
         for q_index, q_payload in enumerate(step_payload.get("questions", [])):
+            raw_options = q_payload.get("options", ["", "", "", ""]) or []
+            options = []
+            for option in raw_options:
+                if isinstance(option, str):
+                    options.append(option)
+                elif isinstance(option, dict):
+                    options.append(
+                        {"text": option.get("text", ""), "image": option.get("image", "")}
+                    )
+                else:
+                    options.append(str(option))
             AssignmentQuestion.objects.create(
                 assignment=model.assignment,
                 step=step,
                 question=q_payload.get("question", ""),
                 question_image=q_payload.get("question_image", ""),
-                options=list(q_payload.get("options", ["", "", "", ""])),
+                options=options,
                 correct_answer=int(q_payload.get("correct_answer", 0)),
                 explanation=q_payload.get("explanation", ""),
                 marks=q_payload.get("marks", 1),
@@ -150,9 +162,16 @@ def _replace_steps(
 
 def save_assignment_fields(assignment: Assignment | None, payload: dict, user) -> Assignment:
     """Create or update an assignment (top-level fields only - not models)."""
+    from .extraction import document_file_id
+
     defaults = {k: payload[k] for k in payload if k not in ("models", "steps", "questions")}
     if defaults.get("access") is None:
         defaults["access"] = {}
+    if defaults.get("source_document") and not defaults.get("source_document_file_id"):
+        try:
+            defaults["source_document_file_id"] = document_file_id(defaults["source_document"])
+        except ValueError:
+            defaults["source_document_file_id"] = ""
     if not assignment:
         assignment = Assignment(created_by=user, **defaults)
     else:
@@ -196,7 +215,14 @@ def step_builder(step: AssignmentModelStep) -> dict:
 
 
 def model_payload(model: AssignmentModel, include_questions: bool = True) -> dict:
-    total_questions = sum(len(step.questions.all()) for step in collect_leaf_steps(model))
+    leaf_steps = collect_leaf_steps(model)
+    step_ids = [step.id for step in leaf_steps]
+    counts = (
+        AssignmentQuestion.objects.filter(step_id__in=step_ids)
+        .values("step_id")
+        .annotate(total=Count("id"))
+    )
+    total_questions = sum(row["total"] for row in counts)
     return {
         "id": model.id,
         "code": model.code,
@@ -213,6 +239,9 @@ def model_payload(model: AssignmentModel, include_questions: bool = True) -> dic
 
 def model_preview(model: AssignmentModel) -> dict:
     """Compact model summary for list cards / model picker (no heavy steps)."""
+    leaf_steps = collect_leaf_steps(model)
+    step_ids = [step.id for step in leaf_steps]
+    total_questions = AssignmentQuestion.objects.filter(step_id__in=step_ids).count()
     return {
         "id": model.id,
         "code": model.code,
@@ -222,7 +251,7 @@ def model_preview(model: AssignmentModel) -> dict:
         "is_published": model.is_published,
         "duration_seconds": model_duration_seconds(model),
         "duration_label": format_duration_hms(model_duration_seconds(model)),
-        "total_questions": sum(len(step.questions.all()) for step in collect_leaf_steps(model)),
+        "total_questions": total_questions,
     }
 
 
@@ -260,6 +289,7 @@ def assignment_payload(assignment: Assignment, include_models: bool = True) -> d
         "published_at": assignment.published_at.isoformat() if assignment.published_at else None,
         "source_document": assignment.source_document,
         "source_document_name": assignment.source_document_name,
+        "source_document_file_id": assignment.source_document_file_id,
         "draft_data": assignment.draft_data,
         "inter_category": {
             "id": assignment.inter_category.id,
@@ -280,7 +310,9 @@ def assignment_payload(assignment: Assignment, include_models: bool = True) -> d
     }
     if assignment.course_id:
         data["course"] = {"id": assignment.course.id, "title": assignment.course.title}
-    assignment_models = list(assignment.models.all())
+    assignment_models = list(
+        assignment.models.prefetch_related("steps", "steps__children", "steps__questions")
+    )
     models = [model_payload(model) for model in assignment_models]
     if include_models:
         data["models"] = models
@@ -635,7 +667,16 @@ def extract_document_questions(config: dict) -> dict:
     ``{"questions": [...], "done_pages": [...], "pending_pages": [...],
     "total_pages": N}``. Pass ``done_pages``/``pending_pages`` back in
     ``config`` to continue a partial run instead of starting over.
+
+    Set ``config["async_mode"]`` to enqueue a background job instead: returns
+    ``{"job_id", "status"}`` immediately and the client polls
+    ``GET admin/assignments/extract-jobs/<id>`` for progress.
     """
+    if config.get("async_mode"):
+        from . import extract_jobs
+
+        job = extract_jobs.enqueue(dict(config))
+        return {"job_id": job["job_id"], "status": job["status"]}
     source_document = str(config.get("source_document") or "").strip()
     if not source_document:
         raise ValueError("Upload a question paper first")
@@ -858,7 +899,9 @@ def compute_outcome(attempt: AssignmentAttempt, answers: dict) -> None:
     assignment = attempt.assignment
     snapshot = attempt.questions_snapshot or {}
     steps = collect_leaf_steps(attempt.model)
-    questions_by_step = {step.id: list(step.questions.order_by("position", "id")) for step in steps}
+    question_ids = [q.id for step in steps for q in step.questions.all()]
+    live = {q.id: q for q in AssignmentQuestion.objects.filter(id__in=question_ids)}
+    questions_by_step = {step.id: list(step.questions.all()) for step in steps}
 
     per_step: dict[int, dict] = {}
     total_questions = 0
@@ -876,9 +919,10 @@ def compute_outcome(attempt: AssignmentAttempt, answers: dict) -> None:
         correct_in_step = 0
         attempted_in_step = 0
         for q in qs:
+            fallback = live.get(q.id, q)
             meta = step_snap.get(str(q.id)) or {
-                "correct_answer": int(q.correct_answer),
-                "marks": float(q.marks),
+                "correct_answer": int(fallback.correct_answer),
+                "marks": float(fallback.marks),
             }
             marks = meta["marks"]
             total_questions += 1

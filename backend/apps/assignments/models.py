@@ -121,7 +121,10 @@ class Assignment(models.Model):
 
     source_document = models.CharField(max_length=500, blank=True, default="")
     source_document_name = models.CharField(max_length=200, blank=True, default="")
-    draft_data = models.JSONField(default=dict, blank=True)
+    # Stable storage id for the uploaded source file (path under the document
+    # store). Derive once from source_document; the extract pipeline prefers
+    # this over re-parsing URLs so backends can move off local disk.
+    source_document_file_id = models.CharField(max_length=500, blank=True, default="")
     # The instructor wizard is progressively saved, including its in-progress
     # client-side model arrangement, so a refresh can resume the exact draft.
     draft_data = models.JSONField(default=dict, blank=True)

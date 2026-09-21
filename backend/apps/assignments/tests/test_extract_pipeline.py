@@ -85,6 +85,22 @@ def test_extract_view_rejects_missing_document(instructor_client, settings):
     assert r.status_code == 400
 
 
+@pytest.mark.django_db
+def test_extract_async_mode_returns_job(instructor_client, settings):
+    settings.LLM_API_KEY = "test-key"
+    r = instructor_client.post(
+        "/api/v1/admin/assignments/extract-questions",
+        {"source_document": "media/paper.pdf", "async_mode": True},
+        format="json",
+    )
+    assert r.status_code == 202
+    job_id = r.json()["data"]["job_id"]
+    assert job_id
+    poll = instructor_client.get(f"/api/v1/admin/assignments/extract-jobs/{job_id}")
+    assert poll.status_code == 200
+    assert poll.json()["data"]["job_id"] == job_id
+
+
 def test_split_answer_key_separates_trailing_key():
     body, key = split_answer_key("Q1. What?\na) x\nb) y\n\nAnswer Key\n\n| 1 | b |\n")
     assert "Answer Key" not in body
@@ -97,6 +113,45 @@ def test_split_markdown_pages_handles_printed_footers():
     assert len(chunks) == 2
     assert "Q1" in chunks[0]
     assert "Q2" in chunks[1]
+
+
+def test_document_file_id_keeps_subdirectory():
+    from apps.assignments.extraction import document_file_id
+
+    assert document_file_id("media/lessons/paper.pdf") == "lessons/paper.pdf"
+    assert document_file_id("http://localhost:8000/media/lessons/paper.pdf") == "lessons/paper.pdf"
+
+
+def test_save_assignment_fields_derives_file_id(db):
+    from apps.assignments.models import Category, InterCategory, SubCategory
+    from apps.assignments.services import save_assignment_fields
+    from apps.users.models import User
+
+    instructor = User.objects.create_user(
+        username="file_id_probe", mobile="9811111111", role="instructor"
+    )
+    cat = Category.objects.create(name="FileIdCat", created_by=instructor)
+    sub = SubCategory.objects.create(name="FileIdSub", category=cat, created_by=instructor)
+    inter = InterCategory.objects.create(name="FileIdInter", sub_category=sub)
+    assignment = save_assignment_fields(
+        None,
+        {"title": "File id", "inter_category": inter, "source_document": "media/lessons/p.pdf"},
+        instructor,
+    )
+    assert assignment.source_document_file_id == "lessons/p.pdf"
+
+
+def test_extract_jobs_enqueue_and_status(monkeypatch):
+    from apps.assignments import extract_jobs
+
+    monkeypatch.setattr(
+        extract_jobs, "_run", lambda job_id, config: extract_jobs._finish(job_id, "done")
+    )
+    job = extract_jobs.enqueue({"source_document": "media/paper.pdf"})
+    assert job["job_id"]
+    stored = extract_jobs.get(job["job_id"])
+    assert stored is not None
+    assert stored["status"] in {"queued", "running", "done"}
 
 
 def test_gemini_request_retries_then_succeeds(monkeypatch):

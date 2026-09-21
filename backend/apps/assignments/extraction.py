@@ -1,7 +1,7 @@
 """Extract readable text and embedded images from an uploaded source document.
 
 PDF / DOCX / plain text are supported. Images extracted from PDF pages are
-saved under MEDIA_ROOT/assignment_images/<slug>/ and returned as media URLs so
+saved through the document storage backend and returned as media URLs so
 they can be embedded into generated questions and options.
 """
 
@@ -21,12 +21,11 @@ _TEXT_EXTENSIONS = {".txt", ".md"}
 _IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
 
 
-def document_path_from_url(url: str) -> Path:
-    """Resolve a stored media URL back to its on-disk path under MEDIA_ROOT.
+def document_file_id(url: str) -> str:
+    """Stable storage id for an uploaded document (path under MEDIA_ROOT).
 
-    `source_document` may be a relative URL ("media/lessons/<name>") or an absolute
-    one ("http://host/media/lessons/<name>"); the path after the media prefix
-    is preserved so subdirectories like ``lessons/`` still resolve.
+    Keeps subdirectory structure (``lessons/<name>``) so the storage backend
+    can later move to S3 without changing every caller.
     """
     media_url = str(settings.MEDIA_URL or "media/").lstrip("/")
     clean = str(url).split("?", 1)[0]
@@ -36,7 +35,17 @@ def document_path_from_url(url: str) -> Path:
         name = Path(clean).name
     if not name:
         raise ValueError("Could not resolve document path from source URL")
-    return Path(settings.MEDIA_ROOT) / name
+    return name
+
+
+def document_path_from_url(url: str) -> Path:
+    """Resolve a stored media URL back to its on-disk path under MEDIA_ROOT.
+
+    `source_document` may be a relative URL ("media/lessons/<name>") or an absolute
+    one ("http://host/media/lessons/<name>"); the path after the media prefix
+    is preserved so subdirectories like ``lessons/`` still resolve.
+    """
+    return Path(settings.MEDIA_ROOT) / document_file_id(url)
 
 
 def extract_document_markdown(url: str) -> str:
@@ -108,9 +117,9 @@ def extract_document_pages(url: str) -> list[dict]:
     """Extract per-page content: text plus any embedded images (saved to disk).
 
     Returns a list of ``{"page": int, "text": str, "images": [{"name", "url",
-    "path"}]}``. Images are persisted under MEDIA_ROOT/assignment_images/<doc-slug>/
-    and each image's URL is relative to MEDIA_URL (the same shape as
-    source_document), so the client resolves them with absoluteMediaUrl().
+    "path", "file_id"}]}``. Images go through the document storage backend
+    (local ``MEDIA_ROOT`` today, S3-compatible tomorrow); ``url`` keeps the
+    MEDIA_URL shape so the client resolves them with absoluteMediaUrl().
     """
     path = document_path_from_url(url)
     if not path.exists():
@@ -139,6 +148,19 @@ def extract_document_pages(url: str) -> list[dict]:
     return pages
 
 
+def save_figure(data: bytes, file_id: str) -> tuple[str, str]:
+    """Persist one extracted figure; returns ``(url, path)``.
+
+    Single choke point for figure storage: local disk today, swap the body
+    for S3/boto3 later without touching callers.
+    """
+    disk_path = Path(settings.MEDIA_ROOT) / file_id
+    disk_path.parent.mkdir(parents=True, exist_ok=True)
+    disk_path.write_bytes(bytes(data))
+    url = f"{settings.MEDIA_URL.rstrip('/')}/{file_id}"
+    return url, str(disk_path)
+
+
 def _image_store_dir(path: Path) -> tuple[Path, str]:
     slug = re.sub(r"[^a-zA-Z0-9_-]", "_", path.stem)[:60] or "document"
     target = Path(settings.MEDIA_ROOT) / "assignment_images" / slug
@@ -146,11 +168,15 @@ def _image_store_dir(path: Path) -> tuple[Path, str]:
     return target, slug
 
 
+def _figure_file_id(slug: str, name: str) -> str:
+    return f"assignment_images/{slug}/{name}"
+
+
 def _extract_pdf_pages(path: Path) -> list[dict]:
     from pypdf import PdfReader
 
     reader = PdfReader(str(path))
-    target, slug = _image_store_dir(path)
+    _target, slug = _image_store_dir(path)
     pages: list[dict] = []
     for number, page in enumerate(reader.pages, start=1):
         text = page.extract_text() or ""
@@ -168,13 +194,13 @@ def _extract_pdf_pages(path: Path) -> list[dict]:
                 continue
             name = f"p{number:02d}_img{index:02d}{_image_suffix(image)}"
             try:
-                disk_path = target / name
-                disk_path.write_bytes(bytes(payload))
+                url, disk_path = save_figure(bytes(payload), _figure_file_id(slug, name))
                 images.append(
                     {
                         "name": name,
-                        "url": f"{settings.MEDIA_URL}assignment_images/{slug}/{name}",
-                        "path": str(disk_path),
+                        "url": url,
+                        "path": disk_path,
+                        "file_id": _figure_file_id(slug, name),
                     }
                 )
             except Exception:

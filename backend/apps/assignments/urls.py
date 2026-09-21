@@ -39,6 +39,11 @@ admin_patterns = [
         name="assignment-extract",
     ),
     path(
+        "admin/assignments/extract-jobs/<str:job_id>",
+        views.admin_extract_job,
+        name="assignment-extract-job",
+    ),
+    path(
         "admin/assignments/regenerate-question",
         views.admin_regenerate_question,
         name="assignment-regenerate",

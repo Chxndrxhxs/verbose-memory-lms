@@ -33,6 +33,7 @@ class AssignmentWriteSerializer(serializers.ModelSerializer):
             "randomize_options",
             "source_document",
             "source_document_name",
+            "source_document_file_id",
             "draft_data",
         ]
 

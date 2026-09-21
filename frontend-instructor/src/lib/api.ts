@@ -1,1 +1,1 @@
-export { api, absoluteMediaUrl, uploadFile, ApiError } from "@masterlms/shared";
+export { api, apiEnvelope, absoluteMediaUrl, uploadFile, ApiError } from "@masterlms/shared";

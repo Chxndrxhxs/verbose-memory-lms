@@ -23,9 +23,7 @@ export function AssignmentPublishStep({ assignment, errors }: Props) {
     },
     {
       label: "At least one question",
-      ok:
-        getTotalQuestions(assignment) > 0 ||
-        (assignment.modelType !== "model_1" && assignment.tests.length > 0),
+      ok: getTotalQuestions(assignment) > 0,
     },
     {
       label: "All questions have valid options",
@@ -48,12 +46,12 @@ export function AssignmentPublishStep({ assignment, errors }: Props) {
           {
             label: "Tests have sets",
             ok:
-              assignment.model3Tests.length > 0 &&
-              assignment.model3Tests.every((test) => test.sets.length > 0),
+              assignment.tests.length > 0 &&
+              assignment.tests.every((test) => test.sets.length > 0),
           },
           {
             label: "All sets contain questions",
-            ok: assignment.model3Tests.every((t) =>
+            ok: assignment.tests.every((t) =>
               t.sets.every((s) => s.questions.length > 0)
             ),
           },

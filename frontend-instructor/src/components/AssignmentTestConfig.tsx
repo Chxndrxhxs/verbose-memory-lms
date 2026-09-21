@@ -517,8 +517,8 @@ export function AssignmentTestConfigStep({ assignment, onChange }: Props) {
   }
 
   // Drafts created before question arrays were added can still be opened safely.
-  // The canonical pool remains on `assignment.questions`; these arrays only hold
-  // each model's arranged questions.
+  // model_3 reuses the same `tests` array: each test's `sets` hold the arranged
+  // questions, so there is exactly one TestPanel source of truth.
   const tests = assignment.tests.map((test) => ({
     ...test,
     questions: test.questions ?? [],

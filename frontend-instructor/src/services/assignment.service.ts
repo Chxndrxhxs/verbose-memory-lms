@@ -7,14 +7,42 @@ interface AssignmentListResponse {
   meta: { page: number; total: number };
 }
 
+export interface ExtractedQuestionRaw {
+  question?: unknown;
+  questionImage?: unknown;
+  question_image?: unknown;
+  options?: unknown;
+  correctAnswer?: unknown;
+  correct_answer?: unknown;
+  explanation?: unknown;
+  marks?: unknown;
+  difficulty?: unknown;
+  topic?: unknown;
+  needs_review?: unknown;
+  has_answer?: unknown;
+}
+
 export interface ExtractQuestionsResult {
-  questions: Assignment["questions"];
+  questions: ExtractedQuestionRaw[];
   done_pages: number[];
   pending_pages: number[];
   skipped_pages: number[];
   total_pages: number;
   rate_limited: boolean;
   error?: string;
+}
+
+export interface ExtractJobEnvelope {
+  job_id: string;
+  status: "queued" | "running" | "paused" | "done" | "failed";
+  source_document: string;
+  questions: ExtractedQuestionRaw[];
+  done_pages: number[];
+  pending_pages: number[];
+  skipped_pages: number[];
+  total_pages: number;
+  rate_limited: boolean;
+  error: string;
 }
 
 export const assignmentService = {
@@ -101,11 +129,16 @@ export const assignmentService = {
     marksPerQuestion: number;
     pending_pages?: number[];
     done_pages?: number[];
+    async_mode?: boolean;
   }): Promise<ExtractQuestionsResult> {
     return api(`/admin/assignments/extract-questions`, {
       method: "POST",
       body: JSON.stringify(config),
     });
+  },
+
+  async getExtractJob(jobId: string): Promise<ExtractJobEnvelope> {
+    return api(`/admin/assignments/extract-jobs/${jobId}`);
   },
 
   async regenerateQuestion(

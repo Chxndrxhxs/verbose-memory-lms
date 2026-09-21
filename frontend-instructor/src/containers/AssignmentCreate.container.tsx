@@ -9,7 +9,6 @@ import {
   ensureModelsCollectPool,
   poolQuestionIdsChanged,
   buildModel2FromQuestions,
-  buildModel3FromQuestions,
   type Assignment,
   type AssignmentValidationError,
 } from "../types/assignment";
@@ -61,23 +60,13 @@ export function AssignmentCreateContainer({ existingId }: { existingId?: string 
     }
     // Switching to a multi-stage model with no tests/sets yet builds them
     // automatically from the question pool so the wizard never shows an empty
-    // configuration screen.
+    // configuration screen. model_3 stores its tests in `tests` with sets.
     if (next.modelType !== assignment.modelType) {
       if (next.modelType !== "model_1") {
         if (built.tests.length === 0 && built.questions.length > 0) {
           built = {
             ...built,
             tests: buildModel2FromQuestions(built.questions, built.duration),
-          };
-        }
-        if (
-          next.modelType === "model_3" &&
-          built.model3Tests.length === 0 &&
-          built.questions.length > 0
-        ) {
-          built = {
-            ...built,
-            model3Tests: buildModel3FromQuestions(built.questions, built.duration),
           };
         }
       }
@@ -226,45 +215,44 @@ function buildAssignmentModels(assignment: Assignment): unknown[] {
     name: test.title,
     description: test.description,
     duration_seconds: test.duration * 60,
-    questions: questionsFor(test.questionIds, test.questions),
+    ...(assignment.modelType === "model_3"
+      ? {
+          children: test.sets.map((set) => ({
+            kind: "set",
+            name: set.title,
+            description: set.description,
+            duration_seconds: set.duration * 60,
+            questions: questionsFor(set.questionIds, set.questions),
+          })),
+        }
+      : { questions: questionsFor(test.questionIds, test.questions) }),
   }));
 
-  const model3Tests =
-    assignment.model3Tests.length > 0
-      ? assignment.model3Tests
-      : buildModel3FromQuestions(assignment.questions, assignment.duration);
-  const model3Steps = model3Tests.map((test) => ({
-    name: test.title,
-    description: test.description,
-    duration_seconds: test.duration * 60,
-    children: test.sets.map((set) => ({
-      kind: "set",
-      name: set.title,
-      description: set.description,
-      duration_seconds: set.duration * 60,
-      questions: questionsFor(set.questionIds, set.questions),
-    })),
-  }));
-
-  return [
-    {
+  // One selected model only: the wizard persists the instructor's chosen
+  // modelType instead of all three, so structure/validation/preview agree.
+  const modelMeta = {
+    model_1: {
       code: "model_1",
       name: "Direct MCQ",
       description: "All questions in one direct MCQ paper.",
-      steps: [
-        {
-          name: "MCQ",
-          duration_seconds: assignment.duration * 60,
-          questions: assignment.questions.map(questionPayload),
-        },
-      ],
     },
-    { code: "model_2", name: "Tests", description: "Questions split into timed tests.", steps: testSteps },
-    {
+    model_2: { code: "model_2", name: "Tests", description: "Questions split into timed tests." },
+    model_3: {
       code: "model_3",
       name: "Tests & Sets",
       description: "Timed tests containing question sets.",
-      steps: model3Steps,
     },
-  ];
+  }[assignment.modelType];
+  const modelSteps =
+    assignment.modelType === "model_1"
+      ? [
+          {
+            name: "MCQ",
+            duration_seconds: assignment.duration * 60,
+            questions: assignment.questions.map(questionPayload),
+          },
+        ]
+      : testSteps;
+
+  return [{ ...modelMeta, steps: modelSteps }];
 }

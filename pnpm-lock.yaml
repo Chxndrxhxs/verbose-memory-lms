@@ -232,6 +232,9 @@ importers:
       tailwind-merge:
         specifier: ^2.0.0
         version: 2.6.1
+      zustand:
+        specifier: ^5.0.15
+        version: 5.0.15(@types/react@19.2.18)(react@19.2.8)
 
 packages:
 

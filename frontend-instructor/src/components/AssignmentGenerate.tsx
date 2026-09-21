@@ -2,7 +2,11 @@ import { useState } from "react";
 import { Sparkles, Settings2, Database, AlertTriangle, FileText } from "@masterlms/shared";
 import type { Assignment, QuestionGenerationConfig, QuestionDifficulty } from "../types/assignment";
 import { generateSampleQuestions } from "../utils/questionGenerator";
-import { assignmentService, type ExtractQuestionsResult } from "../services/assignment.service";
+import {
+  assignmentService,
+  type ExtractedQuestionRaw,
+  type ExtractQuestionsResult,
+} from "../services/assignment.service";
 import { ApiError } from "../lib/api";
 import { cn } from "../lib/utils";
 
@@ -40,7 +44,9 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
   } | null>(null);
 
   const applyExtractResult = (result: ExtractQuestionsResult) => {
-    const list = Array.isArray(result.questions) ? result.questions : [];
+    const list: ExtractedQuestionRaw[] = Array.isArray(result.questions)
+      ? result.questions
+      : [];
     const questions = list.map((q) => ({
       id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       question: String(q.question ?? ""),
@@ -144,6 +150,19 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
       setExtractProgress(null);
     }
     const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const pollJob = async (jobId: string): Promise<ExtractQuestionsResult> => {
+      for (;;) {
+        const job = await assignmentService.getExtractJob(jobId);
+        setExtractProgress({
+          done: job.done_pages.length,
+          total: job.total_pages,
+          pending: job.pending_pages,
+        });
+        if (job.status === "done" || job.status === "paused") return job;
+        if (job.status === "failed") throw new Error(job.error || "Background extract failed");
+        await wait(5000);
+      }
+    };
     let pending = resumePending;
     let attempts = 0;
     try {
@@ -151,12 +170,15 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
         attempts += 1;
         let result: ExtractQuestionsResult;
         try {
-          result = await assignmentService.extractQuestions({
+          const started = await assignmentService.extractQuestions({
             source_document: assignment.sourceDocument,
             difficulty: config.difficulty,
             marksPerQuestion: config.marksPerQuestion,
             pending_pages: pending,
+            async_mode: true,
           });
+          const jobResult = started as ExtractQuestionsResult & { job_id?: string };
+          result = jobResult.job_id ? await pollJob(jobResult.job_id) : jobResult;
         } catch (e) {
           if (e instanceof ApiError && e.status === 429 && attempts <= 3) {
             const payload = (e.payload ?? {}) as { data?: ExtractQuestionsResult };
