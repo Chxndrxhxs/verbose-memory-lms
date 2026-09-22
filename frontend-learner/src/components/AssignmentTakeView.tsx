@@ -227,7 +227,7 @@ export function AssignmentTakeView({
                           <img
                             src={absoluteMediaUrl(image) ?? image}
                             alt={optionText(option)}
-                            className="h-12 w-16 shrink-0 rounded-md border border-zinc-200 object-cover"
+                            className="h-16 w-24 shrink-0 rounded-md border border-zinc-200 bg-white object-contain"
                           />
                         )}
                         <span className="min-w-0">{optionText(option)}</span>

@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { hasRole, type Role } from "@masterlms/shared";
+import { canTeach, hasRole, type Role } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 
 export function Protected({
@@ -13,6 +13,10 @@ export function Protected({
   const isLoading = useAuth((s) => s.isLoading);
   if (isLoading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (!hasRole(user, role) && user.role !== "admin") return <Navigate to="/" replace />;
+  // Auth cookies are shared across the learner/instructor apps on one host,
+  // so a learner session can land here. Send them to login to switch accounts
+  // instead of "/" — the landing page would just bounce them back.
+  if (!hasRole(user, role) && !canTeach(user))
+    return <Navigate to="/login" replace state={{ reason: "role" }} />;
   return <>{children}</>;
 }

@@ -37,6 +37,7 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
   >("");
   const [extractError, setExtractError] = useState<string | null>(null);
   const [needsReviewCount, setNeedsReviewCount] = useState(0);
+  const [missingFigureCount, setMissingFigureCount] = useState(0);
   const [extractProgress, setExtractProgress] = useState<{
     done: number;
     total: number;
@@ -70,6 +71,9 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
       });
       setNeedsReviewCount((prev) =>
         prev + list.filter((q) => q.needs_review || q.has_answer === false).length
+      );
+      setMissingFigureCount((prev) =>
+        prev + list.filter((q) => q.missing_figure).length
       );
     }
     return list.length;
@@ -147,6 +151,7 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
     setExtractError(null);
     if (!resumePending) {
       setNeedsReviewCount(0);
+      setMissingFigureCount(0);
       setExtractProgress(null);
     }
     const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -346,6 +351,12 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
                 ? `${needsReviewCount} question(s) had no printed answer — review the correct option before publishing.`
                 : "Proceed to the next step to review and edit them."}
             </p>
+            {missingFigureCount > 0 && (
+              <p className="mt-0.5 text-xs font-semibold text-amber-700">
+                {missingFigureCount} question(s) mention a figure that wasn&apos;t
+                found in the PDF — attach it manually in the Review step.
+              </p>
+            )}
           </div>
         )}
         {apiOutput === "extract-error" && extractError && (

@@ -70,6 +70,22 @@ _GEMINI_IMAGE_MIME_TYPES = {
     ".webp": "image/webp",
 }
 
+# Stems that point at artwork ("completes the figure", "as shown below").
+# Used to flag questions whose figure never materialised as an image, so the
+# instructor can attach it manually instead of publishing a blind stem.
+_FIGURE_REFERENCE_RE = re.compile(
+    r"question\s*mark|\bfigures?\b(?!\s+of\s+speech)|\bimages?\b|diagram|as\s+shown|"
+    r"shown\s+(below|above)|given\s+(below|above|figure)|in\s+the\s+"
+    r"(figure|diagram|image|picture)",
+    re.IGNORECASE,
+)
+
+
+def stem_references_figure(text: str) -> bool:
+    """True when a stem points at artwork that should be visible."""
+    return bool(text and _FIGURE_REFERENCE_RE.search(text))
+
+
 _GEMINI_RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
 _GEMINI_MAX_RETRIES = 6
 _GEMINI_BACKOFF_BASE_SECONDS = 5.0
@@ -307,6 +323,7 @@ def _normalise_question(raw: dict, config: dict) -> dict:
         "topic": str(raw.get("topic", "")).strip(),
         "has_answer": bool(raw.get("has_answer", True)),
         "needs_review": False,
+        "missing_figure": False,
         "source_page": raw.get("source_page"),
     }
 
@@ -366,6 +383,8 @@ def extract_page_questions(
         question["options"] = resolved_options
         if not question["has_answer"]:
             question["needs_review"] = True
+        if not question["question_image"] and stem_references_figure(question["question"]):
+            question["missing_figure"] = True
         questions.append(question)
     if not questions:
         raise ValueError(f"Gemini returned no questions for page {page_number}")

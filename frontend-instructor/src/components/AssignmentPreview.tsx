@@ -53,7 +53,7 @@ function PreviewQuestionCard({
               <img
                 src={absoluteMediaUrl(question.questionImage) ?? question.questionImage}
                 alt="Question figure"
-                className="h-16 w-24 shrink-0 rounded-lg border border-zinc-200 object-cover"
+                className="h-16 w-24 shrink-0 rounded-lg border border-zinc-200 bg-white object-contain"
               />
             )}
           </div>
@@ -90,7 +90,7 @@ function PreviewQuestionCard({
                     <img
                       src={absoluteMediaUrl(img) ?? img}
                       alt={optionText(opt)}
-                      className="h-12 w-16 shrink-0 rounded-md border border-zinc-200 object-cover"
+                      className="h-16 w-24 shrink-0 rounded-md border border-zinc-200 bg-white object-contain"
                     />
                   )}
                   <span className="min-w-0">{optionText(opt)}</span>

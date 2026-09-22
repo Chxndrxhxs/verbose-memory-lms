@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { CourseBuilderHeader } from "../components/CourseBuilderHeader";
+import { InstructorHeader } from "../components/InstructorHeader";
 import { CourseCreateStep1 } from "../components/CourseCreateStep1";
 import { CourseCreateStep2 } from "../components/CourseCreateStep2";
 import { LessonTypePicker } from "../components/LessonTypePicker";
@@ -558,6 +559,7 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
 
   return (
     <div className="min-h-screen bg-[#f6f5f1]">
+      <InstructorHeader />
       {step === 0 ? (
         <div className="w-full px-4 py-3 sm:px-6">
           <CourseBuilderHeader

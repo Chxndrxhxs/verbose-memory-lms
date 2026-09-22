@@ -169,7 +169,7 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
                                 <img
                                   src={absoluteMediaUrl(optionImage(option)) ?? optionImage(option)}
                                   alt={optionText(option)}
-                                  className="mb-1 h-12 w-16 rounded-md border border-zinc-200 object-cover"
+                                  className="mb-1 h-16 w-24 rounded-md border border-zinc-200 bg-white object-contain"
                                 />
                               )}
                               <span>{optionText(option)}</span>

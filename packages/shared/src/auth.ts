@@ -63,3 +63,7 @@ export function createAuthStore(storageKey: string) {
 export function hasRole(user: AuthUser | null, role: Role): boolean {
   return user?.role === role;
 }
+
+export function canTeach(user: AuthUser | null): boolean {
+  return user?.role === "instructor" || user?.role === "admin";
+}
