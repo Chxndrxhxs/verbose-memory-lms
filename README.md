@@ -1,13 +1,14 @@
 # QTNXT — MasterLMS
 
-A full-stack Learning Management System with separate learner and instructor apps, a shared Django REST API, and MySQL. Rebranded from Knoova to **QTNXT** (`Q` mark).
+A full-stack Learning Management System with separate learner, instructor, and admin apps, a shared Django REST API, and MySQL. Rebranded from Knoova to **QTNXT** (`Q` mark).
 
 ## Apps
 
 | App | Path | Domain |
 | --- | --- | --- |
-| **Learner** | `frontend-learner/` | Browse, search, enroll, learn, track progress → `lms.com` |
-| **Instructor** | `frontend-instructor/` | Create courses (2-step builder), manage curriculum, view analytics → `teach.lms.com` |
+| **Learner** | `frontend-learner/` | Browse, search, enroll, learn, track progress → `lms.com` (`:5173`) |
+| **Instructor** | `frontend-instructor/` | Create courses (2-step builder), manage curriculum, view analytics → `teach.lms.com` (`:5174`) |
+| **Admin** | `frontend-admin/` | Users, courses, enrollments, payments, assignments, categories (`:5175`) |
 | **Backend** | `backend/` | Single shared Django + DRF API (`/api/v1/`) + MySQL |
 | **Shared** | `packages/shared/` | Single `api()` client (cookies + envelope), `toEmbed`, `LESSON_KIND_BADGE`, `cn()`, shared types, icons |
 
@@ -35,15 +36,20 @@ masterlms/
 │   ├── src/pages/         # thin routes — Dashboard, Courses, CourseCreate, CourseEdit, CourseNew, Analytics, Assignments, Activity, Leaderboard, Profile, InstructorLanding, Login, CompleteProfile
 │   ├── src/components/    # pure presenters — CourseCreateStep1/Step2, ProfileView, ErrorBoundary, InstructorHeader, …
 │   └── src/containers/    # CourseCreate (2-step, zod), CourseManage (grid/list), CourseNew (RHF+zod), Profile (queries + mutations)
+├── frontend-admin/        # Vite + React + TS + Tailwind v4 (`:5175`)
+│   ├── src/pages/         # thin routes — Dashboard, Users, UserDetail, Courses, CourseDetail, Enrollments, Payments, Assignments, Categories, Login
+│   └── src/containers/    # Dashboard, Users, Courses, Enrollments, Payments, Assignments, Categories (TanStack Query)
 ├── packages/shared/       # api-client (cookie `api()`, `absoluteMediaUrl`, `uploadFile`), toEmbed, LESSON_KIND_BADGE, LessonKind, cn(), icons (lucide-react), SharedUser/SharedApiCourse* types
 └── backend/
     ├── config/            # settings, urls, wsgi (PAGE_SIZE=12, CookieJWT)
     ├── apps/
-    │   ├── users/         # User + OTP + JWT + avatar URLField
-    │   ├── courses/       # Course / Section / Lesson + Review (rating 1-5, average_rating)
-    │   ├── enrollments/   # Enrollment + LessonCompletion + Certificate (QTNXT-XXXX)
-    │   └── payments/      # Payment (Razorpay mock/live) + Invoice
-    └── .env.example
+│   ├── users/         # User + OTP + JWT + avatar URLField
+│   ├── courses/       # Course / Section / Lesson + Review (rating 1-5, average_rating)
+│   ├── enrollments/   # Enrollment + LessonCompletion + Certificate (QTNXT-XXXX) + activity/leaderboard/timeline
+│   ├── assignments/   # Assignment / Question / Attempt + categories + PDF extract/generate (Gemini)
+│   ├── adminpanel/    # Admin dashboard, users, courses, enrollments, payments
+│   └── payments/      # Payment (Razorpay mock/live) + Invoice
+└── .env.example
 ```
 
 ## Prerequisites
@@ -68,13 +74,13 @@ mysql --version  # optional
 
 ## Project setup (do in order)
 
-You need three processes for full local dev: **Backend** (8000), **Learner** (5173), **Instructor** (5174). Set up backend first — frontends will fail with `VITE_API_URL` unreachable otherwise.
+You need four processes for full local dev: **Backend** (8000), **Learner** (5173), **Instructor** (5174), **Admin** (5175). Set up backend first — frontends will fail with `VITE_API_URL` unreachable otherwise.
 
 ### 0. Clone
 
 ```bash
 git clone https://github.com/Chxndrxhxs/verbose-memory-lms.git
-cd masterlms
+cd verbose-memory-lms
 ```
 
 ### 1. Backend — env, DB, migrations
@@ -110,15 +116,23 @@ Backend `.env` (all keys optional — sensible defaults exist, but set these for
 ```env
 SECRET_KEY=django-insecure-change-me
 DEBUG=True
-ALLOWED_HOSTS=*
+ALLOWED_HOSTS=localhost,127.0.0.1
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175
+CSRF_TRUSTED_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175
 DATABASE_URL=mysql://root:password@localhost:3306/masterlms
 # or without DATABASE_URL: DB_ENGINE/DB_NAME/DB_USER/DB_PASSWORD/DB_HOST/DB_PORT
 RAZORPAY_KEY_ID=rzp_test_xxx
 RAZORPAY_KEY_SECRET=xxx
+LLM_API_KEY=your_ai_studio_key_here
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+LLM_MODEL=gemini-2.0-flash
+LLM_EXTRACT_MAX_RETRIES=6
 ```
 
 - Without `DATABASE_URL` the app uses `backend/db.sqlite3` — fine for quick start.
 - Without Razorpay keys, payments run in **mock** mode (`order_mock_*`, `pay_mock_*`) — enroll still works.
+- Without `LLM_API_KEY`, assignment PDF extract/generate endpoints return 503 — everything else still works.
+- See `backend/.env.example` for the full list (CORS/CSRF, DB splits, LLM retries).
 
 ### 2. Shared + Frontend — install once at repo root
 
@@ -129,11 +143,17 @@ cd ..            # back to repo root
 pnpm install
 ```
 
-This installs `frontend-learner`, `frontend-instructor`, and `packages/shared` via pnpm workspaces.
+This installs `frontend-learner`, `frontend-instructor`, `frontend-admin`, and `packages/shared` via pnpm workspaces.
 
 ### 3. Frontend env (optional)
 
-Create `frontend-learner/.env` and/or `frontend-instructor/.env` if your API is not `http://localhost:8000/api/v1`:
+Each frontend has a `.env.example` with `VITE_API_URL`. Copy it only if your API is not `http://localhost:8000/api/v1`:
+
+```bash
+cp frontend-learner/.env.example frontend-learner/.env
+cp frontend-instructor/.env.example frontend-instructor/.env
+cp frontend-admin/.env.example frontend-admin/.env
+```
 
 ```env
 VITE_API_URL=http://localhost:8000/api/v1
@@ -141,7 +161,7 @@ VITE_API_URL=http://localhost:8000/api/v1
 
 Defaults to `http://localhost:8000/api/v1` when not set. Frontends talk cookies (`credentials: include`) so keep the API host in `CORS_ALLOWED_ORIGINS` / `CSRF_TRUSTED_ORIGINS` in `backend/.env`.
 
-### 4. Run frontends (two terminals or one with pnpm -r)
+### 4. Run frontends (three terminals or one with pnpm -r)
 
 ```bash
 # Terminal A — Learner
@@ -152,9 +172,15 @@ pnpm --filter frontend-learner dev
 pnpm --filter frontend-instructor dev
 # → http://localhost:5174
 
-# Or from root (runs both):
-pnpm dev:learner   # same
+# Terminal C — Admin
+pnpm --filter frontend-admin dev
+# → http://localhost:5175
+
+# Or from root (runs all three):
+pnpm dev
+pnpm dev:learner   # learner only
 pnpm dev:instructor
+pnpm dev:admin
 ```
 
 Login flow: `GET /auth/send-otp` (dev returns `mock_code: "1234"`) → `POST /auth/verify-otp` → httpOnly `access_token`/`refresh_token` cookies + `POST /auth/complete-profile` (avatar via `POST /upload/` → URL).
@@ -172,18 +198,24 @@ cd backend && uv run pytest
 pnpm -r build
 pnpm --filter frontend-learner exec tsc --noEmit
 pnpm --filter frontend-instructor exec tsc --noEmit
+pnpm --filter frontend-admin exec tsc --noEmit
 pnpm --filter frontend-learner exec oxlint
 pnpm --filter frontend-instructor exec oxlint
+pnpm --filter frontend-admin exec oxlint
 cd backend && uv run ruff check . && uv run ruff format .
 ```
 
-If all three pass, you’re good to build.
+If all checks pass, you’re good to build.
 
 ### Useful commands
 
 ```bash
 # Root
 pnpm install            # install all workspaces
+pnpm dev                # run learner + instructor + admin
+pnpm dev:learner
+pnpm dev:instructor
+pnpm dev:admin
 pnpm build              # pnpm -r build
 pnpm lint               # pnpm -r lint
 pnpm tsc                # pnpm -r exec tsc --noEmit
@@ -207,8 +239,11 @@ uv run ruff check . && uv run ruff format .
 | --- | --- | --- | --- |
 | `POST` | `/auth/send-otp` | `{mobile}` | mock `1234` in dev, returns `mock_code` |
 | `POST` | `/auth/verify-otp` | `{mobile, code}` | `{user, tokens, is_new}` + cookies |
+| `POST` | `/auth/refresh` | — | Rotate cookies |
+| `POST` | `/auth/logout` | — | Clear cookies |
 | `PATCH` | `/auth/complete-profile` | `{name, email, age, avatar: URL}` | `avatar` is `URLField` — upload via `/upload/` first |
-| `POST` | `/auth/become-instructor` | — | Promote |
+| `POST` | `/auth/become-instructor` | — | Promote to instructor |
+| `POST` | `/auth/become-admin` | — | Promote to admin |
 | `GET`/`DELETE` | `/users/me` | — | Profile |
 
 ### Courses
@@ -222,6 +257,8 @@ uv run ruff check . && uv run ruff format .
 | `PUT` | `/courses/{id}/curriculum/` | `{sections: [{title, lessons: [{title, kind, duration, resource_url, quiz_data}]}]}` |
 | `POST`/`GET` | `/courses/{id}/rate/` | `{rating: 1-5}` auth+enrolled, recalculates `average_rating`; `GET` returns `{rating, average_rating, rating_count}` |
 | `GET` | `/courses/mine/` | Instructor own courses |
+| `POST` | `/upload/` | `multipart file → {url}` (`/media/...`) |
+| `GET` | `/instructor/overview` | Instructor stats (courses, students, revenue) |
 
 ### Enrollments / Progress / Certificates / Activity
 | Method | Path | Notes |
@@ -229,7 +266,11 @@ uv run ruff check . && uv run ruff format .
 | `POST` | `/courses/{id}/enroll` | Free → immediate, paid → via payments |
 | `GET` | `/me/courses` | `{course, progress, completed_lessons, enrolled_at}` |
 | `POST` | `/courses/{id}/lessons/complete` | `{lesson_id}` → appends `completed_lessons`, `progress = len/total*100`, creates `LessonCompletion` |
+| `POST` | `/courses/{id}/lessons/quiz-attempt` | `{lesson_id, answers}` → quiz score, also drives activity |
 | `GET` | `/me/activity/` | 26-week `[{date, count}]` from `LessonCompletion` (includes quiz) |
+| `GET` | `/me/timeline` | Recent learning events |
+| `GET` | `/leaderboard/` | Points-ranked learners |
+| `GET` | `/instructor/activity/` | Per-course student activity for instructors |
 | `POST` | `/courses/{id}/certificate` | Requires `progress==100`, creates `QTNXT-XXXXXXXX` idempotent |
 | `GET` | `/me/certificates` | `[{certificate_id, course, learner_name, enrolled_at, issued_at}]` |
 
@@ -240,6 +281,38 @@ uv run ruff check . && uv run ruff format .
 | `POST` | `/payments/verify` | `{razorpay_order_id, razorpay_payment_id, razorpay_signature, course_id}` → `PAID` + `enroll()` |
 | `GET` | `/payments/my-payments` | Paid `Payment`s with nested `course` (`amount` paise, `razorpay_*`, `created_at`) |
 | `POST` | `/upload/` | `multipart file → {url}` (`/media/...`) |
+
+### Assignments (learner)
+| Method | Path | Notes |
+| --- | --- | --- |
+| `GET` | `/assignments/` | Published list |
+| `GET` | `/assignments/{id}/` | Detail + questions |
+| `GET` | `/assignments/categories/` | Category tree |
+| `POST` | `/assignments/{id}/start` | Start attempt |
+| `POST` | `/assignments/attempts/{id}/save` | Save answer |
+| `POST` | `/assignments/{id}/submit` | Submit attempt |
+| `GET` | `/assignments/attempts/` | My attempts |
+| `GET` | `/assignments/transcripts/{id}/` | Transcript |
+
+### Assignments + Categories (admin, `frontend-admin`)
+| Method | Path | Notes |
+| --- | --- | --- |
+| `GET/POST` | `/admin/assignments/` | List / create |
+| `GET/PATCH` | `/admin/assignments/{id}/` | Detail / update |
+| `POST` | `/admin/assignments/{id}/publish` `/unpublish` `/duplicate` | Lifecycle |
+| `POST` | `/admin/assignments/generate-questions` `/extract-questions` `/regenerate-question` `/regenerate-options` | LLM question tools (needs `LLM_API_KEY`) |
+| `GET` | `/admin/assignments/extract-jobs/{job_id}` | Async extract status (429 resume state) |
+| `GET` | `/admin/categories/` `/admin/subcategories/` `/admin/intercategories/` | Category CRUD |
+
+### Admin panel (`frontend-admin`, role `admin`)
+| Method | Path | Notes |
+| --- | --- | --- |
+| `GET` | `/admin/dashboard` | Counts + recent users/courses |
+| `GET` | `/admin/users` `/admin/users/{id}` | Users list / detail |
+| `GET` | `/admin/courses` `/admin/courses/{id}` | Courses list / detail |
+| `POST` | `/admin/courses/{id}/status` | Publish / unpublish |
+| `GET` | `/admin/enrollments` | Enrollments list |
+| `GET` | `/admin/payments` | Payments list |
 
 Response shape: `{data, error, meta: {page, total}}` (courses list paginated).
 
@@ -287,10 +360,11 @@ Roles checked in `IsInstructorOrReadOnly` (courses) and `IsAuthenticated` (enrol
 ## Troubleshooting
 
 ### Ports already in use
-- `Port 8000/5173/5174 is already in use`: stop the other dev server or run on a different port:
+- `Port 8000/5173/5174/5175 is already in use`: stop the other dev server or run on a different port:
   - Backend: `uv run python manage.py runserver 8001`
-  - Learner: `pnpm --filter frontend-learner dev -- --port 5175`
-  - Instructor: `pnpm --filter frontend-instructor dev -- --port 5176`
+  - Learner: `pnpm --filter frontend-learner dev -- --port 5176`
+  - Instructor: `pnpm --filter frontend-instructor dev -- --port 5177`
+  - Admin: `pnpm --filter frontend-admin dev -- --port 5178`
 - Find who holds the port (Windows): `netstat -ano | findstr :8000` → `taskkill /PID <pid> /F`
 - macOS/Linux: `lsof -i :8000` → `kill <pid>`
 
@@ -309,14 +383,14 @@ Roles checked in `IsInstructorOrReadOnly` (courses) and `IsAuthenticated` (enrol
 
 ### Frontend shows “Failed to fetch” / CORS / 401
 - **Backend not running**: start it (`uv run python manage.py runserver 8000`). Frontends default to `http://localhost:8000/api/v1`.
-- **`VITE_API_URL` mismatch**: if backend is on 8001, set `VITE_API_URL=http://localhost:8001/api/v1` in `frontend-learner/.env` and `frontend-instructor/.env` (or at repo root). Restart `pnpm dev` after changing `.env`.
+- **`VITE_API_URL` mismatch**: if backend is on 8001, set `VITE_API_URL=http://localhost:8001/api/v1` in `frontend-learner/.env`, `frontend-instructor/.env`, and `frontend-admin/.env` (or copy from each `.env.example`). Restart `pnpm dev` after changing `.env`.
 - **CORS blocked**: add your frontend origins to `backend/.env`:
   ```env
-  CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174
-  CSRF_TRUSTED_ORIGINS=http://localhost:5173,http://localhost:5174
+  CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175
+  CSRF_TRUSTED_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175
   ```
   Restart backend.
-- **401 after login**: cookies are `httpOnly` — ensure you’re using `http://localhost` (not `127.0.0.1` mismatch) and the browser didn’t block third-party cookies. Try `http://localhost:5173` / `http://localhost:5174` exactly.
+- **401 after login**: cookies are `httpOnly` — ensure you’re using `http://localhost` (not `127.0.0.1` mismatch) and the browser didn’t block third-party cookies. Try `http://localhost:5173` / `http://localhost:5174` / `http://localhost:5175` exactly.
 
 ### pnpm / install issues
 - **`ERR_PNPM_NO_IMPORTER_MANIFEST_FOUND`**: run `pnpm install` from repo root (where `pnpm-workspace.yaml` lives), not inside a package.
