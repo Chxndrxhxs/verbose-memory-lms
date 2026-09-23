@@ -16,7 +16,7 @@ export function TopNav() {
         <NavLink to="/activity" className={({ isActive }) => (isActive ? "text-zinc-900" : "hover:text-zinc-900")}>Activity</NavLink>
         <NavLink to="/leaderboard" className={({ isActive }) => (isActive ? "text-zinc-900" : "hover:text-zinc-900")}>Leaderboard</NavLink>
         <NavLink to="/assignments" className={({ isActive }) => (isActive ? "text-zinc-900" : "hover:text-zinc-900")}>Assignments</NavLink>
-        <a href="/#faq" className="hover:text-zinc-900">About</a>
+        <NavLink to="/about" className={({ isActive }) => (isActive ? "text-zinc-900" : "hover:text-zinc-900")}>About</NavLink>
       </nav>
       {user ? <ProfileMenu /> : <Link to="/login" className="rounded-full bg-[#0f172a] px-4 py-1.5 text-sm font-semibold text-white">Get Started</Link>}
     </div>

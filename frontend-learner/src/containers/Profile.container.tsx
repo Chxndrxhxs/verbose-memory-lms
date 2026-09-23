@@ -3,8 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { User, ArrowRight, Trash2, AlertTriangle, Download, Receipt, Award, Eye } from "@masterlms/shared";
 import { TopNav } from "../components/TopNav";
+import { CertificateView } from "../components/CertificateView";
 import { useAuth } from "../hooks/useAuth";
 import { absoluteMediaUrl, api, uploadFile } from "../lib/api";
+import { buildInvoiceHtml } from "../lib/invoice";
 
 type Enrollment = {
   id: number;
@@ -125,14 +127,17 @@ export function ProfileContainer() {
   const openInvoice = (p: Payment) => {
     const amount = (p.amount / 100).toLocaleString("en-IN", { style: "currency", currency: p.currency || "INR" });
     const date = new Date(p.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-    const invoiceNo = `QTNXT-${String(p.id).padStart(6, "0")}-${p.razorpay_payment_id.slice(-6).toUpperCase()}`;
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${invoiceNo}</title><style>body{font-family:Inter,system-ui;padding:32px;color:#18181b} .head{display:flex;justify-content:space-between;align-items:center} .logo{width:32px;height:32px;border-radius:999px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800} h1{font-size:22px;margin:0} table{width:100%;border-collapse:collapse;margin-top:24px} th,td{border:1px solid #e4e4e7;padding:10px;text-align:left;font-size:13px} th{background:#f4f4f5} .muted{color:#71717a;font-size:12px} .total{font-weight:800} @media print{button{display:none}}</style></head><body>
-      <div class="head"><div style="display:flex;gap:10px;align-items:center"><div class="logo">Q</div><div><div style="font-weight:800">QTNXT</div><div class="muted">Learn skills that move you forward</div></div></div><div style="text-align:right"><div style="font-weight:800">Invoice</div><div class="muted">${invoiceNo}</div><div class="muted">${date}</div></div></div>
-      <p class="muted">Billed to: ${user?.name || user?.email || user?.mobile} &lt;${user?.email || ""}&gt;</p>
-      <table><tr><th>Course</th><th>Order ID</th><th>Payment ID</th><th>Amount</th></tr><tr><td>${p.course.title}</td><td style="font-family:monospace;font-size:11px">${p.razorpay_order_id}</td><td style="font-family:monospace;font-size:11px">${p.razorpay_payment_id}</td><td class="total">${amount}</td></tr></table>
-      <p class="muted" style="margin-top:16px">Payment status: Paid • Thank you for learning with QTNXT.</p>
-      <div style="margin-top:24px"><button onclick="window.print()" style="background:#0f172a;color:#fff;border:0;border-radius:999px;padding:10px 18px;font-weight:700;cursor:pointer">Print / Save as PDF</button></div>
-    </body></html>`;
+    const tail = (p.razorpay_payment_id ?? "000000").slice(-6).toUpperCase();
+    const html = buildInvoiceHtml({
+      invoiceNo: `QTNXT-${String(p.id).padStart(6, "0")}-${tail}`,
+      dateLabel: date,
+      billedTo: user?.name || user?.email || user?.mobile,
+      email: user?.email || "",
+      courseTitle: p.course.title,
+      orderId: p.razorpay_order_id,
+      paymentId: p.razorpay_payment_id,
+      amountLabel: amount,
+    });
     const w = window.open("", "_blank");
     if (w) { w.document.write(html); w.document.close(); }
   };
@@ -390,43 +395,14 @@ export function ProfileContainer() {
         </div>
       </div>
       {viewCert && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="relative max-h-[90vh] w-full max-w-[720px] overflow-auto rounded-[20px] bg-white p-6 shadow-xl sm:p-8">
-            <button onClick={() => setViewCert(null)} className="absolute right-4 top-4 rounded-full border bg-white px-3 py-1 text-xs font-medium hover:bg-zinc-50">Close</button>
-            <div className="rounded-2xl border-[3px] border-[#0f172a] p-6 sm:p-8">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0f172a] text-sm font-black text-white">Q</span>
-                  <span className="text-sm font-black tracking-tight">QTNXT</span>
-                </div>
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">Certificate of Completion</span>
-              </div>
-              <div className="mt-6 text-center">
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">This certifies that</p>
-                <p className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">{viewCert.learner_name}</p>
-                <p className="mx-auto mt-3 h-px w-24 bg-yellow-400" />
-                <p className="mt-4 text-sm text-zinc-600">has successfully completed</p>
-                <p className="mt-1 text-lg font-bold leading-tight sm:text-xl">{viewCert.course.title}</p>
-                <div className="mt-6 grid grid-cols-2 gap-4 text-left text-xs">
-                  <div className="rounded-xl bg-zinc-50 p-3"><p className="text-[10px] font-semibold uppercase text-zinc-500">Enrolled on</p><p className="mt-1 font-medium">{new Date(viewCert.enrolled_at).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}</p></div>
-                  <div className="rounded-xl bg-zinc-50 p-3"><p className="text-[10px] font-semibold uppercase text-zinc-500">Completed on</p><p className="mt-1 font-medium">{new Date(viewCert.issued_at).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}</p></div>
-                </div>
-                <div className="mt-6 flex items-center justify-between border-t pt-4 text-left">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase text-zinc-500">Certificate ID</p><p className="font-mono text-xs font-bold">{viewCert.certificate_id}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-serif italic text-sm">QTNXT Academy</p><p className="text-[10px] text-zinc-500">Verified • qtnxt.com/verify/{viewCert.certificate_id}</p>
-                  </div>
-                </div>
-                <div className="mt-6 flex justify-center gap-2">
-                  <button onClick={() => window.print()} className="rounded-full bg-[#0f172a] px-4 py-2 text-xs font-bold text-white hover:bg-black">Print / Save PDF</button>
-                  <button onClick={() => setViewCert(null)} className="rounded-full border px-4 py-2 text-xs font-medium">Close</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <CertificateView
+          learnerName={viewCert.learner_name}
+          courseTitle={viewCert.course.title}
+          enrolledLabel={new Date(viewCert.enrolled_at).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}
+          issuedLabel={new Date(viewCert.issued_at).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}
+          certificateId={viewCert.certificate_id}
+          onClose={() => setViewCert(null)}
+        />
       )}
         {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white shadow-xl">{toast}</div>}
       </div>

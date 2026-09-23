@@ -116,5 +116,7 @@ export {
   PhoneOff,
   Flag,
   ShieldCheck,
+  BookOpen,
+  GraduationCap,
   type LucideIcon,
 } from "lucide-react";

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Pencil,
   Trash2,
@@ -10,9 +10,12 @@ import {
   ChevronUp,
   GripVertical,
   ImageIcon,
+  Upload,
+  X,
 } from "@masterlms/shared";
 import { absoluteMediaUrl, optionImage, optionText } from "@masterlms/shared";
 import { cn } from "../lib/utils";
+import { uploadFile } from "../lib/api";
 import type { Assignment, AssignmentQuestion, QuestionDifficulty } from "../types/assignment";
 import { createEmptyQuestion, DIFFICULTY_LABELS } from "../types/assignment";
 import { generateSampleQuestions } from "../utils/questionGenerator";
@@ -45,6 +48,9 @@ function QuestionCard({
   const [editing, setEditing] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [regeneratingOptions, setRegeneratingOptions] = useState(false);
+  const [uploadingFigure, setUploadingFigure] = useState(false);
+  const [figureError, setFigureError] = useState<string | null>(null);
+  const figureInputRef = useRef<HTMLInputElement>(null);
 
   const updateOption = (idx: number, value: string) => {
     const newOptions = [...question.options];
@@ -95,6 +101,7 @@ function QuestionCard({
           explanation:
             question.explanation || generated.explanation,
           topic: generated.topic || question.topic,
+          questionImage: question.questionImage,
         });
       }
     } finally {
@@ -127,6 +134,29 @@ function QuestionCard({
   };
 
   const letterFor = (i: number) => String.fromCharCode(65 + i);
+
+  const handleFigureFile = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    setFigureError(null);
+    if (!file.type.startsWith("image/")) {
+      setFigureError("Only image files can be attached as figures.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setFigureError("Image too large. Maximum size is 5MB.");
+      return;
+    }
+    setUploadingFigure(true);
+    try {
+      const { url } = await uploadFile(file);
+      onUpdate({ questionImage: url });
+    } catch {
+      setFigureError("Figure upload failed. Please try again.");
+    } finally {
+      setUploadingFigure(false);
+    }
+  };
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white shadow-sm">
@@ -208,19 +238,60 @@ function QuestionCard({
               Question
             </label>
             {editing ? (
-              <textarea
-                value={question.question}
-                onChange={(e) => onUpdate({ question: e.target.value })}
-                rows={2}
-                className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-zinc-900 focus:bg-white resize-none"
-              />
+              <div className="space-y-2">
+                <textarea
+                  value={question.question}
+                  onChange={(e) => onUpdate({ question: e.target.value })}
+                  rows={2}
+                  className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-zinc-900 focus:bg-white resize-none"
+                />
+                {question.questionImage && (
+                  <img
+                    src={absoluteMediaUrl(question.questionImage) ?? question.questionImage}
+                    alt="Question figure"
+                    className="h-20 w-28 rounded-lg border border-zinc-200 bg-white object-contain"
+                  />
+                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    ref={figureInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleFigureFile(e.target.files)}
+                  />
+                  <button
+                    onClick={() => figureInputRef.current?.click()}
+                    disabled={uploadingFigure}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+                  >
+                    <Upload size={12} />
+                    {uploadingFigure
+                      ? "Uploading…"
+                      : question.questionImage
+                        ? "Replace figure"
+                        : "Attach figure"}
+                  </button>
+                  {question.questionImage && (
+                    <button
+                      onClick={() => onUpdate({ questionImage: "" })}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-600 transition-colors hover:bg-zinc-50"
+                    >
+                      <X size={12} /> Remove
+                    </button>
+                  )}
+                </div>
+                {figureError && (
+                  <p className="text-xs text-red-600">{figureError}</p>
+                )}
+              </div>
             ) : (
               <div className="flex items-start gap-3">
                 {question.questionImage && (
                   <img
                     src={absoluteMediaUrl(question.questionImage) ?? question.questionImage}
                     alt="Question figure"
-                    className="h-20 w-28 shrink-0 rounded-lg border border-zinc-200 object-cover"
+                    className="h-20 w-28 shrink-0 rounded-lg border border-zinc-200 bg-white object-contain"
                   />
                 )}
                 <p className="text-sm text-zinc-800">
@@ -279,7 +350,7 @@ function QuestionCard({
                       <img
                         src={absoluteMediaUrl(optionImage(opt)) ?? optionImage(opt)}
                         alt={optionText(opt)}
-                        className="h-10 w-14 shrink-0 rounded-md border border-zinc-200 object-cover"
+                        className="h-16 w-24 shrink-0 rounded-md border border-zinc-200 bg-white object-contain"
                       />
                     )}
                     {optionText(opt) || (

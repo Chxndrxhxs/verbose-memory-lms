@@ -22,15 +22,17 @@ type Props = {
   sectionCount: number;
   lessonCount: number;
   enrolled?: boolean;
+  progress?: number;
 };
 
 function formatCount(n: number): string {
   return n.toLocaleString("en-IN");
 }
 
-export function CourseCard({ id, title, subtitle, instructor, instructorAvatar, price, rawPrice, originalPrice, rating, img, icon: Icon, accent: _accent, featured, studentCount, sectionCount, lessonCount, enrolled }: Props) {
+export function CourseCard({ id, title, subtitle, instructor, instructorAvatar, price, rawPrice, originalPrice, rating, img, icon: Icon, accent: _accent, featured, studentCount, sectionCount, lessonCount, enrolled, progress = 0 }: Props) {
   const isFree = rawPrice === 0;
   const bestseller = featured || (rating ? Number(rating) >= 4.6 : false) || studentCount >= 10000;
+  const cta = progress >= 100 ? "Review course →" : progress > 0 ? `Continue ${progress}% →` : "Go to course →";
 
   return (
     <div className={`relative flex w-full max-w-[280px] mx-auto flex-col overflow-hidden rounded-xl border bg-white shadow-sm ${featured ? "scale-[1.02] shadow-md -rotate-[0.5deg] z-10" : ""}`}>
@@ -73,7 +75,14 @@ export function CourseCard({ id, title, subtitle, instructor, instructorAvatar, 
         </div>
 
         {enrolled ? (
-          <Link to={`/learn/${id}`} className="mt-2 block w-full rounded-full bg-[#0f172a] py-2 text-center text-xs font-bold text-white hover:bg-black">Go to course →</Link>
+          <>
+            {progress > 0 && (
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-100">
+                <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, progress)}%` }} />
+              </div>
+            )}
+            <Link to={`/learn/${id}`} className="mt-2 block w-full rounded-full bg-[#0f172a] py-2 text-center text-xs font-bold text-white hover:bg-black">{cta}</Link>
+          </>
         ) : (
           <div className="mt-2 flex items-center gap-1.5 border-t pt-2">
             <span className={`text-[13px] font-black tracking-tight ${isFree ? "text-emerald-600" : "text-zinc-900"}`}>{price}</span>

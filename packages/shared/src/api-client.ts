@@ -36,6 +36,18 @@ export async function api<T>(path: string, init: RequestInit & { auth?: boolean 
   return handle<T>(await request(path, rest));
 }
 
+/** Alias kept for leaderboard/activity callers: same refresh-on-401 behavior, raw envelope. */
+
+export class ApiError extends Error {
+  status: number;
+  payload: unknown;
+  constructor(message: string, status: number, payload: unknown) {
+    super(message);
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
 export async function apiEnvelope<T>(path: string, init: RequestInit & { auth?: boolean } = {}): Promise<T> {
   const { auth: _auth, ...rest } = init;
   let res = await request(path, rest);
@@ -46,7 +58,7 @@ export async function apiEnvelope<T>(path: string, init: RequestInit & { auth?: 
     } catch {}
   }
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(errorMessage(json, res.status));
+  if (!res.ok) throw new ApiError(errorMessage(json, res.status), res.status, json);
   return json as T;
 }
 
@@ -60,7 +72,7 @@ async function request(path: string, init: RequestInit): Promise<Response> {
 
 async function handle<T>(res: Response): Promise<T> {
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(errorMessage(json, res.status));
+  if (!res.ok) throw new ApiError(errorMessage(json, res.status), res.status, json);
   return (json.data ?? json) as T;
 }
 

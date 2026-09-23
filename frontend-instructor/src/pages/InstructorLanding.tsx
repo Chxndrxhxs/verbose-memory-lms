@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight } from "@masterlms/shared";
+import { ArrowRight, canTeach } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 
 const HERO = "https://images.pexels.com/photos/3184311/pexels-photo-3184311.jpeg?auto=compress&cs=tinysrgb&w=1600";
@@ -11,6 +11,7 @@ const avatars = [
 
 export default function InstructorLanding() {
   const user = useAuth((s) => s.user);
+  const teach = canTeach(user);
   return (
     <div className="min-h-screen bg-[#f6f5f1]">
       <div className="px-3 pt-3 sm:px-4">
@@ -27,8 +28,10 @@ export default function InstructorLanding() {
               <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-bold text-zinc-900">Teach</span>
             </div>
             <div className="flex items-center gap-2">
-              {user ? (
+              {teach ? (
                 <Link to="/dashboard" className="inline-flex items-center gap-1.5 rounded-full bg-[#0f172a] px-4 py-1.5 text-sm font-semibold text-white">Go to dashboard <ArrowRight size={14} strokeWidth={2.5} /></Link>
+              ) : user ? (
+                <Link to="/login" className="inline-flex items-center gap-1.5 rounded-full bg-[#0f172a] px-4 py-1.5 text-sm font-semibold text-white">Switch to instructor account</Link>
               ) : (
                 <>
                   <Link to="/login" className="hidden rounded-full px-4 py-1.5 text-sm font-medium sm:block">Login</Link>
@@ -57,8 +60,10 @@ export default function InstructorLanding() {
             </h1>
             <p className="mt-3 max-w-[520px] text-[12px] font-light leading-relaxed tracking-wide text-white/80 sm:text-[13px]">Create courses, reach 12k+ learners, and turn your expertise into income — calm tools, clear analytics.</p>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-              {user ? (
+              {teach ? (
                 <Link to="/dashboard" className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold text-zinc-900 shadow-lg">Go to dashboard <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white"><ArrowRight size={12} strokeWidth={3} /></span></Link>
+              ) : user ? (
+                <Link to="/login" className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold text-zinc-900 shadow-lg">Switch to instructor account <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white"><ArrowRight size={12} strokeWidth={3} /></span></Link>
               ) : (
                 <>
                   <Link to="/login" className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold text-zinc-900 shadow-lg">Start teaching <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white"><ArrowRight size={12} strokeWidth={3} /></span></Link>

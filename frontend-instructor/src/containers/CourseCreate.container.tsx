@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useBlocker, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { CourseBuilderHeader } from "../components/CourseBuilderHeader";
+import { InstructorHeader } from "../components/InstructorHeader";
 import { CourseCreateStep1 } from "../components/CourseCreateStep1";
 import { CourseCreateStep2 } from "../components/CourseCreateStep2";
 import { LessonTypePicker } from "../components/LessonTypePicker";
@@ -169,6 +170,16 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [serverDirty, setServerDirty] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const hydratedRef = useRef(false);
+  const skipDirtyRef = useRef(false);
+  const draftKey = `instructor:course-draft:${existingId || "new"}`;
+
+  const markDirty = () => {
+    if (hydratedRef.current) setServerDirty(true);
+  };
 
   const showToast = (msg: string, ms = 2500) => {
     setToast(msg);
@@ -221,6 +232,7 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
   useEffect(() => {
     const c = existingQuery.data;
     if (!c) return;
+    skipDirtyRef.current = true;
     setCourseId(String(c.id));
     setValues({
       title: c.title ?? "",
@@ -249,11 +261,109 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
         quiz_data: l.quiz_data ?? [],
       })),
     })));
+    setServerDirty(false);
   }, [existingQuery.data]);
 
   useEffect(() => {
     if (existingQuery.error) showToast("Failed to load course");
   }, [existingQuery.error]);
+
+  // restore unsent draft for the new-course flow (refresh-safe step 0)
+  useEffect(() => {
+    if (existingId) {
+      hydratedRef.current = true;
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        const draft = JSON.parse(raw) as { values?: CourseStep1 };
+        if (draft.values) setValues((v) => ({ ...v, ...draft.values }));
+      }
+    } catch { /* no draft */ }
+    hydratedRef.current = true;
+  }, [draftKey, existingId]);
+
+  // persist draft locally so refresh never loses work
+  useEffect(() => {
+    if (!hydratedRef.current || existingId) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify({ values, updatedAt: Date.now() }));
+        setLastSavedAt(new Date().toLocaleTimeString());
+      } catch { /* storage unavailable */ }
+    }, 800);
+    return () => clearTimeout(t);
+  }, [values, draftKey, existingId]);
+
+  const blocker = useBlocker(serverDirty && !saving && !publishing);
+  useEffect(() => {
+    if (blocker.state === "blocked") {
+      if (window.confirm("You have unsaved changes. Leave anyway?")) blocker.proceed();
+      else blocker.reset();
+    }
+  }, [blocker]);
+
+  // any builder edit after hydrate marks the server copy dirty
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (skipDirtyRef.current) {
+      skipDirtyRef.current = false;
+      return;
+    }
+    markDirty();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values, chapters, coverImage]);
+
+  // debounced server autosave once the course exists
+  useEffect(() => {
+    if (!courseId || !serverDirty || !hydratedRef.current) return;
+    if (values.title.trim().length < 4 || values.description.trim().length < 10) return;
+    const t = setTimeout(async () => {
+      setAutoSaving(true);
+      try {
+        const price = values.pricingType === "free" ? 0 : Number(values.price);
+        const original = values.pricingType === "free" ? 0 : Number(values.originalPrice || 0);
+        const learn = values.whatYouWillLearn.split(".").map((s) => s.trim()).filter(Boolean);
+        await api(`/courses/${courseId}/`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            title: values.title.trim(),
+            subtitle: values.subtitle.trim(),
+            description: values.description.trim(),
+            what_you_will_learn: learn,
+            price,
+            pricing_type: values.pricingType,
+            original_price: original,
+            pg_fees_to_learner: values.pgFeesToLearner,
+            ...(coverImage ? { cover_image: absoluteMediaUrl(coverImage) } : {}),
+          }),
+        });
+        await api(`/courses/${courseId}/curriculum/`, {
+          method: "PUT",
+          body: JSON.stringify({
+            sections: chapters.map((c, i) => ({
+              title: c.title || `Section ${i + 1}`,
+              lessons: c.lessons.map((l, li) => ({
+                title: l.title,
+                kind: l.kind,
+                duration: l.duration,
+                resource_url: l.resource_url,
+                quiz_data: l.quiz_data ?? [],
+                order: li,
+              })),
+            })),
+          }),
+        });
+        queryClient.invalidateQueries({ queryKey: ["instructor-courses"] });
+        setServerDirty(false);
+        setLastSavedAt(new Date().toLocaleTimeString());
+      } catch { /* keep dirty — manual Save retries */ }
+      finally { setAutoSaving(false); }
+    }, 2000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverDirty, courseId]);
 
   const loading = Boolean(existingId) && existingQuery.isLoading;
 
@@ -287,6 +397,11 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
     onSuccess: (id) => {
       setCourseId(id);
       queryClient.invalidateQueries({ queryKey: ["instructor-courses"] });
+      setServerDirty(false);
+      setLastSavedAt(new Date().toLocaleTimeString());
+      try {
+        localStorage.removeItem(draftKey);
+      } catch { /* storage unavailable */ }
       setStep(1);
     },
     onError: (e) => showToast(String(e)),
@@ -376,11 +491,17 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
       if (publish) {
         await api(`/courses/${courseId}/publish/`, { method: "POST" });
         setPublishOpen(false);
+        setServerDirty(false);
+        try {
+          localStorage.removeItem(draftKey);
+        } catch { /* storage unavailable */ }
         showToast("Published ✓ — visible to learners");
+        setTimeout(() => nav("/courses"), 900);
       } else {
-        showToast("Saved ✓");
+        setServerDirty(false);
+        setLastSavedAt(new Date().toLocaleTimeString());
+        showToast("Saved ✓ — stay here, keep building");
       }
-      setTimeout(() => nav("/courses"), 900);
     } catch (e) {
       const msg = String(e);
       showToast(
@@ -428,13 +549,23 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
     );
   }
 
+  const saveStatus = autoSaving || saving || publishing
+    ? "Saving…"
+    : serverDirty
+      ? "Unsaved changes"
+      : lastSavedAt
+        ? `Saved ${lastSavedAt}`
+        : "";
+
   return (
     <div className="min-h-screen bg-[#f6f5f1]">
+      <InstructorHeader />
       {step === 0 ? (
         <div className="w-full px-4 py-3 sm:px-6">
           <CourseBuilderHeader
             title={values.title}
-            saving={saving || publishing}
+            saving={saving || publishing || autoSaving}
+            saveStatus={saveStatus}
             disabled={!courseId}
             onPreview={() => setPreviewOpen(true)}
             onPublish={() => setPublishOpen(true)}
@@ -457,7 +588,7 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
         </div>
       ) : (
         <div className="w-full px-4 py-3 sm:px-6">
-          <CourseBuilderHeader title={values.title} saving={saving || publishing} onPreview={() => setPreviewOpen(true)} onPublish={() => setPublishOpen(true)} onSave={() => saveCourse(false)} />
+          <CourseBuilderHeader title={values.title} saving={saving || publishing || autoSaving} saveStatus={saveStatus} onPreview={() => setPreviewOpen(true)} onPublish={() => setPublishOpen(true)} onSave={() => saveCourse(false)} />
           <div className="mt-4">
             <StepIndicator step={1} canGoBuilder={Boolean(courseId)} onNavigate={setStep} />
           </div>

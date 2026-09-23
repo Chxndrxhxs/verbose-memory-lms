@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useQuery } from "@tanstack/react-query";
 import { Diamond, Hexagon, Code, Target } from "@masterlms/shared";
 import { CourseCard } from "../components/CourseCard";
@@ -78,31 +80,61 @@ export function CourseListContainer() {
     queryKey: ["me", "courses"],
     queryFn: async () => {
       try {
-        const res = await api<{ course: { id: number } }[] | { results: { course: { id: number } }[] }>("/me/courses");
-        const list = Array.isArray(res) ? res : (res as { results: { course: { id: number } }[] }).results ?? [];
-        return new Set(list.map((e) => String(e.course.id)));
-      } catch { return new Set<string>(); }
+        const res = await api<
+          { course: { id: number }; progress: number }[] | { results: { course: { id: number }; progress: number }[] }
+        >("/me/courses");
+        const list = Array.isArray(res) ? res : (res as { results: { course: { id: number }; progress: number }[] }).results ?? [];
+        return new Map(list.map((e) => [String(e.course.id), e.progress ?? 0]));
+      } catch { return new Map<string, number>(); }
     },
   });
-  const enrolledIds = enrolledData ?? new Set<string>();
+  const progressById = enrolledData ?? new Map<string, number>();
+  const enrolledIds = new Set(progressById.keys());
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");
+  const [level, setLevel] = useState<string>("all");
+  const [price, setPrice] = useState<string>("all");
+  const [sort, setSort] = useState<string>("popular");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const debouncedQuery = useDebouncedValue(query);
 
   const categories = useMemo(() => {
     const set = new Set((data ?? []).map((c) => c.category).filter(Boolean));
     return Array.from(set) as string[];
   }, [data]);
+  const levels = useMemo(() => {
+    const set = new Set((data ?? []).map((c) => c.level).filter(Boolean));
+    return Array.from(set) as string[];
+  }, [data]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return (data ?? []).filter((c) => {
+    const q = debouncedQuery.trim().toLowerCase();
+    const list = (data ?? []).filter((c) => {
       if (category !== "all" && c.category !== category) return false;
-      if (q && !c.title.toLowerCase().includes(q) && !(c.subtitle ?? "").toLowerCase().includes(q)) return false;
-      return true;
+      if (level !== "all" && (c.level ?? "") !== level) return false;
+      if (price === "free" && c.rawPrice !== 0) return false;
+      if (price === "paid" && c.rawPrice === 0) return false;
+      if (!q) return true;
+      return [c.title, c.subtitle ?? "", c.instructor, c.category ?? "", c.level ?? ""]
+        .some((f) => f.toLowerCase().includes(q));
     });
-  }, [data, query, category]);
+    const by: Record<string, (a: Course, b: Course) => number> = {
+      popular: (a, b) => b.studentCount - a.studentCount,
+      rating: (a, b) => Number(b.rating ?? 0) - Number(a.rating ?? 0),
+      priceLow: (a, b) => a.rawPrice - b.rawPrice,
+      priceHigh: (a, b) => b.rawPrice - a.rawPrice,
+    };
+    return [...list].sort(by[sort] ?? by.popular);
+  }, [data, debouncedQuery, category, level, price, sort]);
+  const hasFilters =
+    query.trim() !== "" || category !== "all" || level !== "all" || price !== "all";
+  const clearAll = () => {
+    setQuery("");
+    setCategory("all");
+    setLevel("all");
+    setPrice("all");
+  };
 
   if (isLoading) return <p className="py-10 text-center text-sm text-zinc-500">Loading courses…</p>;
 
@@ -113,39 +145,73 @@ export function CourseListContainer() {
           <div className="relative">
             <button
               onClick={() => setFiltersOpen((v) => !v)}
+              aria-expanded={filtersOpen}
+              aria-haspopup="true"
               className="inline-flex items-center gap-1.5 rounded-full border bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
             >
-              Add Filters <span className="text-[10px]">▼</span>
+              Filters{(category !== "all" || level !== "all" || price !== "all") && <span className="ml-1 rounded-full bg-zinc-900 px-1.5 text-[10px] text-white">•</span>} <span className="text-[10px]">▼</span>
             </button>
             {filtersOpen && (
-              <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-44 overflow-hidden rounded-2xl border bg-white shadow-lg">
-                <button
-                  onClick={() => { setCategory("all"); setFiltersOpen(false); }}
-                  className={`flex w-full px-3 py-2 text-left text-xs font-medium hover:bg-zinc-50 ${category === "all" ? "bg-zinc-900 text-white hover:bg-zinc-900" : "text-zinc-700"}`}
-                >
-                  All courses
-                </button>
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => { setCategory(cat); setFiltersOpen(false); }}
-                    className={`flex w-full px-3 py-2 text-left text-xs font-medium hover:bg-zinc-50 ${category === cat ? "bg-zinc-900 text-white hover:bg-zinc-900" : "text-zinc-700"}`}
-                  >
-                    {cat}
-                  </button>
-                ))}
+              <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-52 rounded-2xl border bg-white p-3 shadow-lg">
+                <p className="px-1 text-[11px] font-bold uppercase tracking-wide text-zinc-400">Category</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {["all", ...categories].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setCategory(cat)}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${category === cat ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"}`}
+                    >
+                      {cat === "all" ? "All" : cat}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 px-1 text-[11px] font-bold uppercase tracking-wide text-zinc-400">Level</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {["all", ...levels].map((lv) => (
+                    <button
+                      key={lv}
+                      onClick={() => setLevel(lv)}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${level === lv ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"}`}
+                    >
+                      {lv === "all" ? "Any" : lv}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 px-1 text-[11px] font-bold uppercase tracking-wide text-zinc-400">Price</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {[["all", "Any"], ["free", "Free"], ["paid", "Paid"]].map(([v, label]) => (
+                    <button
+                      key={v}
+                      onClick={() => setPrice(v)}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${price === v ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setFiltersOpen(false)} className="mt-3 w-full rounded-full bg-zinc-900 py-1.5 text-xs font-bold text-white">Done</button>
               </div>
             )}
           </div>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by Course Title"
+            placeholder="Search title, instructor, category…"
+            aria-label="Search courses"
             className="min-w-0 flex-1 rounded-full bg-zinc-50 px-3 py-2 text-sm outline-none placeholder:text-zinc-400 focus:bg-white focus:ring-1 focus:ring-zinc-200"
           />
+          {query && (
+            <button onClick={() => setQuery("")} aria-label="Clear search" className="shrink-0 rounded-full px-2 py-1 text-xs font-bold text-zinc-400 hover:text-zinc-900">✕</button>
+          )}
         </div>
 
         <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
+          <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort courses" className="rounded-xl border bg-white px-3 py-2 text-xs font-semibold text-zinc-700 shadow-sm">
+            <option value="popular">Most popular</option>
+            <option value="rating">Highest rated</option>
+            <option value="priceLow">Price: low to high</option>
+            <option value="priceHigh">Price: high to low</option>
+          </select>
           <div className="flex overflow-hidden rounded-xl border bg-white shadow-sm">
             <button
               onClick={() => setView("list")}
@@ -183,12 +249,23 @@ export function CourseListContainer() {
         </div>
       </div>
 
+      <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
+        <p aria-live="polite">{filtered.length} course{filtered.length === 1 ? "" : "s"}{hasFilters ? " match your filters" : ""}</p>
+        {hasFilters && (
+          <button onClick={clearAll} className="font-semibold text-[#3478ff] hover:underline">Clear all</button>
+        )}
+      </div>
+
       {filtered.length === 0 ? (
-        <p className="mt-8 text-center text-sm text-zinc-500">No courses match your filters.</p>
+        <div className="mt-8 rounded-2xl border border-dashed bg-white px-4 py-10 text-center">
+          <p className="text-sm font-bold">No courses match your filters.</p>
+          <p className="mt-1 text-xs text-zinc-500">Try a different search term or clear your filters.</p>
+          <button onClick={clearAll} className="mt-3 rounded-full bg-zinc-900 px-4 py-2 text-xs font-bold text-white">Clear all filters</button>
+        </div>
       ) : view === "grid" ? (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((c) => (
-            <CourseCard key={c.id} {...c} enrolled={enrolledIds.has(c.id)} />
+            <CourseCard key={c.id} {...c} enrolled={enrolledIds.has(c.id)} progress={progressById.get(c.id)} />
           ))}
         </div>
       ) : (
@@ -196,9 +273,11 @@ export function CourseListContainer() {
           {filtered.map((c) => {
             const disc = c.originalPrice && c.originalPrice > c.rawPrice ? Math.round(((c.originalPrice - c.rawPrice) / c.originalPrice) * 100) : 0;
             const enrolled = enrolledIds.has(c.id);
-            const href = enrolled ? `/learn/${c.id}` : `/courses/${c.id}`;
+            const pct = progressById.get(c.id) ?? 0;
+            const to = enrolled ? `/learn/${c.id}` : `/courses/${c.id}`;
+            const label = pct >= 100 ? "Review →" : pct > 0 ? `Continue ${pct}% →` : "Go to course →";
             return (
-              <a key={c.id} href={href} className="flex items-center gap-3 rounded-2xl border bg-white p-3 shadow-sm hover:bg-zinc-50">
+              <Link key={c.id} to={to} className="flex items-center gap-3 rounded-2xl border bg-white p-3 shadow-sm hover:bg-zinc-50">
                 <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${c.accent} text-white`}>
                   <c.icon size={18} strokeWidth={2} />
                 </div>
@@ -210,7 +289,7 @@ export function CourseListContainer() {
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
                   {enrolled ? (
-                    <span className="rounded-full bg-[#0f172a] px-3 py-1 text-xs font-bold text-white">Go to course →</span>
+                    <span className="rounded-full bg-[#0f172a] px-3 py-1 text-xs font-bold text-white">{label}</span>
                   ) : (
                     <>
                       {c.originalPrice && <span className="hidden text-xs text-zinc-400 line-through sm:inline">₹{c.originalPrice.toLocaleString("en-IN")}</span>}
@@ -219,7 +298,7 @@ export function CourseListContainer() {
                     </>
                   )}
                 </div>
-              </a>
+              </Link>
             );
           })}
         </div>

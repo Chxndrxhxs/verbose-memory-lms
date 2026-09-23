@@ -2,10 +2,21 @@ import logging
 import re
 
 from django.db import transaction
+from django.db.models import Count
 from django.utils import timezone
 
-from .extraction import extract_document_pages
-from .llm import generate_questions_from_text, is_llm_configured
+from .extraction import (
+    extract_document_markdown,
+    extract_document_pages,
+    split_answer_key,
+    split_markdown_pages,
+)
+from .llm import (
+    GeminiRateLimitedError,
+    extract_page_questions,
+    generate_questions_from_text,
+    is_llm_configured,
+)
 from .models import (
     Assignment,
     AssignmentAttempt,
@@ -122,12 +133,23 @@ def _replace_steps(
             position=index,
         )
         for q_index, q_payload in enumerate(step_payload.get("questions", [])):
+            raw_options = q_payload.get("options", ["", "", "", ""]) or []
+            options = []
+            for option in raw_options:
+                if isinstance(option, str):
+                    options.append(option)
+                elif isinstance(option, dict):
+                    options.append(
+                        {"text": option.get("text", ""), "image": option.get("image", "")}
+                    )
+                else:
+                    options.append(str(option))
             AssignmentQuestion.objects.create(
                 assignment=model.assignment,
                 step=step,
                 question=q_payload.get("question", ""),
                 question_image=q_payload.get("question_image", ""),
-                options=list(q_payload.get("options", ["", "", "", ""])),
+                options=options,
                 correct_answer=int(q_payload.get("correct_answer", 0)),
                 explanation=q_payload.get("explanation", ""),
                 marks=q_payload.get("marks", 1),
@@ -140,9 +162,16 @@ def _replace_steps(
 
 def save_assignment_fields(assignment: Assignment | None, payload: dict, user) -> Assignment:
     """Create or update an assignment (top-level fields only - not models)."""
+    from .extraction import document_file_id
+
     defaults = {k: payload[k] for k in payload if k not in ("models", "steps", "questions")}
     if defaults.get("access") is None:
         defaults["access"] = {}
+    if defaults.get("source_document") and not defaults.get("source_document_file_id"):
+        try:
+            defaults["source_document_file_id"] = document_file_id(defaults["source_document"])
+        except ValueError:
+            defaults["source_document_file_id"] = ""
     if not assignment:
         assignment = Assignment(created_by=user, **defaults)
     else:
@@ -186,7 +215,14 @@ def step_builder(step: AssignmentModelStep) -> dict:
 
 
 def model_payload(model: AssignmentModel, include_questions: bool = True) -> dict:
-    total_questions = sum(len(step.questions.all()) for step in collect_leaf_steps(model))
+    leaf_steps = collect_leaf_steps(model)
+    step_ids = [step.id for step in leaf_steps]
+    counts = (
+        AssignmentQuestion.objects.filter(step_id__in=step_ids)
+        .values("step_id")
+        .annotate(total=Count("id"))
+    )
+    total_questions = sum(row["total"] for row in counts)
     return {
         "id": model.id,
         "code": model.code,
@@ -203,6 +239,9 @@ def model_payload(model: AssignmentModel, include_questions: bool = True) -> dic
 
 def model_preview(model: AssignmentModel) -> dict:
     """Compact model summary for list cards / model picker (no heavy steps)."""
+    leaf_steps = collect_leaf_steps(model)
+    step_ids = [step.id for step in leaf_steps]
+    total_questions = AssignmentQuestion.objects.filter(step_id__in=step_ids).count()
     return {
         "id": model.id,
         "code": model.code,
@@ -212,7 +251,7 @@ def model_preview(model: AssignmentModel) -> dict:
         "is_published": model.is_published,
         "duration_seconds": model_duration_seconds(model),
         "duration_label": format_duration_hms(model_duration_seconds(model)),
-        "total_questions": sum(len(step.questions.all()) for step in collect_leaf_steps(model)),
+        "total_questions": total_questions,
     }
 
 
@@ -250,6 +289,7 @@ def assignment_payload(assignment: Assignment, include_models: bool = True) -> d
         "published_at": assignment.published_at.isoformat() if assignment.published_at else None,
         "source_document": assignment.source_document,
         "source_document_name": assignment.source_document_name,
+        "source_document_file_id": assignment.source_document_file_id,
         "draft_data": assignment.draft_data,
         "inter_category": {
             "id": assignment.inter_category.id,
@@ -270,7 +310,9 @@ def assignment_payload(assignment: Assignment, include_models: bool = True) -> d
     }
     if assignment.course_id:
         data["course"] = {"id": assignment.course.id, "title": assignment.course.title}
-    assignment_models = list(assignment.models.all())
+    assignment_models = list(
+        assignment.models.prefetch_related("steps", "steps__children", "steps__questions")
+    )
     models = [model_payload(model) for model in assignment_models]
     if include_models:
         data["models"] = models
@@ -613,6 +655,112 @@ def regenerate_options(source: dict) -> dict:
     return {**source, "options": new_options, "correct_answer": base["correct_answer"]}
 
 
+def extract_document_questions(config: dict) -> dict:
+    """Copy the MCQs already printed in the uploaded document, verbatim.
+
+    Pipeline: MarkItDown markdown (structure) + pypdf figures (pixels) ->
+    Gemini verbatim structuring per page, with figures as vision inputs so
+    figure stems and image options survive. Questions without a printed
+    answer are flagged ``needs_review`` instead of guessing.
+
+    Returns an envelope so the UI can resume after rate limits:
+    ``{"questions": [...], "done_pages": [...], "pending_pages": [...],
+    "total_pages": N}``. Pass ``done_pages``/``pending_pages`` back in
+    ``config`` to continue a partial run instead of starting over.
+
+    Set ``config["async_mode"]`` to enqueue a background job instead: returns
+    ``{"job_id", "status"}`` immediately and the client polls
+    ``GET admin/assignments/extract-jobs/<id>`` for progress.
+    """
+    if config.get("async_mode"):
+        from . import extract_jobs
+
+        job = extract_jobs.enqueue(dict(config))
+        return {"job_id": job["job_id"], "status": job["status"]}
+    source_document = str(config.get("source_document") or "").strip()
+    if not source_document:
+        raise ValueError("Upload a question paper first")
+    if not is_llm_configured():
+        raise ValueError("Connect a Gemini API key to extract PDF questions")
+    try:
+        markdown = extract_document_markdown(source_document)
+    except FileNotFoundError:
+        raise
+    except Exception as exc:
+        raise ValueError(f"Could not read the uploaded document: {exc}") from exc
+    if not markdown.strip():
+        raise ValueError("No readable text found in the uploaded document")
+    try:
+        pages = extract_document_pages(source_document)
+    except FileNotFoundError:
+        raise
+    except Exception as exc:
+        raise ValueError(f"Could not read the uploaded document: {exc}") from exc
+    markdown, answer_key = split_answer_key(markdown)
+    body_pages = [page for page in pages if "answer key" not in page["text"].lower()]
+    ordered = body_pages or pages
+    md_body_pages = split_markdown_pages(markdown)
+    if len(md_body_pages) == len(ordered):
+        source_pages = md_body_pages
+    else:
+        logger.warning(
+            "MarkItDown returned %s chunks for %s pages; using pypdf text",
+            len(md_body_pages),
+            len(ordered),
+        )
+        source_pages = [page["text"] for page in ordered]
+    if answer_key:
+        markdown_pages = [
+            f"{text}\n\n{answer_key}" if text.strip() else text for text in source_pages
+        ]
+    else:
+        markdown_pages = source_pages
+    questions: list[dict] = []
+    done_pages: list[int] = []
+    skipped_pages: list[int] = []
+    resume_pages = config.get("pending_pages") or config.get("done_pages")
+    only_pages = {int(page) for page in resume_pages} if resume_pages is not None else None
+    for index, page in enumerate(ordered):
+        if only_pages is not None and page["page"] not in only_pages:
+            continue
+        page_markdown = (markdown_pages[index] or page["text"]).strip()
+        if not page_markdown and not page["images"]:
+            continue
+        try:
+            questions.extend(
+                extract_page_questions(page_markdown, page["page"], page["images"], config)
+            )
+            done_pages.append(page["page"])
+        except GeminiRateLimitedError as exc:
+            pending = [p["page"] for p in ordered[index:]]
+            logger.warning("Gemini rate-limited; pausing with %s pages pending", len(pending))
+            return {
+                "questions": questions,
+                "done_pages": done_pages,
+                "pending_pages": pending,
+                "skipped_pages": skipped_pages,
+                "total_pages": len(ordered),
+                "rate_limited": True,
+                "error": str(exc),
+            }
+        except Exception:
+            skipped_pages.append(page["page"])
+            logger.warning("Verbatim extraction failed for page %s", page["page"], exc_info=True)
+    if not questions and not done_pages and not skipped_pages:
+        raise ValueError(
+            "No numbered questions with options found. "
+            "Check the file has Q1, Q2... with (a)-(d) options, or use Generate mode."
+        )
+    return {
+        "questions": questions,
+        "done_pages": done_pages,
+        "pending_pages": [],
+        "skipped_pages": skipped_pages,
+        "total_pages": len(ordered),
+        "rate_limited": False,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Attempt lifecycle
 # ---------------------------------------------------------------------------
@@ -751,7 +899,9 @@ def compute_outcome(attempt: AssignmentAttempt, answers: dict) -> None:
     assignment = attempt.assignment
     snapshot = attempt.questions_snapshot or {}
     steps = collect_leaf_steps(attempt.model)
-    questions_by_step = {step.id: list(step.questions.order_by("position", "id")) for step in steps}
+    question_ids = [q.id for step in steps for q in step.questions.all()]
+    live = {q.id: q for q in AssignmentQuestion.objects.filter(id__in=question_ids)}
+    questions_by_step = {step.id: list(step.questions.all()) for step in steps}
 
     per_step: dict[int, dict] = {}
     total_questions = 0
@@ -769,9 +919,10 @@ def compute_outcome(attempt: AssignmentAttempt, answers: dict) -> None:
         correct_in_step = 0
         attempted_in_step = 0
         for q in qs:
+            fallback = live.get(q.id, q)
             meta = step_snap.get(str(q.id)) or {
-                "correct_answer": int(q.correct_answer),
-                "marks": float(q.marks),
+                "correct_answer": int(fallback.correct_answer),
+                "marks": float(fallback.marks),
             }
             marks = meta["marks"]
             total_questions += 1

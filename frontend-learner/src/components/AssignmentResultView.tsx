@@ -4,7 +4,10 @@ import {
   ArrowLeft,
   CheckCircle2,
   Shield,
+  absoluteMediaUrl,
   formatAssignmentDuration,
+  optionImage,
+  optionText,
   type AssignmentResultPayload,
 } from "@masterlms/shared";
 import { TopNav } from "./TopNav";
@@ -130,7 +133,16 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
                   {result.review.map((item) => (
                     <div key={item.question_id} className="rounded-2xl border border-zinc-100 p-4">
                       <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm font-medium leading-relaxed">{item.question}</p>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium leading-relaxed">{item.question}</p>
+                          {item.question_image && (
+                            <img
+                              src={absoluteMediaUrl(item.question_image) ?? item.question_image}
+                              alt="Question figure"
+                              className="mt-2 h-32 w-full rounded-xl border border-zinc-200 object-contain"
+                            />
+                          )}
+                        </div>
                         {item.is_correct ? (
                           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
                             <CheckCircle2 size={12} /> Correct
@@ -153,7 +165,14 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
                           return (
                             <div key={oi} className={`rounded-lg border px-3 py-2 ${cls}`}>
                               <span className="mr-2 font-bold">{String.fromCharCode(65 + oi)}.</span>
-                              {option}
+                              {optionImage(option) && (
+                                <img
+                                  src={absoluteMediaUrl(optionImage(option)) ?? optionImage(option)}
+                                  alt={optionText(option)}
+                                  className="mb-1 h-16 w-24 rounded-md border border-zinc-200 bg-white object-contain"
+                                />
+                              )}
+                              <span>{optionText(option)}</span>
                               {isCorrectChoice && (
                                 <span className="ml-2 text-[10px] font-bold uppercase">Correct answer</span>
                               )}

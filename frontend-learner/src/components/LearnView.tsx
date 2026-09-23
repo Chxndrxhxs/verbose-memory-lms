@@ -248,8 +248,8 @@ export function LearnView(p: Props) {
           {tab === "notes" && (
             <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm">
               <h3 className="text-sm font-bold">Your notes</h3>
-              <textarea value={note} onChange={(e) => p.onNote(e.target.value)} placeholder="Take a note for this lesson…" className="mt-3 min-h-[120px] w-full rounded-xl border bg-zinc-50 p-3 text-sm outline-none focus:border-zinc-300" />
-              <p className="mt-2 text-xs text-zinc-500">{note.length} characters • local only</p>
+              <textarea value={note} onChange={(e) => p.onNote(e.target.value)} placeholder={`Take a note for “${activeLesson?.title ?? "this lesson"}”…`} className="mt-3 min-h-[120px] w-full rounded-xl border bg-zinc-50 p-3 text-sm outline-none focus:border-zinc-300" />
+              <p className="mt-2 text-xs text-zinc-500">{note.length} characters • saved on this device</p>
             </div>
           )}
           {tab === "qna" && (

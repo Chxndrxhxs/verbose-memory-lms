@@ -5,6 +5,7 @@ import type { CourseDetail } from "../types/course";
 type Props = {
   data: CourseDetail;
   enrolled: boolean;
+  progress?: number;
   processing: boolean;
   open: number;
   toast: string | null;
@@ -15,6 +16,7 @@ type Props = {
 export function CourseDetailView({
   data,
   enrolled,
+  progress = 0,
   processing,
   open,
   toast,
@@ -24,6 +26,7 @@ export function CourseDetailView({
   const curriculum = data.curriculum ?? [];
   const learn = data.learn ?? [];
   const lectureCount = curriculum.reduce((a, c) => a + c.lessons.length, 0);
+  const cta = progress >= 100 ? "Review course →" : progress > 0 ? `Continue learning — ${progress}% →` : "Start learning →";
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       {/* LEFT */}
@@ -53,8 +56,13 @@ export function CourseDetailView({
           <div className="relative"><img src={data.img} alt="" className="h-48 w-full object-cover" /><button className="absolute inset-0 m-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-zinc-900 shadow"><Play size={20} strokeWidth={2.5} className="ml-0.5" /></button></div>
           <div className="p-4">
             <div className="flex items-baseline gap-2"><span className="text-2xl font-black">{data.price}</span></div>
+            {enrolled && progress > 0 && (
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-100">
+                <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, progress)}%` }} />
+              </div>
+            )}
             {enrolled ? (
-              <Link to={`/learn/${data.id}`} className="mt-3 block w-full rounded-full bg-emerald-600 py-3 text-center text-sm font-bold text-white">Start learning →</Link>
+              <Link to={`/learn/${data.id}`} className="mt-3 block w-full rounded-full bg-emerald-600 py-3 text-center text-sm font-bold text-white">{cta}</Link>
             ) : (
               <button onClick={onEnroll} disabled={processing} className="mt-3 w-full rounded-full bg-[#0f172a] py-3 text-sm font-bold text-white disabled:opacity-60">
                 {processing ? "Processing…" : data.price === "Free" ? "Enroll now — Free" : "Enroll now"}
@@ -122,8 +130,13 @@ export function CourseDetailView({
           )}
           <div className="p-5">
             <div className="flex items-baseline gap-2"><span className="text-[28px] font-black tracking-tight">{data.price}</span></div>
+            {enrolled && progress > 0 && (
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-100">
+                <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, progress)}%` }} />
+              </div>
+            )}
             {enrolled ? (
-              <Link to={`/learn/${data.id}`} className="mt-4 block w-full rounded-full bg-emerald-600 py-3 text-center text-sm font-bold text-white hover:bg-emerald-700">Start learning →</Link>
+              <Link to={`/learn/${data.id}`} className="mt-4 block w-full rounded-full bg-emerald-600 py-3 text-center text-sm font-bold text-white hover:bg-emerald-700">{cta}</Link>
             ) : (
               <button onClick={onEnroll} disabled={processing} className="mt-4 w-full rounded-full bg-[#0f172a] py-3 text-sm font-bold text-white hover:bg-black disabled:opacity-60">
                 {processing ? "Processing…" : "Enroll now"}

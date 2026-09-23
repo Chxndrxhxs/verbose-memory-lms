@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import About from "./pages/About";
 import Activity from "./pages/Activity";
 import Assignments from "./pages/Assignments";
 import CompleteProfile from "./pages/CompleteProfile";
@@ -34,6 +35,7 @@ const router = createBrowserRouter([
   { path: "/assignments/take/:attemptId", element: <Protected><AssignmentTake /></Protected> },
   { path: "/assignments/transcript/:assignmentId", element: <Protected><AssignmentResult /></Protected> },
   { path: "/profile", element: <Protected><Profile /></Protected> },
+  { path: "/about", element: <About /> },
 ]);
 
 export default function App() {

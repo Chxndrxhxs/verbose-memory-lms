@@ -15,6 +15,7 @@ from .models import (
     Assignment,
     AssignmentAttempt,
     AssignmentModel,
+    AssignmentQuestion,
     Category,
     InterCategory,
     SubCategory,
@@ -29,6 +30,7 @@ from .services import (
     assignment_payload,
     category_tree_payload,
     collect_leaf_steps,
+    extract_document_questions,
     generate_questions_from_document,
     grade_expired_attempts,
     model_preview,
@@ -89,11 +91,12 @@ def published_list(request):
         value = request.query_params.get(param)
         if value and value.isdigit():
             qs = qs.filter(**{field: value})
+    qs = qs.order_by("-created_at")
+    if request.query_params.get("page") is None:
+        items = [assignment_payload(a, include_models=False) for a in qs[:100]]
+        return ok(items)
     items = [assignment_payload(a, include_models=False) for a in qs[:100]]
-    paged = paginate_data_list(request, items)
-    if paged is not None:
-        return paged
-    return ok(items)
+    return paginate_data_list(request, items)
 
 
 @api_view(["GET"])
@@ -282,7 +285,11 @@ def attempt_detail(request, attempt_id: int):
         )
 
     grade_expired_attempts()
-    attempt = AssignmentAttempt.objects.get(id=attempt.id)
+    attempt = (
+        AssignmentAttempt.objects.select_related("assignment", "model")
+        .prefetch_related("model__steps", "model__steps__children", "model__steps__questions")
+        .get(id=attempt.id)
+    )
     if attempt.status == AssignmentAttempt.Status.IN_PROGRESS:
         return ok(
             {
@@ -484,8 +491,9 @@ def admin_publish(request, assignment_id: int):
             status=status.HTTP_400_BAD_REQUEST,
         )
     for model in published:
-        questions = sum(len(step.questions.all()) for step in collect_leaf_steps(model))
-        if questions == 0:
+        leaf_steps = collect_leaf_steps(model)
+        step_ids = [step.id for step in leaf_steps]
+        if not AssignmentQuestion.objects.filter(step_id__in=step_ids).exists():
             return Response(
                 {"data": None, "error": f"{model.name} has no questions"},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -551,6 +559,36 @@ def admin_duplicate(request, assignment_id: int):
 @permission_classes([IsInstructor])
 def admin_generate_questions(request):
     return ok(generate_questions_from_document(request.data))
+
+
+@api_view(["POST"])
+@permission_classes([IsInstructor])
+def admin_extract_questions(request):
+    try:
+        result = extract_document_questions(request.data)
+    except FileNotFoundError as exc:
+        return Response({"data": None, "error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    except ValueError as exc:
+        return Response({"data": None, "error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    if "job_id" in result:
+        return Response({"data": result, "error": None}, status=status.HTTP_202_ACCEPTED)
+    if result.get("rate_limited"):
+        return Response({"data": result, "error": None}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+    return ok(result)
+
+
+@api_view(["GET"])
+@permission_classes([IsInstructor])
+def admin_extract_job(request, job_id: str):
+    from . import extract_jobs
+
+    job = extract_jobs.get(job_id)
+    if job is None:
+        return Response(
+            {"data": None, "error": "Extract job not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    return ok(job)
 
 
 @api_view(["POST"])

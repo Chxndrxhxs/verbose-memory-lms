@@ -24,15 +24,27 @@ export function quizOption(opt: string | { type?: string; text?: string; media_u
 }
 
 // assignment options may be a plain string OR { text, image } (PDF figures) —
-// these helpers normalise both so presenters never branch on the raw shape.
+// these helpers normalise every shape (including unresolved { image_ref })
+// so presenters never branch on the raw payload.
 export function optionText(opt: AssignmentOption): string {
   if (typeof opt === "string") return opt;
-  return opt.text ?? "";
+  if (typeof opt.text === "string" && opt.text.trim()) return opt.text;
+  const ref = (opt as { image_ref?: unknown }).image_ref;
+  if (typeof ref === "number") return `Figure ${ref}`;
+  return "";
 }
 
 export function optionImage(opt: AssignmentOption): string {
   if (typeof opt === "string") return "";
   return opt.image ?? "";
+}
+
+export function normalizeOption(opt: AssignmentOption): { text: string; image: string } {
+  return { text: optionText(opt), image: optionImage(opt) };
+}
+
+export function normalizeOptions(options: AssignmentOption[]): { text: string; image: string }[] {
+  return (options ?? []).map(normalizeOption);
 }
 
 export function isImageOption(opt: AssignmentOption): boolean {
