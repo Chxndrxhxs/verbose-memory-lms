@@ -2,7 +2,6 @@ from django.conf import settings
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -45,8 +44,6 @@ def set_auth_cookies(res: Response, tokens: dict) -> Response:
 
 class SendOTPView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "send_otp"
 
     def post(self, request):
         s = SendOTPSerializer(data=request.data)
@@ -57,8 +54,6 @@ class SendOTPView(APIView):
 
 class VerifyOTPView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "verify_otp"
 
     def post(self, request):
         s = VerifyOTPSerializer(data=request.data)
