@@ -2,6 +2,7 @@ import { Link, NavLink } from "react-router-dom";
 import { useState } from "react";
 import { Menu, X, canTeach } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
+import { MobileTabBar } from "./MobileTabBar";
 import { ProfileMenu } from "./ProfileMenu";
 import { cn } from "../lib/utils";
 
@@ -21,6 +22,7 @@ export function InstructorHeader() {
   // link would bounce, so hide the nav instead of showing dead links.
   const showNav = !user || canTeach(user);
   return (
+    <>
     <div className="sticky top-0 z-30 w-full bg-white px-4 py-3 shadow-sm sm:px-6">
       <div className="flex w-full items-center justify-between">
         <Link to={showNav && user ? "/dashboard" : "/"} className="flex items-center gap-2">
@@ -68,5 +70,7 @@ export function InstructorHeader() {
         </nav>
       )}
     </div>
+    {showNav && <MobileTabBar />}
+    </>
   );
 }

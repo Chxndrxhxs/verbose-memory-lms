@@ -11,3 +11,8 @@
 h1,h2,h3 { font-family: var(--font-display); }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 999px; }
+
+/* Clearance for the mobile bottom tab bar (rendered only below sm) */
+@media (max-width: 639.5px) {
+  body { padding-bottom: 68px; }
+}
