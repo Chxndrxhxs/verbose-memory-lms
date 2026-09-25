@@ -79,7 +79,14 @@ async function handle<T>(res: Response): Promise<T> {
 export function absoluteMediaUrl(path: string | undefined | null): string | null {
   if (!path) return null;
   if (/^(https?:|blob:|data:)/.test(path)) return path;
-  return `${BASE}${path.startsWith('/') ? '' : '/'}${path}`;
+  const absolute = `${BASE}${path.startsWith('/') ? '' : '/'}${path}`;
+  if (/^https?:/.test(absolute)) return absolute;
+  // Relative VITE_API_URL (same-origin deploy) yields "/media/..." which DRF
+  // URLFields reject, so expand against the page origin into a real absolute URL.
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}${absolute}`;
+  }
+  return absolute;
 }
 
 export async function uploadFile(file: File): Promise<{ url: string; size: number }> {

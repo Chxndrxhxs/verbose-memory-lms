@@ -39,7 +39,7 @@ const router = createBrowserRouter([
       { path: "categories", element: <Categories /> },
     ],
   },
-]);
+], { basename: "/admin" });
 
 export default function App() {
   const fetchMe = useAuth((s) => s.fetchMe);

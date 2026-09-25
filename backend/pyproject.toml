@@ -15,6 +15,7 @@ dependencies = [
     "python-docx>=1.2.0",
     "httpx>=0.28.1",
     "markitdown[docx,pdf]>=0.1.7",
+    "waitress>=3.0.2",
 ]
 
 [dependency-groups]

@@ -49,7 +49,7 @@ const router = createBrowserRouter([
     ],
   },
   { path: "/profile", element: <Protected><Profile /></Protected> },
-]);
+], { basename: "/teach" });
 
 export default function App() {
   const fetchMe = useAuth((s) => s.fetchMe);

@@ -36,7 +36,7 @@ const router = createBrowserRouter([
   { path: "/assignments/transcript/:assignmentId", element: <Protected><AssignmentResult /></Protected> },
   { path: "/profile", element: <Protected><Profile /></Protected> },
   { path: "/about", element: <About /> },
-]);
+], { basename: "/" });
 
 export default function App() {
   const fetchMe = useAuth((s) => s.fetchMe);
