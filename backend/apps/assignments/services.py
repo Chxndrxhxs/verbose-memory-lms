@@ -718,6 +718,7 @@ def extract_document_questions(config: dict) -> dict:
     questions: list[dict] = []
     done_pages: list[int] = []
     skipped_pages: list[int] = []
+    first_error = ""
     resume_pages = config.get("pending_pages") or config.get("done_pages")
     only_pages = {int(page) for page in resume_pages} if resume_pages is not None else None
     for index, page in enumerate(ordered):
@@ -743,13 +744,21 @@ def extract_document_questions(config: dict) -> dict:
                 "rate_limited": True,
                 "error": str(exc),
             }
-        except Exception:
+        except Exception as exc:
             skipped_pages.append(page["page"])
+            if not first_error:
+                first_error = str(exc) or repr(exc)
             logger.warning("Verbatim extraction failed for page %s", page["page"], exc_info=True)
     if not questions and not done_pages and not skipped_pages:
         raise ValueError(
             "No numbered questions with options found. "
             "Check the file has Q1, Q2... with (a)-(d) options, or use Generate mode."
+        )
+    if not questions and not done_pages:
+        raise ValueError(
+            "Could not extract questions from any page. "
+            f"First page error: {first_error or 'unknown'}. "
+            "Check the Gemini API key and that the PDF has Q1, Q2... with options."
         )
     return {
         "questions": questions,
