@@ -34,12 +34,12 @@ class OTP(models.Model):
     MAX_ATTEMPTS = 5
 
     @classmethod
-    def create_for(cls, mobile: str) -> "OTP":
+    def create_for(cls, mobile: str, code: str | None = None) -> "OTP":
         import random
 
         # resending invalidates older unused codes for this mobile
         cls.objects.filter(mobile=mobile, is_used=False).update(is_used=True)
-        code = f"{random.randint(1000, 9999)}"
+        code = code or f"{random.randint(1000, 9999)}"
         return cls.objects.create(
             mobile=mobile,
             code=code,
