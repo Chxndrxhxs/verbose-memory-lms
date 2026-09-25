@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Diamond, Hexagon, Code, Target } from "@masterlms/shared";
 import { CourseCard } from "../components/CourseCard";
 import { api } from "../lib/api";
+import { useMyCourses } from "../hooks/useMyCourses";
 import type { Course } from "../types/course";
 
 type ApiCourse = {
@@ -76,19 +77,14 @@ async function fetchCourses(): Promise<Course[]> {
 
 export function CourseListContainer() {
   const { data, isLoading } = useQuery({ queryKey: ["courses"], queryFn: fetchCourses });
-  const { data: enrolledData } = useQuery({
-    queryKey: ["me", "courses"],
-    queryFn: async () => {
-      try {
-        const res = await api<
-          { course: { id: number }; progress: number }[] | { results: { course: { id: number }; progress: number }[] }
-        >("/me/courses");
-        const list = Array.isArray(res) ? res : (res as { results: { course: { id: number }; progress: number }[] }).results ?? [];
-        return new Map(list.map((e) => [String(e.course.id), e.progress ?? 0]));
-      } catch { return new Map<string, number>(); }
-    },
-  });
-  const progressById = enrolledData ?? new Map<string, number>();
+  const { data: myCourses } = useMyCourses();
+  const progressById = useMemo(
+    () =>
+      new Map<string, number>(
+        (myCourses ?? []).map((e) => [String(e.course.id), e.progress ?? 0] as [string, number])
+      ),
+    [myCourses]
+  );
   const enrolledIds = new Set(progressById.keys());
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");

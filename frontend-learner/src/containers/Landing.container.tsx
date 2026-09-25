@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Hexagon, Code, Target, Diamond } from "@masterlms/shared";
 import { LandingView } from "../components/LandingView";
 import { api } from "../lib/api";
+import { useMyCourses } from "../hooks/useMyCourses";
 import type { Course } from "../types/course";
 
 type ApiCourse = {
@@ -67,17 +69,11 @@ async function fetchLandingCourses(): Promise<Course[]> {
 
 export function LandingContainer() {
   const { data } = useQuery({ queryKey: ["landing-courses"], queryFn: fetchLandingCourses });
-  const { data: enrolledData } = useQuery({
-    queryKey: ["me", "courses"],
-    queryFn: async () => {
-      try {
-        const res = await api<{ course: { id: number } }[] | { results: { course: { id: number } }[] }>("/me/courses");
-        const list = Array.isArray(res) ? res : (res as { results: { course: { id: number } }[] }).results ?? [];
-        return new Set(list.map((e) => String(e.course.id)));
-      } catch { return new Set<string>(); }
-    },
-  });
-  const enrolledIds = enrolledData ?? new Set<string>();
+  const { data: myCourses } = useMyCourses();
+  const enrolledIds = useMemo(
+    () => new Set((myCourses ?? []).map((e) => String(e.course.id))),
+    [myCourses]
+  );
   const enriched = (data ?? []).map((c) => ({ ...c, enrolled: enrolledIds.has(c.id) }));
   return <LandingView courses={enriched} />;
 }

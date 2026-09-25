@@ -1,10 +1,12 @@
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { ProfileMenu } from "./ProfileMenu";
+import { MobileTabBar } from "./MobileTabBar";
 
 export function TopNav() {
   const user = useAuth((s) => s.user);
   return (
+    <>
     <div className="sticky top-0 z-30 flex w-full items-center justify-between bg-white px-4 py-3 shadow-sm sm:px-6">
       <Link to="/" className="flex items-center gap-2">
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f172a] text-xs font-bold text-white">Q</span>
@@ -20,5 +22,7 @@ export function TopNav() {
       </nav>
       {user ? <ProfileMenu /> : <Link to="/login" className="rounded-full bg-[#0f172a] px-4 py-1.5 text-sm font-semibold text-white">Get Started</Link>}
     </div>
+    <MobileTabBar />
+    </>
   );
 }

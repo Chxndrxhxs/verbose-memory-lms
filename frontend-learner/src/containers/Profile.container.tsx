@@ -6,6 +6,7 @@ import { TopNav } from "../components/TopNav";
 import { CertificateView } from "../components/CertificateView";
 import { useAuth } from "../hooks/useAuth";
 import { absoluteMediaUrl, api, uploadFile } from "../lib/api";
+import { useMyCourses } from "../hooks/useMyCourses";
 import { buildInvoiceHtml } from "../lib/invoice";
 
 type Enrollment = {
@@ -51,13 +52,7 @@ export function ProfileContainer() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [toast, setToast] = useState<string | null>(null);
 
-  const enrollmentsQ = useQuery({
-    queryKey: ["me", "courses"],
-    queryFn: async () => {
-      const res = await api<Enrollment[] | { results: Enrollment[] }>("/me/courses");
-      return Array.isArray(res) ? res : res.results ?? [];
-    },
-  });
+  const enrollmentsQ = useMyCourses();
 
   const paymentsQ = useQuery({
     queryKey: ["me", "payments"],

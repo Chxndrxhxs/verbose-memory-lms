@@ -22,3 +22,8 @@ h2,h3 { font-family: var(--font-display); }
   0% { transform: translateX(-50%); }
   100% { transform: translateX(0); }
 }
+
+/* Clearance for the mobile bottom tab bar (rendered only below sm) */
+@media (max-width: 639.5px) {
+  body { padding-bottom: 68px; }
+}
