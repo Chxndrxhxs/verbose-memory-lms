@@ -13,6 +13,8 @@ export function Protected({
   const isLoading = useAuth((s) => s.isLoading);
   if (isLoading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (!hasRole(user, role)) return <Navigate to="/" replace />;
+  // Same shared-cookie situation as the instructor app: a non-admin session
+  // landing here must go to login, not "/" (that would bounce forever).
+  if (!hasRole(user, role)) return <Navigate to="/login" replace state={{ reason: "role" }} />;
   return <>{children}</>;
 }

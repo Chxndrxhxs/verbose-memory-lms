@@ -1,5 +1,6 @@
 import type { LeaderboardEntry, LeaderboardResponse } from "@masterlms/shared";
 import { TIER_META } from "@masterlms/shared";
+import { Link } from "react-router-dom";
 import { TierBadge } from "./TierBadge";
 
 const SORTS = [
@@ -117,7 +118,7 @@ export function LeaderboardView({
           <div className="rounded-2xl border border-dashed bg-white p-8 text-center shadow-sm">
             <p className="text-sm font-bold">No students yet</p>
             <p className="mt-1 text-xs text-zinc-500">Share your course link to get your first learners.</p>
-            <a href="/courses/create" className="mt-3 inline-block rounded-full bg-zinc-900 px-4 py-2 text-xs font-bold text-white">Create course</a>
+            <Link to="/courses/create" className="mt-3 inline-block rounded-full bg-zinc-900 px-4 py-2 text-xs font-bold text-white">Create course</Link>
           </div>
         ) : (
           <div className="rounded-2xl border bg-white p-8 text-center text-sm text-zinc-500">No learners match these filters.</div>

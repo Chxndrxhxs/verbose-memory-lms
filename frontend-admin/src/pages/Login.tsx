@@ -1,9 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Lock } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 import { api } from "../lib/api";
@@ -20,6 +20,7 @@ type VerifyUser = { name: string; email: string; mobile: string; role: AdminRole
 
 export default function Login() {
   const nav = useNavigate();
+  const location = useLocation();
   const { setUser } = useAuth();
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [toast, setToast] = useState<string | null>(null);
@@ -38,6 +39,17 @@ export default function Login() {
     setToast(msg);
     setTimeout(() => setToast(null), ms);
   };
+
+  // Arrived here because a non-admin session hit the admin panel
+  // (auth cookies are shared across apps on one host).
+  useEffect(() => {
+    const reason = (location.state as { reason?: string } | null)?.reason;
+    if (reason === "role") {
+      showToast("You're not signed in as an admin — log in with an admin account.", 4000);
+      nav(location.pathname, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const sendOtp = useMutation({
     mutationFn: (mobile: string) =>

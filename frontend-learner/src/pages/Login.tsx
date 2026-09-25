@@ -111,6 +111,7 @@ export default function Login() {
           <Link to="/" className="flex items-center gap-2 lg:hidden">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f172a] text-xs font-bold text-white">K</span>
             <span className="text-sm font-bold">QTNXT</span>
+            <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white">Learn</span>
           </Link>
           <span className="hidden lg:block" />
           <Link to="/" className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 hover:text-zinc-900">
