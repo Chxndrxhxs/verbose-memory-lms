@@ -8,6 +8,7 @@ export type QuestionStatus = "review" | "answered" | "unanswered" | "not-visited
 
 export type QuestionRow = {
   stepId: number;
+  stepName: string;
   questionId: number;
   index: number;
   status: QuestionStatus;
@@ -19,17 +20,30 @@ export type QuestionRow = {
   marks: number;
   difficulty: string;
   topic: string;
+  explanation: string;
+};
+
+export type QuestionSection = {
+  stepId: number;
+  name: string;
+  startIndex: number;
+  endIndex: number;
 };
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
-function flattenQuestions(steps: AssignmentTakeStep[]): QuestionRow[] {
+function flattenQuestions(
+  steps: AssignmentTakeStep[],
+): { rows: QuestionRow[]; sections: QuestionSection[] } {
   const rows: QuestionRow[] = [];
+  const sections: QuestionSection[] = [];
   let idx = 0;
   for (const step of steps) {
+    const startIndex = idx;
     for (const q of step.questions) {
       rows.push({
         stepId: step.step_id,
+        stepName: step.name,
         questionId: q.id,
         index: idx++,
         status: "not-visited",
@@ -41,10 +55,17 @@ function flattenQuestions(steps: AssignmentTakeStep[]): QuestionRow[] {
         marks: q.marks,
         difficulty: q.difficulty,
         topic: q.topic,
+        explanation: q.explanation ?? "",
       });
     }
+    sections.push({
+      stepId: step.step_id,
+      name: step.name,
+      startIndex,
+      endIndex: idx - 1,
+    });
   }
-  return rows;
+  return { rows, sections };
 }
 
 function encodeAnswer(
@@ -82,7 +103,14 @@ export function useAssignmentQuestionState(
   initialAnswers: Record<string, Record<string, number>>,
   attemptId: number,
 ) {
-  const questionsRef = useRef<QuestionRow[]>(flattenQuestions(steps));
+  const flatRef = useRef<{ rows: QuestionRow[]; sections: QuestionSection[] } | null>(
+    null,
+  );
+  if (flatRef.current === null) {
+    flatRef.current = flattenQuestions(steps);
+  }
+  const questionsRef = useRef<QuestionRow[]>(flatRef.current.rows);
+  const sectionsRef = useRef<QuestionSection[]>(flatRef.current.sections);
   const [answers, setAnswers] = useState<Record<string, Record<string, number>>>(
     initialAnswers,
   );
@@ -159,6 +187,26 @@ export function useAssignmentQuestionState(
   const next = useCallback(() => goTo(currentIndex + 1), [goTo, currentIndex]);
   const previous = useCallback(() => goTo(currentIndex - 1), [goTo, currentIndex]);
 
+  const sections = sectionsRef.current;
+  const currentSectionIndex = sections.findIndex(
+    (s) => currentIndex >= s.startIndex && currentIndex <= s.endIndex,
+  );
+  const goToSection = useCallback(
+    (sectionIdx: number) => {
+      const section = sections[sectionIdx];
+      if (section) goTo(section.startIndex);
+    },
+    [sections, goTo],
+  );
+  const nextSection = useCallback(() => {
+    const nextIdx = currentSectionIndex + 1;
+    if (nextIdx < sections.length) goToSection(nextIdx);
+  }, [currentSectionIndex, sections.length, goToSection]);
+  const previousSection = useCallback(() => {
+    const prevIdx = currentSectionIndex - 1;
+    if (prevIdx >= 0) goToSection(prevIdx);
+  }, [currentSectionIndex, goToSection]);
+
   // Build answers for backend (strip sentinel for actual answers)
   const buildSubmitAnswers = useCallback((): Record<string, Record<string, number>> => {
     const result: Record<string, Record<string, number>> = {};
@@ -204,13 +252,18 @@ export function useAssignmentQuestionState(
 
   return {
     questions: questionsWithStatus,
+    sections,
     currentIndex,
+    currentSectionIndex,
     selectAnswer,
     markForReview,
     clearAnswer,
     goTo,
     next,
     previous,
+    goToSection,
+    nextSection,
+    previousSection,
     saveStatus,
     buildSubmitAnswers,
     counts,

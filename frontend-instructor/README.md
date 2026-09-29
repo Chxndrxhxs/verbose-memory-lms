@@ -1,32 +1,39 @@
-# React + TypeScript + Vite
+# frontend-instructor — QTNXT teaching app (`:5174`, served at `/teach/`)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Create courses (2-step builder), manage curriculum, assignments (8-step wizard),
+question packs (4-step builder), analytics.
 
-Currently, two official plugins are available:
+## Run
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+pnpm --filter frontend-instructor dev   # http://localhost:5174
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Needs backend at `VITE_API_URL` (default `http://localhost:8000/api/v1`, see `.env.example`).
+Auth is cookie-based (`credentials: include`) + per-app `X-App: instructor` session.
+Promote a learner via `POST /auth/become-instructor` (once only).
+
+## Routes (`src/App.tsx`, `basename: "/teach"`)
+
+`/`, `/login`, `/complete-profile`, `/dashboard`, `/courses` (+ `/courses/new` →
+`/courses/create`, `/courses/:id` edit), `/activity`, `/leaderboard`, `/analytics`,
+`/assignments` (+ `/new`, `/:id/edit`, `/:id/preview`), `/packs` (+ `/new`, `/:id/edit`),
+`/profile`. Everything except landing/login is `Protected`.
+
+## Structure (Container-Presenter)
+
+`src/pages/` thin routes → `src/containers/` (`CourseCreate`, `CourseManage`,
+`AssignmentCreate`/`AssignmentList`, `PackBuilder`/`PackList`, `Profile`) →
+`src/components/` pure presenters (`CourseCreateStep1/Step2`, `AssignmentWizard` steps,
+`PackInfoStep`/`PackModulesStep`/…​). Forms: `react-hook-form` + `zod`. Server state:
+TanStack Query. Shared client/types in `packages/shared`.
+
+## Checks
+
+```bash
+pnpm --filter frontend-instructor exec tsc --noEmit
+pnpm --filter frontend-instructor exec oxlint
+pnpm --filter frontend-instructor build
+```
+
+Design source of truth: root `DESIGN.md`.

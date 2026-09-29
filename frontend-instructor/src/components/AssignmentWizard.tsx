@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, Save, Eye, Check } from "@masterlms/shared";
+import { ArrowLeft, ArrowRight, Save, Check } from "@masterlms/shared";
 import { cn } from "../lib/utils";
+import { builderCardClass } from "../lib/builder";
 import type { Assignment, AssignmentValidationError } from "../types/assignment";
+import { MODEL_LABELS, getTotalQuestions } from "../types/assignment";
 import { AssignmentBasicInfoStep } from "./AssignmentBasicInfo";
 import { AssignmentPdfUploadStep } from "./AssignmentPdfUpload";
 import { AssignmentGenerateStep } from "./AssignmentGenerate";
@@ -42,20 +44,36 @@ export function AssignmentWizard({
   isEditing: _isEditing,
 }: Props) {
   const [step, setStep] = useState(0);
+  const questionCount = getTotalQuestions(assignment);
 
-  const canAdvance = (): boolean => {
-    switch (step) {
-      case 0:
-        return Boolean(assignment.title.trim());
-      case 1:
-        return Boolean(assignment.sourceDocument || assignment.sourceDocumentName);
-      default:
-        return true;
-    }
-  };
+  const captions = [
+    assignment.title.trim() || "Missing title",
+    assignment.sourceDocumentName || "Optional",
+    `${assignment.questions.length} in pool`,
+    `${questionCount} question${questionCount === 1 ? "" : "s"}`,
+    MODEL_LABELS[assignment.modelType],
+    assignment.modelType === "practice"
+      ? "Not needed"
+      : `${assignment.tests.length} test${assignment.tests.length === 1 ? "" : "s"}`,
+    "Student view",
+    errors.length === 0 ? "Ready" : `${errors.length} issues`,
+  ];
+
+  const blockers: (string | null)[] = [
+    assignment.title.trim() ? null : "Add a title to continue.",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+  ];
+  const blocker = blockers[step];
 
   const advance = async () => {
-    if (step < STEP_LABELS.length - 1 && canAdvance()) {
+    if (blocker) return;
+    if (step < STEP_LABELS.length - 1) {
       const saved = await onPersistDraft();
       if (!saved) return;
       setStep(step + 1);
@@ -129,53 +147,77 @@ export function AssignmentWizard({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="overflow-x-auto rounded-full border border-zinc-200 bg-white p-1 shadow-sm">
-        <div className="flex min-w-max gap-0.5">
+    <div className="space-y-6">
+      <div className={builderCardClass}>
+        <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+          {assignment.id ? "Edit assignment" : "New assignment"}
+        </p>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 sm:text-[28px]">
+          {assignment.title.trim() || "Untitled assignment"}
+        </h1>
+        <p className="mt-1 text-[15px] text-zinc-500">
+          Step {step + 1} of {STEP_LABELS.length} · {STEP_LABELS[step]}
+        </p>
+        <ol className="mt-5 flex items-center gap-2 overflow-x-auto pb-1">
           {STEP_LABELS.map((label, i) => {
             const active = i === step;
             const completed = i < step;
             return (
-              <button
-                key={label}
-                onClick={() => {
-                  if (i <= step || (i <= step + 1 && canAdvance())) setStep(i);
-                }}
-                className={cn(
-                  "flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-colors whitespace-nowrap",
-                  active
-                    ? "bg-[#0f172a] text-white shadow"
-                    : completed
-                      ? "text-emerald-600 hover:bg-emerald-50"
-                      : "text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600"
-                )}
-              >
-                <span
+              <li key={label} className="flex shrink-0 items-center gap-2">
+                {i > 0 && <span className="h-px w-3 bg-zinc-300" aria-hidden />}
+                <button
+                  key={label}
+                  onClick={() => {
+                    if (i <= step || (i <= step + 1 && !blocker)) setStep(i);
+                  }}
+                  title={captions[i]}
                   className={cn(
-                    "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold",
+                    "rounded-2xl border px-3.5 py-2 text-left transition-all",
                     active
-                      ? "bg-white/20 text-white"
+                      ? "border-zinc-900 bg-zinc-900 text-white shadow-sm"
                       : completed
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-zinc-200 text-zinc-500"
+                        ? "border-emerald-200 bg-emerald-50 hover:border-emerald-300"
+                        : "border-zinc-200 bg-white hover:border-zinc-400",
                   )}
                 >
-                  {completed ? <Check size={10} /> : i + 1}
-                </span>
-                <span className="hidden sm:inline">{label}</span>
-              </button>
+                  <span
+                    className={cn(
+                      "block text-xs font-bold whitespace-nowrap",
+                      active
+                        ? "text-white"
+                        : completed
+                          ? "text-emerald-800"
+                          : "text-zinc-900",
+                    )}
+                  >
+                    {i + 1}. {label}
+                  </span>
+                  <span
+                    className={cn(
+                      "block max-w-32 truncate text-[11px]",
+                      active ? "text-white/70" : "text-zinc-500",
+                    )}
+                  >
+                    {captions[i]}
+                  </span>
+                </button>
+              </li>
             );
           })}
-        </div>
+        </ol>
       </div>
 
       <div className="min-h-[60vh]">{renderStep()}</div>
 
-      <div className="flex items-center justify-between border-t border-zinc-200 pt-4">
+      <div className={cn(builderCardClass, "flex items-center justify-between gap-3 !p-4 sm:!p-5")}>
         <button
           onClick={goBack}
           disabled={step === 0}
-          className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-40"
+          className={cn(
+            "inline-flex items-center gap-2 rounded-full border border-zinc-200",
+            "px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors",
+            "hover:bg-zinc-50 disabled:opacity-40",
+          )}
         >
           <ArrowLeft size={14} /> Back
         </button>
@@ -184,26 +226,51 @@ export function AssignmentWizard({
           <button
             onClick={() => onSave(false)}
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+            className={cn(
+              "inline-flex items-center gap-2 rounded-full border border-zinc-200",
+              "px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors",
+              "hover:bg-zinc-50 disabled:opacity-50",
+            )}
           >
-            <Save size={14} /> Save draft
+            <Save size={14} /> {saving ? "Saving…" : "Save draft"}
           </button>
 
           {step < STEP_LABELS.length - 1 ? (
-            <button
-              onClick={advance}
-              disabled={!canAdvance()}
-              className="inline-flex items-center gap-2 rounded-full bg-[#0f172a] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              Next <ArrowRight size={14} />
-            </button>
+            <span className="inline-flex items-center gap-2">
+              {blocker && (
+                <span className="hidden text-xs text-zinc-400 sm:block">
+                  {blocker}
+                </span>
+              )}
+              <button
+                onClick={advance}
+                disabled={Boolean(blocker) || saving}
+                title={blocker ?? "Save and continue"}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full bg-[#0f172a]",
+                  "px-4 py-2.5 text-sm font-semibold text-white shadow-sm",
+                  "transition-opacity hover:opacity-90 disabled:opacity-40",
+                )}
+              >
+                {saving ? "Saving…" : "Next"} <ArrowRight size={14} />
+              </button>
+            </span>
           ) : (
             <button
               onClick={() => onSave(true)}
               disabled={saving || errors.length > 0}
-              className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-opacity hover:bg-emerald-700 disabled:opacity-50"
+              title={
+                errors.length > 0
+                  ? `${errors.length} issues to fix first`
+                  : "Publish for students"
+              }
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full bg-emerald-600",
+                "px-5 py-2.5 text-sm font-semibold text-white shadow-sm",
+                "transition-opacity hover:bg-emerald-700 disabled:opacity-50",
+              )}
             >
-              <Eye size={14} /> Publish
+              <Check size={14} /> Publish
             </button>
           )}
         </div>

@@ -41,7 +41,9 @@ def course(instructor):
         title="Q1",
         kind="quiz",
         order=1,
-        quiz_data=[{"id": "q1", "question": "Q?", "options": ["a", "b"], "correct": 0}],
+        quiz_data=[
+            {"id": f"q{i}", "question": "Q?", "options": ["a", "b"], "correct": 0} for i in range(5)
+        ],
     )
     return course
 
@@ -85,7 +87,8 @@ def test_rr_pipeline_enroll_quiz_cert(instructor, learner, course):
 
     q = lc.post(
         f"/api/v1/courses/{course.id}/lessons/quiz-attempt",
-        {"lesson_id": lesson_quiz.id, "score": 4, "total": 5},
+        # 5 stored questions, correct=0 each → 4 right / 1 wrong = 0.8
+        {"lesson_id": lesson_quiz.id, "answers": {"0": 0, "1": 0, "2": 0, "3": 0, "4": 1}},
         format="json",
     )
     assert q.status_code == 200
@@ -121,7 +124,7 @@ def test_ordering_by_quiz_accuracy(instructor, learner, course):
     lesson_quiz = Lesson.objects.get(section__course=course, kind="quiz")
     lc.post(
         f"/api/v1/courses/{course.id}/lessons/quiz-attempt",
-        {"lesson_id": lesson_quiz.id, "score": 3, "total": 5},
+        {"lesson_id": lesson_quiz.id, "answers": {"0": 0, "1": 0, "2": 0, "3": 1, "4": 1}},
         format="json",
     )
 
@@ -133,7 +136,7 @@ def test_ordering_by_quiz_accuracy(instructor, learner, course):
     c2.post(f"/api/v1/courses/{course.id}/enroll")
     c2.post(
         f"/api/v1/courses/{course.id}/lessons/quiz-attempt",
-        {"lesson_id": lesson_quiz.id, "score": 5, "total": 5},
+        {"lesson_id": lesson_quiz.id, "answers": {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0}},
         format="json",
     )
 

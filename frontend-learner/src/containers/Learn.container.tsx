@@ -5,7 +5,6 @@ import { ArrowLeft } from "@masterlms/shared";
 import type { SharedApiCourseDetail } from "@masterlms/shared";
 import { toEmbed } from "@masterlms/shared";
 import { absoluteMediaUrl, api } from "../lib/api";
-import { quizCorrect } from "../lib/quiz";
 import { LearnView } from "../components/LearnView";
 
 type ApiCourse = SharedApiCourseDetail;
@@ -112,17 +111,22 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
   } | null>(null);
 
   const quizMutation = useMutation({
-    mutationFn: (args: { lessonId: number; score: number; total: number }) =>
+    mutationFn: (args: { lessonId: number; answers: Record<number, number | string> }) =>
       api<{ score: number; total: number; passed: boolean; attempt: number; best: number }>(
         `/courses/${courseId}/lessons/quiz-attempt`,
         {
           method: "POST",
-          body: JSON.stringify({ lesson_id: args.lessonId, score: args.score, total: args.total }),
+          body: JSON.stringify({ lesson_id: args.lessonId, answers: args.answers }),
         }
       ),
     onSuccess: (res) => {
       setQuizResult({ attempt: res.attempt, best: res.best });
+      setQuizScore({ score: res.score, total: res.total });
+      if (res.passed) markComplete();
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
+    },
+    onError: () => {
+      setQuizSubmitted(false);
     },
   });
 
@@ -145,10 +149,13 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
     },
   });
 
+  const [quizScore, setQuizScore] = useState<{ score: number; total: number } | null>(null);
+
   const selectLesson = (lessonId: number) => {
     setActive(lessonId);
     setQuizSubmitted(false);
     setQuizResult(null);
+    setQuizScore(null);
     try {
       localStorage.setItem(lastKey, String(lessonId));
     } catch { /* storage unavailable */ }
@@ -172,12 +179,9 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
 
   const submitQuiz = () => {
     if (active == null || !activeLesson?.quiz_data?.length) return;
-    const correct = activeLesson.quiz_data.filter((q, qi) => quizCorrect(q, quizAnswers[qi])).length;
-    if (correct === activeLesson.quiz_data.length) {
-      markComplete();
-    }
-    // best-effort server log — learner flow never blocks on it
-    quizMutation.mutate({ lessonId: active, score: correct, total: activeLesson.quiz_data.length });
+    // Server grades against the stored answer key; UI only locks the form.
+    // Completion + score display wait for the server verdict below.
+    quizMutation.mutate({ lessonId: active, answers: { ...quizAnswers } });
     setQuizSubmitted(true);
   };
 
@@ -214,6 +218,8 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
       note={note}
       quizAnswers={quizAnswers}
       quizSubmitted={quizSubmitted}
+      quizVerdict={quizScore}
+      quizGrading={quizMutation.isPending}
       quizAttempt={quizResult?.attempt ?? null}
       quizBest={quizResult?.best ?? null}
       showRating={showRating}

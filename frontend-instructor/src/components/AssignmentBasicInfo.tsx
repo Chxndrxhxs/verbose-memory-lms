@@ -1,3 +1,13 @@
+import type { ReactNode } from "react";
+import { cn } from "../lib/utils";
+import {
+  builderCardClass,
+  builderEyebrowClass,
+  builderFieldClass,
+  builderHintClass,
+  builderLabelClass,
+  builderSectionTitleClass,
+} from "../lib/builder";
 import type { Assignment } from "../types/assignment";
 import { getCourseOptions } from "../types/assignment";
 
@@ -6,230 +16,247 @@ type Props = {
   onChange: (patch: Partial<Assignment>) => void;
 };
 
+const checkRow = cn(
+  "flex items-center gap-3 rounded-xl border border-zinc-200",
+  "bg-white px-4 py-3.5",
+);
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="border-t border-zinc-100 pt-6 first:border-t-0 first:pt-0">
+      <h3 className={builderEyebrowClass}>{title}</h3>
+      <div className="mt-4 space-y-5">{children}</div>
+    </section>
+  );
+}
+
 export function AssignmentBasicInfoStep({ assignment, onChange }: Props) {
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-bold text-zinc-900">Basic Information</h2>
-      <p className="mt-1 text-sm text-zinc-500">
-        Define the assignment details students will see.
+    <div className={builderCardClass}>
+      <h2 className="text-xl font-bold tracking-tight text-zinc-900">About this assignment</h2>
+      <p className="mt-1.5 text-[15px] text-zinc-500">
+        What students see, when it runs, and how it scores.
       </p>
 
-      <div className="mt-6 space-y-4">
-        <div>
-          <label className="block text-xs font-semibold text-zinc-600">
-            Title <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            value={assignment.title}
-            onChange={(e) => onChange({ title: e.target.value })}
-            placeholder="e.g. Mid-term Assessment"
-            className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition-colors focus:border-zinc-900 focus:bg-white"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-zinc-600">
-            Description
-          </label>
-          <textarea
-            value={assignment.description}
-            onChange={(e) => onChange({ description: e.target.value })}
-            placeholder="Brief description of this assignment…"
-            rows={3}
-            className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition-colors focus:border-zinc-900 focus:bg-white resize-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-zinc-600">
-            Instructions
-          </label>
-          <textarea
-            value={assignment.instructions}
-            onChange={(e) => onChange({ instructions: e.target.value })}
-            placeholder="Instructions for students (optional)…"
-            rows={3}
-            className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition-colors focus:border-zinc-900 focus:bg-white resize-none"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mt-8 space-y-8">
+        <Section title="1 · Details">
           <div>
-            <label className="block text-xs font-semibold text-zinc-600">
-              Subject / Course
-            </label>
-            <select
-              value={assignment.course}
-              onChange={(e) => onChange({ course: e.target.value })}
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none focus:border-zinc-900"
-            >
-              <option value="">Select a course</option>
-              {getCourseOptions().map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-zinc-600">
-              Difficulty Level
-            </label>
-            <select
-              value={assignment.difficulty}
-              onChange={(e) =>
-                onChange({
-                  difficulty: e.target.value as Assignment["difficulty"],
-                })
-              }
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none focus:border-zinc-900"
-            >
-              <option value="easy">Easy</option>
-              <option value="medium">Medium</option>
-              <option value="hard">Hard</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className="block text-xs font-semibold text-zinc-600">
-              Total Marks
+            <label className={builderLabelClass} htmlFor="assignment-title">
+              Title <span className="text-red-500">*</span>
             </label>
             <input
-              type="number"
-              min={1}
-              value={assignment.totalMarks || ""}
-              onChange={(e) =>
-                onChange({ totalMarks: Number(e.target.value) || 0 })
-              }
-              placeholder="e.g. 100"
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition-colors focus:border-zinc-900 focus:bg-white"
+              id="assignment-title"
+              type="text"
+              value={assignment.title}
+              onChange={(e) => onChange({ title: e.target.value })}
+              placeholder="e.g. Mid-term Assessment"
+              className={builderFieldClass}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-zinc-600">
-              Total Duration (minutes)
+            <label className={builderLabelClass} htmlFor="assignment-description">
+              Description
             </label>
-            <input
-              type="number"
-              min={1}
-              value={assignment.duration}
-              onChange={(e) =>
-                onChange({ duration: Math.max(1, Number(e.target.value) || 1) })
-              }
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition-colors focus:border-zinc-900 focus:bg-white"
+            <textarea
+              id="assignment-description"
+              value={assignment.description}
+              onChange={(e) => onChange({ description: e.target.value })}
+              placeholder="Brief description of this assignment…"
+              rows={3}
+              className={`${builderFieldClass} resize-none`}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-zinc-600">
-              Passing Percentage (%)
+            <label className={builderLabelClass} htmlFor="assignment-instructions">
+              Instructions for students
             </label>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={assignment.passingPercentage}
-              onChange={(e) =>
-                onChange({
-                  passingPercentage: Math.min(
-                    100,
-                    Math.max(0, Number(e.target.value) || 0)
-                  ),
-                })
-              }
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition-colors focus:border-zinc-900 focus:bg-white"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className="block text-xs font-semibold text-zinc-600">
-              Start Date (optional)
-            </label>
-            <input
-              type="datetime-local"
-              value={assignment.startDate || ""}
-              onChange={(e) => onChange({ startDate: e.target.value })}
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition-colors focus:border-zinc-900 focus:bg-white"
+            <textarea
+              id="assignment-instructions"
+              value={assignment.instructions}
+              onChange={(e) => onChange({ instructions: e.target.value })}
+              placeholder="What should students know before starting? (optional)"
+              rows={3}
+              className={`${builderFieldClass} resize-none`}
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-zinc-600">
-              End Date (optional)
-            </label>
-            <input
-              type="datetime-local"
-              value={assignment.endDate || ""}
-              onChange={(e) => onChange({ endDate: e.target.value })}
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition-colors focus:border-zinc-900 focus:bg-white"
-            />
-          </div>
-        </div>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <label className={builderLabelClass}>Subject / Course</label>
+              <select
+                value={assignment.course}
+                onChange={(e) => onChange({ course: e.target.value })}
+                className={builderFieldClass}
+              >
+                <option value="">Select a course</option>
+                {getCourseOptions().map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3">
+            <div>
+              <label className={builderLabelClass}>Difficulty level</label>
+              <select
+                value={assignment.difficulty}
+                onChange={(e) =>
+                  onChange({
+                    difficulty: e.target.value as Assignment["difficulty"],
+                  })
+                }
+                className={builderFieldClass}
+              >
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </div>
+          </div>
+        </Section>
+
+        <Section title="2 · Schedule">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <div>
+              <label className={builderLabelClass}>Duration (minutes)</label>
+              <input
+                type="number"
+                min={1}
+                value={assignment.duration}
+                onChange={(e) =>
+                  onChange({ duration: Math.max(1, Number(e.target.value) || 1) })
+                }
+                className={builderFieldClass}
+              />
+            </div>
+            <div>
+              <label className={builderLabelClass}>Start (optional)</label>
+              <input
+                type="datetime-local"
+                value={assignment.startDate || ""}
+                onChange={(e) => onChange({ startDate: e.target.value })}
+                className={builderFieldClass}
+              />
+            </div>
+            <div>
+              <label className={builderLabelClass}>End (optional)</label>
+              <input
+                type="datetime-local"
+                value={assignment.endDate || ""}
+                onChange={(e) => onChange({ endDate: e.target.value })}
+                className={builderFieldClass}
+              />
+            </div>
+          </div>
+        </Section>
+
+        <Section title="3 · Marking">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <label className={builderLabelClass}>Total marks</label>
+              <input
+                type="number"
+                min={1}
+                value={assignment.totalMarks || ""}
+                onChange={(e) =>
+                  onChange({ totalMarks: Number(e.target.value) || 0 })
+                }
+                placeholder="Auto-sums from questions when published"
+                className={builderFieldClass}
+              />
+            </div>
+
+            <div>
+              <label className={builderLabelClass}>Passing percentage</label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={assignment.passingPercentage}
+                onChange={(e) =>
+                  onChange({
+                    passingPercentage: Math.min(
+                      100,
+                      Math.max(0, Number(e.target.value) || 0)
+                    ),
+                  })
+                }
+                className={builderFieldClass}
+              />
+            </div>
+          </div>
+
+          <div className={cn(checkRow, "flex-wrap")}>
             <input
               type="checkbox"
-              id="randomize-questions"
-              checked={assignment.randomizeQuestions}
+              id="negative-marking"
+              checked={assignment.negativeMarking}
               onChange={(e) =>
-                onChange({ randomizeQuestions: e.target.checked })
+                onChange({ negativeMarking: e.target.checked })
               }
               className="h-4 w-4 rounded border-zinc-300 accent-zinc-900"
             />
-            <label htmlFor="randomize-questions" className="text-sm text-zinc-700">
-              Randomize question order
+            <label htmlFor="negative-marking" className={builderSectionTitleClass}>
+              Negative marking
             </label>
+            <span className={builderHintClass}>Deduct marks for wrong answers.</span>
+            {assignment.negativeMarking && (
+              <input
+                type="number"
+                min={0}
+                step={0.25}
+                value={assignment.negativeMarks}
+                onChange={(e) =>
+                  onChange({ negativeMarks: Number(e.target.value) || 0 })
+                }
+                placeholder="0.25"
+                title="Marks deducted per wrong answer"
+                className={cn(builderFieldClass, "mt-0 w-28 !py-2.5")}
+              />
+            )}
           </div>
+        </Section>
 
-          <div className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3">
-            <input
-              type="checkbox"
-              id="randomize-options"
-              checked={assignment.randomizeOptions}
-              onChange={(e) =>
-                onChange({ randomizeOptions: e.target.checked })
-              }
-              className="h-4 w-4 rounded border-zinc-300 accent-zinc-900"
-            />
-            <label htmlFor="randomize-options" className="text-sm text-zinc-700">
-              Randomize option order
-            </label>
+        <Section title="4 · Delivery">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div className={checkRow}>
+              <input
+                type="checkbox"
+                id="randomize-questions"
+                checked={assignment.randomizeQuestions}
+                onChange={(e) =>
+                  onChange({ randomizeQuestions: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-zinc-300 accent-zinc-900"
+              />
+              <div>
+                <label htmlFor="randomize-questions" className={builderSectionTitleClass}>
+                  Shuffle question order
+                </label>
+                <p className={builderHintClass}>Each student sees a different order.</p>
+              </div>
+            </div>
+
+            <div className={checkRow}>
+              <input
+                type="checkbox"
+                id="randomize-options"
+                checked={assignment.randomizeOptions}
+                onChange={(e) =>
+                  onChange({ randomizeOptions: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-zinc-300 accent-zinc-900"
+              />
+              <div>
+                <label htmlFor="randomize-options" className={builderSectionTitleClass}>
+                  Shuffle options
+                </label>
+                <p className={builderHintClass}>Each student sees options shuffled.</p>
+              </div>
+            </div>
           </div>
-        </div>
-
-        <div className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3">
-          <input
-            type="checkbox"
-            id="negative-marking"
-            checked={assignment.negativeMarking}
-            onChange={(e) =>
-              onChange({ negativeMarking: e.target.checked })
-            }
-            className="h-4 w-4 rounded border-zinc-300 accent-zinc-900"
-          />
-          <label htmlFor="negative-marking" className="text-sm text-zinc-700">
-            Enable negative marking
-          </label>
-          {assignment.negativeMarking && (
-            <input
-              type="number"
-              min={0}
-              step={0.25}
-              value={assignment.negativeMarks}
-              onChange={(e) =>
-                onChange({ negativeMarks: Number(e.target.value) || 0 })
-              }
-              placeholder="0.25"
-              className="ml-2 w-20 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm outline-none focus:border-zinc-900"
-            />
-          )}
-        </div>
+        </Section>
       </div>
     </div>
   );

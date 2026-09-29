@@ -15,6 +15,7 @@ from .llm import (
     GeminiRateLimitedError,
     extract_page_questions,
     generate_questions_from_text,
+    generate_questions_from_topic,
     is_llm_configured,
 )
 from .models import (
@@ -50,6 +51,52 @@ DEFAULT_RESULTS = {
     "show_correct_answers": True,
     "show_explanations": True,
 }
+
+# Exam modules: practice is an untimed, unproctored study format with inline
+# explanations; mock is the proctored Testbook-style exam format where each
+# question category (Quant, English, ...) is its own timed section (TEST step).
+# Codes match AssignmentModel.ExamModule and the shared frontend ExamModule type.
+MODULE_DEFAULTS = {
+    "practice": {
+        "label": "Practice",
+        "proctored": False,
+        "untimed": True,
+        "negative_marking": False,
+        "security": {
+            "fullscreen": False,
+            "camera": False,
+            "microphone": False,
+            "block_tab_switch": False,
+            "block_copy": False,
+            "block_paste": False,
+            "block_right_click": False,
+            "block_shortcuts": False,
+            "violations_before_auto_submit": 0,
+        },
+        "results": {
+            "instant_result": True,
+            "show_marks": True,
+            "show_correct_answers": True,
+            "show_explanations": True,
+        },
+    },
+    "mock": {
+        "label": "Mock Test",
+        "proctored": True,
+        "untimed": False,
+        "negative_marking": True,
+        "security": dict(DEFAULT_SECURITY),
+        "results": dict(DEFAULT_RESULTS),
+    },
+}
+
+# Practice attempts ignore the step clock; the server expiry is a safety net.
+PRACTICE_EXPIRY_SECONDS = 7 * 24 * 3600
+
+
+def module_defaults(code: str) -> dict:
+    return MODULE_DEFAULTS.get(code, MODULE_DEFAULTS["mock"])
+
 
 # ---------------------------------------------------------------------------
 # Duration calculation
@@ -107,7 +154,7 @@ def replace_assignment_structure(assignment: Assignment, models_payload: list[di
     for position, model_payload in enumerate(models_payload):
         model = AssignmentModel.objects.create(
             assignment=assignment,
-            code=model_payload.get("code", f"Model {position + 1}"),
+            code=model_payload.get("code") or AssignmentModel.ExamModule.MOCK,
             name=model_payload.get("name", f"Model {position + 1}"),
             description=model_payload.get("description", ""),
             execution_mode=model_payload.get(
@@ -340,12 +387,16 @@ def category_tree_payload(include_assignments: bool = False) -> list[dict]:
                     "name": inter.name,
                     "position": inter.position,
                     "assignments_count": Assignment.objects.filter(
-                        inter_category=inter, status=Assignment.Status.PUBLISHED
+                        inter_category=inter,
+                        status=Assignment.Status.PUBLISHED,
+                        pack__isnull=True,
                     ).count(),
                 }
                 if include_assignments:
                     items = Assignment.objects.filter(
-                        inter_category=inter, status=Assignment.Status.PUBLISHED
+                        inter_category=inter,
+                        status=Assignment.Status.PUBLISHED,
+                        pack__isnull=True,
                     ).select_related("created_by")
                     item["assignments"] = [
                         assignment_payload(a, include_models=False) for a in items
@@ -487,19 +538,89 @@ def generate_questions(config: dict) -> list[dict]:
 
 
 def regenerate_question(source: dict) -> dict:
+    """Replace one question with a fresh one on the same topic.
+
+    Uses the AI when a topic is known and the LLM is configured (a single
+    topic call, no document needed); otherwise the template bank. Never
+    raises — the review screen must always get a question back.
+    """
+    topic = str(source.get("topic") or "").strip()
     config = {
         "numberOfQuestions": 1,
         "difficulty": source.get("difficulty", "medium"),
-        "marksPerQuestion": 1,
-        "numberOfOptions": max(3, len(source.get("options", []))),
+        "marksPerQuestion": source.get("marks", 1),
+        "numberOfOptions": max(2, min(6, len(source.get("options", []) or []))) or 4,
         "generateExplanations": bool(source.get("explanation")),
-        "topicDistribution": {source.get("topic", "Topic"): 1} if source.get("topic") else {},
+        "topicDistribution": {topic: 1} if topic else {},
     }
+    if topic and is_llm_configured():
+        try:
+            return {
+                **generate_questions_from_topic(topic, config)[0],
+                "question_image": source.get("question_image", ""),
+            }
+        except Exception:
+            logger.warning("Topic LLM regenerate failed for %r", topic, exc_info=True)
     question = generate_questions(config)[0]
     return {**question, "question_image": source.get("question_image", "")}
 
 
 def generate_questions_from_document(config: dict) -> list[dict]:
+    """Generate fresh MCQs, preferring the AI and falling back to templates.
+
+    Routing:
+      * source document present -> one LLM call per page chunk (grounded in
+        the upload), as before;
+      * topics but no document -> one LLM call per topic (the model's own
+        subject knowledge), so instructors stop needing a PDF;
+      * no topics and no document -> the deterministic template bank.
+    Topic-mode failures raise so the UI can show the real error instead of
+    silently swapping in placeholders.
+    """
+    total_count = max(1, min(100, int(config.get("numberOfQuestions", 10))))
+    source_document = str(config.get("source_document") or "").strip()
+    if source_document:
+        return _generate_with_document(config, total_count)
+
+    distribution = _topic_distribution(config)
+    if distribution:
+        if not is_llm_configured():
+            raise ValueError("Connect a Gemini API key to generate questions with AI")
+        counts = _distribute_counts(len(distribution), total_count, [n for _, n in distribution])
+        generated: list[dict] = []
+        first_error = ""
+        for (topic, _), count in zip(distribution, counts, strict=False):
+            if count <= 0:
+                continue
+            try:
+                generated.extend(
+                    generate_questions_from_topic(topic, {**config, "numberOfQuestions": count})
+                )
+            except Exception as exc:
+                if not first_error:
+                    first_error = str(exc) or repr(exc)
+                logger.warning("Topic LLM generation failed for %r", topic, exc_info=True)
+        if generated:
+            return generated[:total_count]
+        raise ValueError(f"AI generation failed: {first_error or 'unknown error'}")
+
+    return generate_questions(config)
+
+
+def _topic_distribution(config: dict) -> list[tuple[str, int]]:
+    raw = config.get("topicDistribution") or {}
+    if not isinstance(raw, dict):
+        return []
+    items: list[tuple[str, int]] = []
+    for name, n in raw.items():
+        try:
+            items.append((str(name).strip(), int(n)))
+        except (TypeError, ValueError):
+            continue
+    return [(name, n) for name, n in items if name and n > 0]
+
+
+def _generate_with_document(config: dict, total_count: int) -> list[dict]:
     """Generate questions from the uploaded source document.
 
     Works page-by-page so images extracted from the PDF stay attached to the
@@ -508,10 +629,8 @@ def generate_questions_from_document(config: dict) -> list[dict]:
       * a page with two or more figures contributes an image-choice question
         whose options ARE those figures.
 
-    Uses the configured LLM when a source document is provided (one call per
-    chunk of pages). Falls back to the deterministic template bank when there is
-    no document, no LLM key, or the LLM/extraction fails, so generation never
-    breaks the instructor flow.
+    Falls back to the deterministic template bank when extraction or the LLM
+    fails, so generation never breaks the instructor flow.
     """
     source_document = str(config.get("source_document") or "").strip()
     if not source_document:
@@ -811,20 +930,24 @@ def build_attempt_snapshot(assignment: Assignment, model: AssignmentModel) -> di
 
 def take_structure(attempt: AssignmentAttempt) -> list[dict]:
     """The screen the learner answers against. Uses the snapshot order + options,
-    and hides correct answers/explanations."""
+    and hides correct answers/explanations (except practice, which shows
+    explanations inline as a study aid)."""
     model = attempt.model
     snapshot = attempt.questions_snapshot or {}
+    show_explanations = model.code == AssignmentModel.ExamModule.PRACTICE
     structure = []
     for step in model.steps.filter(parent__isnull=True):
-        _append_take_step(structure, step, snapshot)
+        _append_take_step(structure, step, snapshot, show_explanations)
     return structure
 
 
-def _append_take_step(structure: list, step: AssignmentModelStep, snapshot: dict) -> None:
+def _append_take_step(
+    structure: list, step: AssignmentModelStep, snapshot: dict, show_explanations=False
+) -> None:
     children = list(step.children.all())
     if children:
         for child in children:
-            _append_take_step(structure, child, snapshot)
+            _append_take_step(structure, child, snapshot, show_explanations)
         return
     step_snap = snapshot.get(str(step.id), {})
     questions = []
@@ -845,6 +968,7 @@ def _append_take_step(structure: list, step: AssignmentModelStep, snapshot: dict
                 "marks": meta["marks"],
                 "difficulty": q.difficulty,
                 "topic": q.topic,
+                **({"explanation": q.explanation} if show_explanations else {}),
             }
         )
     structure.append(
@@ -861,7 +985,10 @@ def _append_take_step(structure: list, step: AssignmentModelStep, snapshot: dict
 def start_attempt(learner, assignment: Assignment, model: AssignmentModel) -> AssignmentAttempt:
     """Create a server-side attempt with a real server expiry time."""
     model = assignment.models.get(id=model.id, is_published=True)
-    total_seconds = model_duration_seconds(model)
+    if model.code == AssignmentModel.ExamModule.PRACTICE:
+        total_seconds = PRACTICE_EXPIRY_SECONDS
+    else:
+        total_seconds = model_duration_seconds(model)
     attempt = AssignmentAttempt.objects.create(
         learner=learner,
         assignment=assignment,
@@ -872,6 +999,45 @@ def start_attempt(learner, assignment: Assignment, model: AssignmentModel) -> As
     )
     logger.info("Attempt %s started for user %s", attempt.id, learner.mobile)
     return attempt
+
+
+class AttemptDenied(Exception):
+    """Raised when an attempt may not start. Carries an HTTP status code."""
+
+    def __init__(self, message: str, status_code: int = 403):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def begin_attempt(learner, assignment: Assignment, model_id: int) -> AssignmentAttempt:
+    """Resume an in-progress attempt or create a new one, enforcing model
+    availability and max_attempts. Shared by the assignment and pack flows."""
+    try:
+        model_id = int(model_id)
+    except (TypeError, ValueError):
+        raise AttemptDenied("model_id is required", 400) from None
+    grade_expired_attempts()
+    existing = AssignmentAttempt.objects.filter(
+        learner=learner,
+        assignment=assignment,
+        model_id=model_id,
+        status=AssignmentAttempt.Status.IN_PROGRESS,
+    ).first()
+    if existing:
+        return existing
+    if assignment.max_attempts > 0:
+        used = AssignmentAttempt.objects.filter(
+            learner=learner,
+            assignment=assignment,
+            status__in=[AssignmentAttempt.Status.COMPLETED, AssignmentAttempt.Status.EXPIRED],
+        ).count()
+        if used >= assignment.max_attempts:
+            raise AttemptDenied("Maximum attempts reached", 403)
+    try:
+        model = assignment.models.get(id=model_id, is_published=True)
+    except AssignmentModel.DoesNotExist:
+        raise AttemptDenied("Model is not available", 400) from None
+    return start_attempt(learner, assignment, model)
 
 
 def save_attempt_answers(attempt: AssignmentAttempt, answers: dict) -> AssignmentAttempt:

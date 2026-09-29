@@ -40,6 +40,27 @@ Respond with ONLY valid JSON. Do not wrap it in markdown. Shape:
 "difficulty": "easy", "topic": "..."}}]}}"""
 
 
+_TOPIC_SYSTEM_PROMPT = """You are an expert exam question designer. Create exactly {count}
+multiple-choice questions about "{topic}". All questions must be {difficulty}
+level. Follow these rules:
+
+1. Test real understanding of the topic — never write generic filler that
+   would fit any subject.
+2. Each question has exactly {options_count} options, every option non-empty
+   and plausible; distractors must be believable wrong answers about THIS topic.
+3. "correct_answer" is the 0-based index of the correct option. Vary which
+   position is correct across questions.
+4. "difficulty" is "{difficulty}".
+5. "topic" is "{topic}".
+6. "marks" is a positive number (use {marks}).
+7. {explanation_rule}
+
+Respond with ONLY valid JSON. Do not wrap it in markdown. Shape:
+{{"questions": [{{"question": "...", "options": ["...", "...", "..."],
+"correct_answer": 0, "explanation": "...", "marks": {marks},
+"difficulty": "{difficulty}", "topic": "{topic}"}}]}}"""
+
+
 _EXTRACT_SYSTEM_PROMPT = """You extract multiple-choice questions that ALREADY EXIST in
 the source material below. Copy each question and its options VERBATIM — do not
 rewrite, summarise, or invent questions. Skip anything that is not a numbered
@@ -56,6 +77,11 @@ If an answer key, solution, or correct option is printed in the source, record
 "correct_answer" (0-based) and "has_answer": true; otherwise set
 "correct_answer" to 0 and "has_answer" to false. Never guess — an answer key
 appended after the questions applies to the questions on this page.
+
+Every question MUST have a "topic": a short subject/category label (1-4 words,
+e.g. Percentage, General Knowledge, English, Reasoning, Time and Work) inferred
+from what the question is actually about. Never leave it empty — if no section
+heading is printed, infer the best label from the stem and options.
 
 Respond with ONLY valid JSON. Do not wrap it in markdown. Shape:
 {{"questions": [{{"question": "...", "question_image_ref": null,
@@ -201,7 +227,49 @@ def generate_questions_from_text(text: str, config: dict) -> list[dict]:
     prompt = _SYSTEM_PROMPT.format(
         count=count, options_count=options_count, marks=marks
     ) + _INSTRUCTION.format(text=text[:40_000])
+    return _complete_questions(prompt, config, count, log_label="text")
 
+
+def generate_questions_from_topic(topic: str, config: dict) -> list[dict]:
+    """Ask the configured chat model for MCQs about a bare topic name.
+
+    No document needed: the model draws on its own subject knowledge.
+    Raises when the LLM is unconfigured or returns nothing usable.
+    """
+    name = str(topic or "").strip()
+    if not name:
+        raise ValueError("A topic name is required")
+    if not is_llm_configured():
+        raise ValueError("Connect a Gemini API key to generate questions with AI")
+    count = max(1, min(100, int(config.get("numberOfQuestions", 10))))
+    options_count = max(2, min(6, int(config.get("numberOfOptions", 4))))
+    marks = config.get("marksPerQuestion", 1)
+    difficulty = str(config.get("difficulty", "medium")).lower()
+    if difficulty not in ("easy", "medium", "hard"):
+        difficulty = "medium"
+    if config.get("generateExplanations", True):
+        explanation_rule = '"explanation" is 1-2 sentences explaining why the answer is correct.'
+    else:
+        explanation_rule = '"explanation" is an empty string.'
+
+    prompt = _TOPIC_SYSTEM_PROMPT.format(
+        count=count,
+        topic=name[:120],
+        difficulty=difficulty,
+        options_count=options_count,
+        marks=marks,
+        explanation_rule=explanation_rule,
+    )
+    questions = _complete_questions(
+        prompt, {**config, "difficulty": difficulty}, count, log_label=f"topic {name!r}"
+    )
+    for question in questions:
+        question["topic"] = name[:120]
+    return questions
+
+
+def _complete_questions(prompt: str, config: dict, count: int, log_label: str) -> list[dict]:
+    """POST one chat prompt, then validate/normalise the returned MCQs."""
     payload = {
         "model": settings.LLM_MODEL,
         "temperature": 0.4,
@@ -227,7 +295,7 @@ def generate_questions_from_text(text: str, config: dict) -> list[dict]:
         raise ValueError("LLM returned no questions")
 
     questions = [_normalise_question(q, config) for q in raw_questions[:count]]
-    logger.info("Generated %s questions via LLM", len(questions))
+    logger.info("Generated %s questions via LLM for %s", len(questions), log_label)
     return questions
 
 
@@ -320,7 +388,7 @@ def _normalise_question(raw: dict, config: dict) -> dict:
         "explanation": str(raw.get("explanation", "")).strip(),
         "marks": marks,
         "difficulty": difficulty,
-        "topic": str(raw.get("topic", "")).strip(),
+        "topic": str(raw.get("topic", "")).strip()[:120],
         "has_answer": bool(raw.get("has_answer", True)),
         "needs_review": False,
         "missing_figure": False,

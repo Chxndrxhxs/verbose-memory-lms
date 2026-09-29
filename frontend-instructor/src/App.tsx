@@ -14,6 +14,9 @@ import CourseEdit from "./pages/CourseEdit";
 import Courses from "./pages/Courses";
 import Dashboard from "./pages/Dashboard";
 import InstructorLanding from "./pages/InstructorLanding";
+import Packs from "./pages/Packs";
+import PackCreate from "./pages/PackCreate";
+import PackEdit from "./pages/PackEdit";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import { Protected } from "./components/Protected";
@@ -46,6 +49,13 @@ const router = createBrowserRouter([
       { path: "new", element: <Protected><AssignmentCreate /></Protected> },
       { path: ":id/edit", element: <Protected><AssignmentEdit /></Protected> },
       { path: ":id/preview", element: <Protected><AssignmentPreviewPage /></Protected> },
+    ],
+  },
+  { path: "/packs",
+    children: [
+      { index: true, element: <Protected><Packs /></Protected> },
+      { path: "new", element: <Protected><PackCreate /></Protected> },
+      { path: ":id/edit", element: <Protected><PackEdit /></Protected> },
     ],
   },
   { path: "/profile", element: <Protected><Profile /></Protected> },

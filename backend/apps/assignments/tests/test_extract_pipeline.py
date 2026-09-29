@@ -74,6 +74,142 @@ def test_extract_view_needs_gemini_key(instructor_client):
     assert r.json()["data"] is None
 
 
+def test_generate_from_topic_uses_llm_knowledge(monkeypatch, settings):
+    from apps.assignments import services
+
+    settings.LLM_API_KEY = "test-key"
+    seen: list[str] = []
+
+    def fake_topic(topic, config):
+        seen.append(topic)
+        count = max(1, int(config.get("numberOfQuestions", 1)))
+        return [
+            {
+                "question": f"What is {topic} ({i + 1})?",
+                "question_image": "",
+                "options": ["A", "B", "C", "D"],
+                "correct_answer": 1,
+                "explanation": "Because.",
+                "marks": 2,
+                "difficulty": "hard",
+                "topic": topic,
+                "has_answer": True,
+                "needs_review": False,
+            }
+            for i in range(count)
+        ]
+
+    monkeypatch.setattr(services, "generate_questions_from_topic", fake_topic)
+    questions = services.generate_questions_from_document(
+        {
+            "numberOfQuestions": 3,
+            "difficulty": "hard",
+            "marksPerQuestion": 2,
+            "numberOfOptions": 4,
+            "topicDistribution": {"Percentage": 2, "Profit": 1},
+        }
+    )
+    assert len(questions) == 3
+    assert {q["topic"] for q in questions} == {"Percentage", "Profit"}
+    assert seen == ["Percentage", "Profit"]
+
+
+def test_generate_from_topic_needs_key(instructor_client, settings):
+    settings.LLM_API_KEY = ""
+    r = instructor_client.post(
+        "/api/v1/admin/assignments/generate-questions",
+        {"numberOfQuestions": 2, "topicDistribution": {"Percentage": 2}},
+        format="json",
+    )
+    assert r.status_code == 400
+    assert "Gemini" in r.json()["error"]
+
+
+def test_generate_without_topics_or_document_stays_offline(instructor_client, settings):
+    settings.LLM_API_KEY = ""
+    r = instructor_client.post(
+        "/api/v1/admin/assignments/generate-questions",
+        {"numberOfQuestions": 3},
+        format="json",
+    )
+    assert r.status_code == 200
+    assert len(r.json()["data"]) == 3
+
+
+def test_regenerate_prefers_llm_for_known_topic(monkeypatch, settings):
+    from apps.assignments import services
+
+    settings.LLM_API_KEY = "test-key"
+    monkeypatch.setattr(
+        services,
+        "generate_questions_from_topic",
+        lambda topic, config: [
+            {
+                "question": f"Fresh {topic}?",
+                "question_image": "",
+                "options": ["A", "B"],
+                "correct_answer": 0,
+                "explanation": "x",
+                "marks": 1,
+                "difficulty": "medium",
+                "topic": topic,
+                "has_answer": True,
+                "needs_review": False,
+            }
+        ],
+    )
+    question = services.regenerate_question({"topic": "Percentage", "options": ["A", "B"]})
+    assert question["question"] == "Fresh Percentage?"
+
+
+def test_llm_topic_prompt_asks_for_topic_knowledge(monkeypatch, settings):
+    import json as json_lib
+
+    import httpx
+
+    settings.LLM_API_KEY = "test-key"
+    settings.LLM_BASE_URL = "https://example.test/v1"
+    settings.LLM_MODEL = "test-model"
+    captured: dict = {}
+
+    def fake_post(url, json, headers, timeout):
+        captured["prompt"] = json["messages"][0]["content"]
+        request = httpx.Request("POST", url)
+        return httpx.Response(
+            200,
+            request=request,
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": json_lib.dumps(
+                                {
+                                    "questions": [
+                                        {
+                                            "question": "Q?",
+                                            "options": ["A", "B", "C"],
+                                            "correct_answer": 2,
+                                            "explanation": "",
+                                            "marks": 1,
+                                            "difficulty": "easy",
+                                            "topic": "Percentage",
+                                        }
+                                    ]
+                                }
+                            )
+                        }
+                    }
+                ]
+            },
+        )
+
+    monkeypatch.setattr(llm.httpx, "post", fake_post)
+    questions = llm.generate_questions_from_topic("Percentage", {"numberOfQuestions": 1})
+    assert questions[0]["correct_answer"] == 2
+    assert questions[0]["topic"] == "Percentage"
+    assert "Percentage" in captured["prompt"]
+
+
 @pytest.mark.django_db
 def test_extract_view_rejects_missing_document(instructor_client, settings):
     settings.LLM_API_KEY = "test-key"

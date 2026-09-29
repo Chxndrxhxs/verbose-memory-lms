@@ -11,7 +11,20 @@ class Payment(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payments"
     )
-    course = models.ForeignKey("courses.Course", on_delete=models.CASCADE, related_name="payments")
+    course = models.ForeignKey(
+        "courses.Course",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="payments",
+    )
+    pack = models.ForeignKey(
+        "packs.QuestionPack",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="payments",
+    )
     razorpay_order_id = models.CharField(max_length=100, unique=True)
     razorpay_payment_id = models.CharField(max_length=100, blank=True)
     razorpay_signature = models.CharField(max_length=255, blank=True)
@@ -23,6 +36,15 @@ class Payment(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(course__isnull=False, pack__isnull=True)
+                    | models.Q(course__isnull=True, pack__isnull=False)
+                ),
+                name="payment_single_item",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.razorpay_order_id} - {self.status}"

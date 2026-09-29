@@ -7,10 +7,28 @@ import type {
   AssignmentModelPreview,
   AssignmentResultPayload,
   AssignmentTakeStep,
+  BankQuestion,
+  ExamModule,
+  PackAdminDetail,
+  PackDetail,
+  PackListItem,
 } from './types';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1';
 const BASE = API.replace(/\/api\/v\d+\/?$/, '');
+
+// Which frontend is calling (learner | instructor | admin). The backend uses
+// it to pick that app's auth cookie, so sessions never leak across apps.
+// Each app sets this once at startup via setAppId().
+let appId = '';
+
+export function setAppId(id: string): void {
+  appId = id;
+}
+
+function appHeaders(): Record<string, string> {
+  return appId ? { 'X-App': appId } : {};
+}
 
 function errorMessage(json: Record<string, unknown>, status: number): string {
   if (typeof json.error === 'string') return json.error;
@@ -65,6 +83,7 @@ export async function apiEnvelope<T>(path: string, init: RequestInit & { auth?: 
 async function request(path: string, init: RequestInit): Promise<Response> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    ...appHeaders(),
     ...((init.headers as Record<string, string>) ?? {}),
   };
   return fetch(`${API}${path}`, { ...init, headers, credentials: 'include' });
@@ -92,7 +111,12 @@ export function absoluteMediaUrl(path: string | undefined | null): string | null
 export async function uploadFile(file: File): Promise<{ url: string; size: number }> {
   const form = new FormData();
   form.append('file', file);
-  const res = await fetch(`${API}/upload/`, { method: 'POST', body: form, credentials: 'include' });
+  const res = await fetch(`${API}/upload/`, {
+    method: 'POST',
+    body: form,
+    credentials: 'include',
+    headers: appHeaders(),
+  });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || json.detail || `Upload ${res.status}`);
   return json.data as { url: string; size: number };
@@ -297,4 +321,106 @@ export async function adminSaveStructure(id: number, models: Record<string, unkn
       body: JSON.stringify({ models }),
     }),
   );
+}
+
+export function getPacks(params?: { q?: string; price?: 'free' | 'paid' }): Promise<PackListItem[]> {
+  const query = new URLSearchParams();
+  if (params?.q) query.set('q', params.q);
+  if (params?.price) query.set('price', params.price);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return api(`/packs/${suffix}`);
+}
+
+export function getPackDetail(id: number): Promise<PackDetail> {
+  return api(`/packs/${id}/`);
+}
+
+export function getMyPacks(): Promise<PackListItem[]> {
+  return api('/packs/mine/');
+}
+
+export function claimFreePack(id: number): Promise<{ owned: boolean; pack_id: number }> {
+  return api(`/packs/${id}/claim`, { method: 'POST' });
+}
+
+export function startPackAttempt(
+  packId: number,
+  module: ExamModule,
+): Promise<{ attempt: AssignmentAttemptBrief; structure: AssignmentTakeStep[] }> {
+  return api(`/packs/${packId}/start`, {
+    method: 'POST',
+    body: JSON.stringify({ module }),
+  });
+}
+
+export interface PaymentOrder {
+  order_id: string;
+  amount: number;
+  currency: string;
+  key_id: string;
+  mock?: boolean;
+  free?: boolean;
+  already_enrolled?: boolean;
+  already_owned?: boolean;
+  owned?: boolean;
+  purchase_id?: number;
+  enrollment_id?: number;
+}
+
+export function createPaymentOrder(payload: { course_id: number } | { pack_id: number }): Promise<PaymentOrder> {
+  return api('/payments/create-order', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function verifyPayment(payload: Record<string, unknown>): Promise<{ verified: boolean; mock?: boolean; enrollment_id?: number; purchase_id?: number }> {
+  return api('/payments/verify', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function adminListPacks(): Promise<PackListItem[]> {
+  return okOrThrow(api('/admin/packs/'));
+}
+
+export function adminCreatePack(payload: Record<string, unknown>): Promise<PackAdminDetail> {
+  return okOrThrow(api('/admin/packs/', { method: 'POST', body: JSON.stringify(payload) }));
+}
+
+export function adminGetPack(id: number): Promise<PackAdminDetail> {
+  return okOrThrow(api(`/admin/packs/${id}/`));
+}
+
+export function adminUpdatePack(id: number, payload: Record<string, unknown>): Promise<PackAdminDetail> {
+  return okOrThrow(api(`/admin/packs/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }));
+}
+
+export function adminDeletePack(id: number): Promise<void> {
+  return okOrThrow(api(`/admin/packs/${id}/`, { method: 'DELETE' }));
+}
+
+export function adminSetPackQuestions(id: number, questions: Record<string, unknown>[]): Promise<PackAdminDetail> {
+  return okOrThrow(
+    api(`/admin/packs/${id}/questions`, {
+      method: 'PUT',
+      body: JSON.stringify({ questions }),
+    }),
+  );
+}
+
+export function adminPublishPack(id: number): Promise<PackAdminDetail> {
+  return okOrThrow(api(`/admin/packs/${id}/publish`, { method: 'POST' }));
+}
+
+export function adminUnpublishPack(id: number): Promise<PackAdminDetail> {
+  return okOrThrow(api(`/admin/packs/${id}/unpublish`, { method: 'POST' }));
+}
+
+export function getQuestionBankTopics(): Promise<string[]> {
+  return okOrThrow(api(`/admin/packs/question-bank-topics/`));
+}
+
+export function getQuestionBank(params?: { q?: string; topic?: string; difficulty?: string }): Promise<BankQuestion[]> {
+  const query = new URLSearchParams();
+  if (params?.q) query.set('q', params.q);
+  if (params?.topic) query.set('topic', params.topic);
+  if (params?.difficulty) query.set('difficulty', params.difficulty);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return okOrThrow(api(`/admin/packs/question-bank/${suffix}`));
 }

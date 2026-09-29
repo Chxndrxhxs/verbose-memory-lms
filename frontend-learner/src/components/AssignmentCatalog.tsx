@@ -1,15 +1,18 @@
 import { Link } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Clock, HelpCircle } from "@masterlms/shared";
 import {
-  ArrowLeft,
-  ChevronRight,
   type AssignmentCatalogCategory,
   type AssignmentCatalogItem,
+  type PackListItem,
 } from "@masterlms/shared";
+import { cn } from "../lib/utils";
 import { TopNav } from "./TopNav";
 
 type Props = {
   categories: AssignmentCatalogCategory[];
   assignments: AssignmentCatalogItem[];
+  ownedPacks: PackListItem[];
+  packsForSale: PackListItem[];
   isLoading: boolean;
   error: Error | null;
   categoryId: number | null;
@@ -21,9 +24,38 @@ type Props = {
   onReset: () => void;
 };
 
+const selectClass = cn(
+  "rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none",
+  "focus:border-zinc-900 disabled:opacity-40",
+);
+
+const backLink = cn(
+  "inline-flex items-center gap-1.5 text-xs font-semibold",
+  "text-zinc-500 hover:text-zinc-900",
+);
+
+const rowCard = cn(
+  "group flex items-center gap-4 rounded-2xl border bg-white p-4",
+  "transition hover:border-zinc-400 hover:shadow-sm",
+);
+
+function SkeletonCard() {
+  return (
+    <div className="flex animate-pulse items-center gap-4 rounded-2xl border bg-white p-4">
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="h-4 w-2/3 rounded bg-zinc-100" />
+        <div className="h-3 w-1/3 rounded bg-zinc-100" />
+      </div>
+      <div className="h-8 w-20 shrink-0 rounded-full bg-zinc-100" />
+    </div>
+  );
+}
+
 export function AssignmentCatalog({
   categories,
   assignments,
+  ownedPacks,
+  packsForSale,
   isLoading,
   error,
   categoryId,
@@ -34,201 +66,266 @@ export function AssignmentCatalog({
   onSelectInterCategory,
   onReset,
 }: Props) {
-  const category = categories.find((c) => c.id === categoryId);
-  const subCategory = category?.subcategories.find((s) => s.id === subCategoryId);
-  const interCategory = subCategory?.intercategories.find(
-    (i) => i.id === interCategoryId,
-  );
-
-  const contextLabel = interCategory
-    ? interCategory.name
-    : subCategory
-      ? `${subCategory.name}`
-      : category
-        ? `${category.name}`
-        : "All";
+  const category = categories.find((c) => c.id === categoryId) ?? null;
+  const subCategory =
+    category?.subcategories.find((s) => s.id === subCategoryId) ?? null;
+  const filtered = categoryId !== null || subCategoryId !== null || interCategoryId !== null;
+  const myTests = assignments.length + ownedPacks.length;
 
   return (
     <div className="min-h-screen bg-[#f6f5f1]">
       <TopNav />
       <div className="w-full px-3 py-6 sm:px-4">
         <div className="rounded-[28px] bg-white p-8 shadow-sm sm:p-10">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-900"
-          >
+          <Link to="/" className={backLink}>
             <ArrowLeft size={14} strokeWidth={2.5} /> Back to home
           </Link>
-          <h1 className="mt-3 text-2xl font-bold tracking-tight">Assignments</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            Pick a category, then drill into sub-categories and inter-categories.
-          </p>
-
-          {/* Category level */}
-          <div className="mt-8">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-              Category
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {categories.map((c) => {
-                const active = c.id === categoryId;
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => onSelectCategory(c.id)}
-                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                      active
-                        ? "border-[#0f172a] bg-[#0f172a] text-white"
-                        : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400"
-                    }`}
-                  >
-                    {c.name}
-                  </button>
-                );
-              })}
-              {categories.length === 0 && !isLoading && (
-                <p className="text-sm text-zinc-400">No categories yet.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Sub-category level */}
-          {category && (
-            <div className="mt-6">
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                {category.name} · Sub-categories
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Tests</h1>
+              <p className="mt-1 text-sm text-zinc-500">
+                {myTests === 0
+                  ? "Pick a subject to find something to take."
+                  : `${myTests} test${myTests === 1 ? "" : "s"} ready for you.`}
               </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {category.subcategories.map((s) => {
-                  const active = s.id === subCategoryId;
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => onSelectSubCategory(s.id)}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                        active
-                          ? "border-[#0f172a] bg-[#0f172a] text-white"
-                          : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400"
-                      }`}
-                    >
-                      {s.name}
-                    </button>
-                  );
-                })}
-              </div>
             </div>
-          )}
-
-          {/* Inter-category level */}
-          {subCategory && (
-            <div className="mt-6">
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                {category?.name} / {subCategory.name} · Inter-categories
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {subCategory.intercategories.map((i) => {
-                  const active = i.id === interCategoryId;
-                  return (
-                    <button
-                      key={i.id}
-                      onClick={() => onSelectInterCategory(i.id)}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                        active
-                          ? "border-emerald-600 bg-emerald-600 text-white"
-                          : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400"
-                      }`}
-                    >
-                      {i.name}
-                      <span className={`text-[11px] ${active ? "text-white/80" : "text-zinc-400"}`}>
-                        {i.assignments_count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Breadcrumb + reset */}
-          {(categoryId !== null || subCategoryId !== null || interCategoryId !== null) && (
-            <div className="mt-6 flex flex-wrap items-center gap-1.5 text-sm text-zinc-600">
+            {filtered && (
               <button
                 onClick={onReset}
-                className="rounded-full px-3 py-1 text-xs font-semibold text-zinc-500 transition hover:bg-zinc-100"
+                className={cn(
+                  "rounded-full bg-zinc-100 px-3.5 py-1.5 text-xs font-semibold",
+                  "text-zinc-600 hover:bg-zinc-200",
+                )}
               >
-                All assignments
+                Clear filters
               </button>
-              {category && (
-                <>
-                  <ChevronRight size={14} className="text-zinc-300" />
-                  <button
-                    onClick={() => onSelectCategory(category.id)}
-                    className="font-medium text-zinc-800 hover:underline"
-                  >
-                    {category.name}
-                  </button>
-                </>
-              )}
-              {subCategory && (
-                <>
-                  <ChevronRight size={14} className="text-zinc-300" />
-                  <button
-                    onClick={() => onSelectSubCategory(subCategory.id)}
-                    className="font-medium text-zinc-800 hover:underline"
-                  >
-                    {subCategory.name}
-                  </button>
-                </>
-              )}
-              {interCategory && (
-                <>
-                  <ChevronRight size={14} className="text-zinc-300" />
-                  <span className="font-semibold text-emerald-700">{interCategory.name}</span>
-                </>
-              )}
+            )}
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <label className="min-w-36 flex-1 text-xs font-semibold text-zinc-500">
+              Subject
+              <select
+                value={categoryId ?? ""}
+                onChange={(e) =>
+                  e.target.value ? onSelectCategory(Number(e.target.value)) : onReset()
+                }
+                className={cn(selectClass, "mt-1 w-full")}
+              >
+                <option value="">All subjects</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="min-w-36 flex-1 text-xs font-semibold text-zinc-500">
+              Area
+              <select
+                value={subCategoryId ?? ""}
+                onChange={(e) =>
+                  e.target.value
+                    ? onSelectSubCategory(Number(e.target.value))
+                    : categoryId != null && onSelectCategory(categoryId)
+                }
+                disabled={category == null}
+                className={cn(selectClass, "mt-1 w-full")}
+              >
+                <option value="">All areas</option>
+                {category?.subcategories.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="min-w-36 flex-1 text-xs font-semibold text-zinc-500">
+              Topic
+              <select
+                value={interCategoryId ?? ""}
+                onChange={(e) =>
+                  e.target.value
+                    ? onSelectInterCategory(Number(e.target.value))
+                    : subCategoryId != null && onSelectSubCategory(subCategoryId)
+                }
+                disabled={subCategory == null}
+                className={cn(selectClass, "mt-1 w-full")}
+              >
+                <option value="">All topics</option>
+                {subCategory?.intercategories.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name} ({i.assignments_count})
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <h2 className="mt-8 text-sm font-bold">
+            My tests{" "}
+            <span className="font-normal text-zinc-400">
+              · {assignments.length + ownedPacks.length}
+            </span>
+          </h2>
+
+          {isLoading && (
+            <div className="mt-4 grid gap-3">
+              {[0, 1, 2].map((i) => (
+                <SkeletonCard key={i} />
+              ))}
             </div>
           )}
-
-          {/* Assignments */}
-          <div className="mt-8">
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 className="text-sm font-semibold">{contextLabel} assignments</h2>
-              <span className="text-xs text-zinc-400">
-                {assignments.length} {assignments.length === 1 ? "assignment" : "assignments"}
-              </span>
-            </div>
-
-            {isLoading && <p className="mt-6 text-sm text-zinc-500">Loading assignments…</p>}
-            {error && (
-              <p className="mt-6 text-sm text-red-600">
-                Unable to load assignments: {error.message}
-              </p>
-            )}
-            {!isLoading && !error && assignments.length === 0 && (
-              <p className="mt-6 text-sm text-zinc-500">
-                No published assignments {categoryId !== null ? "in this category yet" : "yet"}.
-              </p>
-            )}
+          {error && (
+            <p className="mt-4 text-sm text-red-600">
+              Unable to load tests: {error.message}
+            </p>
+          )}
+          {!isLoading && !error && myTests === 0 && (
+            <p
+              className={cn(
+                "mt-4 rounded-2xl border border-dashed border-zinc-300 p-8",
+                "text-center text-sm text-zinc-500",
+              )}
+            >
+              Nothing here yet
+              {filtered ? " for these filters — try clearing them." : "."}
+            </p>
+          )}
+          {!isLoading && !error && myTests > 0 && (
             <div className="mt-4 grid gap-3">
               {assignments.map((assignment) => (
                 <Link
-                  key={assignment.id}
+                  key={`a-${assignment.id}`}
                   to={`/assignments/${assignment.id}`}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white p-4 transition hover:border-zinc-300 hover:shadow-sm"
+                  className={rowCard}
                 >
-                  <div>
-                    <p className="text-sm font-semibold">{assignment.title}</p>
-                    <p className="text-xs text-zinc-500">
-                      {assignment.questions_count} questions · {assignment.duration_label}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold group-hover:underline">
+                      {assignment.title}
+                    </p>
+                    <p
+                      className={cn(
+                        "mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5",
+                        "text-xs text-zinc-500",
+                      )}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        <HelpCircle size={12} /> {assignment.questions_count}{" "}
+                        questions
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Clock size={12} /> {assignment.duration_label}
+                      </span>
+                      {assignment.models_preview.length > 0 && (
+                        <span>
+                          {assignment.models_preview.map((m) => m.name).join(" · ")}
+                        </span>
+                      )}
                     </p>
                   </div>
-                  <span className="rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white">
-                    Available
+                  <span
+                    className={cn(
+                      "inline-flex shrink-0 items-center gap-1 rounded-full",
+                      "bg-zinc-900 px-3.5 py-1.5 text-xs font-semibold text-white",
+                    )}
+                  >
+                    Start <ArrowRight size={13} />
+                  </span>
+                </Link>
+              ))}
+              {ownedPacks.map((pack) => (
+                <Link
+                  key={`p-${pack.id}`}
+                  to={`/packs/${pack.id}`}
+                  className={rowCard}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold group-hover:underline">
+                      {pack.title}
+                    </p>
+                    <p className="mt-0.5 text-xs text-zinc-500">
+                      {pack.question_count} questions
+                      {pack.attempts_left != null &&
+                        ` · ${pack.attempts_left} attempts left`}
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-full bg-emerald-100 px-3 py-1.5",
+                      "text-xs font-bold text-emerald-800",
+                    )}
+                  >
+                    Owned
                   </span>
                 </Link>
               ))}
             </div>
-          </div>
+          )}
+
+          {!isLoading && !error && packsForSale.length > 0 && (
+            <div className="mt-10">
+              <h2 className="text-sm font-bold">
+                Test packages{" "}
+                <span className="font-normal text-zinc-400">
+                  · {packsForSale.length}
+                </span>
+              </h2>
+              <p className="mt-1 text-xs text-zinc-500">
+                Curated question bundles — buy once, take in any enabled module.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {packsForSale.map((pack) => (
+                  <Link
+                    key={pack.id}
+                    to={`/packs/${pack.id}`}
+                    className={cn(
+                      "flex items-center gap-4 rounded-2xl border bg-[#fbfaf7] p-4",
+                      "transition hover:border-zinc-400 hover:shadow-sm",
+                    )}
+                  >
+                    {pack.cover ? (
+                      <img
+                        src={pack.cover}
+                        alt=""
+                        className={cn(
+                          "h-14 w-11 shrink-0 rounded-lg border border-zinc-200",
+                          "object-cover",
+                        )}
+                      />
+                    ) : null}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{pack.title}</p>
+                      <p className="mt-0.5 text-xs text-zinc-500">
+                        {pack.question_count} questions ·{" "}
+                        {pack.allowed_modules.length}{" "}
+                        {pack.allowed_modules.length === 1 ? "module" : "modules"}
+                      </p>
+                    </div>
+                    {pack.is_free ? (
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full bg-emerald-100 px-3 py-1",
+                          "text-xs font-bold text-emerald-800",
+                        )}
+                      >
+                        Free
+                      </span>
+                    ) : (
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full bg-[#0f172a] px-3 py-1",
+                          "text-xs font-bold text-white",
+                        )}
+                      >
+                        ₹{Number(pack.price).toLocaleString("en-IN")}
+                      </span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

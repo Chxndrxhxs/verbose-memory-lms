@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -67,14 +67,17 @@ function TakeRunner({ take }: { take: TakeData }) {
 
   const {
     questions,
+    sections,
     counts,
     currentIndex,
+    currentSectionIndex,
     selectAnswer,
     markForReview,
     clearAnswer,
     goTo,
     next,
     previous,
+    goToSection,
     saveStatus,
     buildSubmitAnswers,
   } = useAssignmentQuestionState(take.structure, take.answers ?? {}, attemptId);
@@ -85,12 +88,24 @@ function TakeRunner({ take }: { take: TakeData }) {
 
   const securityEnabled = detailQuery.data?.security;
 
-  // Camera is mandatory for every exam — enforced here regardless of the
-  // assignment's stored security flags so proctoring cannot be skipped.
-  const cameraRequired = true;
+  // Practice mode is untimed study: no camera gate, no lockdown, no
+  // copy/paste/tab listeners. Mock stays fully proctored.
+  const isPractice = take.attempt.model_code === "practice";
+  const cameraRequired = !isPractice;
+  const effectiveSecurity = useMemo(() => {
+    if (isPractice) {
+      return {
+        block_copy: false,
+        block_paste: false,
+        block_tab_switch: false,
+        violations_before_auto_submit: 0,
+      };
+    }
+    return securityEnabled;
+  }, [isPractice, securityEnabled]);
 
-  // Always-on exam lockdown: right-click, Escape, F-keys, all Ctrl/Cmd & Alt combos.
-  useExamLockdown();
+  // Always-on exam lockdown for proctored modes only.
+  useExamLockdown(!isPractice);
 
   // Leave fullscreen whenever the exam screen is unmounted (submit, back-nav).
   useEffect(() => {
@@ -100,22 +115,23 @@ function TakeRunner({ take }: { take: TakeData }) {
   }, [exit]);
 
   useEffect(() => {
-    if (!securityEnabled) return;
+    if (!effectiveSecurity) return;
     const prevent = (event: Event) => event.preventDefault();
     const onVisibility = () => {
-      if (document.hidden && securityEnabled.block_tab_switch) {
+      if (document.hidden && effectiveSecurity.block_tab_switch) {
         setViolations((v) => v + 1);
       }
     };
-    if (securityEnabled.block_copy) document.addEventListener("copy", prevent);
-    if (securityEnabled.block_paste) document.addEventListener("paste", prevent);
-    if (securityEnabled.block_tab_switch) document.addEventListener("visibilitychange", onVisibility);
+    if (effectiveSecurity.block_copy) document.addEventListener("copy", prevent);
+    if (effectiveSecurity.block_paste) document.addEventListener("paste", prevent);
+    if (effectiveSecurity.block_tab_switch)
+      document.addEventListener("visibilitychange", onVisibility);
     return () => {
       document.removeEventListener("copy", prevent);
       document.removeEventListener("paste", prevent);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [securityEnabled]);
+  }, [effectiveSecurity]);
 
   // If the camera stream dies mid-exam, count it as a violation.
   useEffect(() => {
@@ -155,12 +171,12 @@ function TakeRunner({ take }: { take: TakeData }) {
   }, [submitMutation]);
 
   useEffect(() => {
-    const threshold = detailQuery.data?.security?.violations_before_auto_submit ?? 0;
+    const threshold = effectiveSecurity?.violations_before_auto_submit ?? 0;
     if (threshold > 0 && violations >= threshold) {
       onAutoSubmit();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [violations, detailQuery.data?.security?.violations_before_auto_submit]);
+  }, [violations, effectiveSecurity?.violations_before_auto_submit]);
 
   return (
     <>
@@ -174,8 +190,10 @@ function TakeRunner({ take }: { take: TakeData }) {
         title={detailQuery.data?.title ?? null}
         attempt={take.attempt}
         questions={questions}
+        sections={sections}
         counts={counts}
         currentIndex={currentIndex}
+        currentSectionIndex={currentSectionIndex}
         saveStatus={saveStatus}
         violations={violations}
         isFullscreen={isFullscreen}
@@ -184,19 +202,22 @@ function TakeRunner({ take }: { take: TakeData }) {
         onMarkForReview={markForReview}
         onClear={clearAnswer}
         onGoTo={goTo}
+        onGoToSection={goToSection}
         onNext={next}
         onPrevious={previous}
         onEnterFullscreen={enter}
         onSubmit={() => submitMutation.mutate()}
         onAutoSubmit={onAutoSubmit}
         submitting={submitMutation.isPending}
+        practice={isPractice}
       />
     </>
   );
 }
 
-function useExamLockdown() {
+function useExamLockdown(enabled: boolean) {
   useEffect(() => {
+    if (!enabled) return;
     const onContextMenu = (event: Event) => event.preventDefault();
     const onKeyDown = (event: KeyboardEvent) => {
       const blocked =
@@ -216,7 +237,7 @@ function useExamLockdown() {
       document.removeEventListener("contextmenu", onContextMenu);
       document.removeEventListener("keydown", onKeyDown, true);
     };
-  }, []);
+  }, [enabled]);
 }
 
 function TakeLoading() {

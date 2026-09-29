@@ -8,7 +8,8 @@ import {
   getTotalMarks,
   ensureModelsCollectPool,
   poolQuestionIdsChanged,
-  buildModel2FromQuestions,
+  buildMockFromQuestions,
+  normalizeModelType,
   type Assignment,
   type AssignmentValidationError,
 } from "../types/assignment";
@@ -30,6 +31,7 @@ export function AssignmentCreateContainer({ existingId }: { existingId?: string 
       setAssignment({
         ...createEmptyAssignment(),
         ...saved,
+        modelType: normalizeModelType(saved.modelType),
         questions: saved.questions ?? [],
         tests: saved.tests ?? [],
         model3Tests: saved.model3Tests ?? [],
@@ -53,20 +55,20 @@ export function AssignmentCreateContainer({ existingId }: { existingId?: string 
     let built = next;
     const poolChanged = poolQuestionIdsChanged(
       assignment.questions,
-      next.questions
+      next.questions,
     );
     if (poolChanged || next.modelType !== assignment.modelType) {
       built = ensureModelsCollectPool(next);
     }
-    // Switching to a multi-stage model with no tests/sets yet builds them
-    // automatically from the question pool so the wizard never shows an empty
-    // configuration screen. model_3 stores its tests in `tests` with sets.
+    // Switching to mock with no sections yet builds them automatically from
+    // the question pool so the wizard never shows an empty configuration
+    // screen. Sections are flat timed tests grouped by category.
     if (next.modelType !== assignment.modelType) {
-      if (next.modelType !== "model_1") {
+      if (next.modelType !== "practice") {
         if (built.tests.length === 0 && built.questions.length > 0) {
           built = {
             ...built,
-            tests: buildModel2FromQuestions(built.questions, built.duration),
+            tests: buildMockFromQuestions(built.questions, built.duration),
           };
         }
       }
@@ -210,41 +212,30 @@ function buildAssignmentModels(assignment: Assignment): unknown[] {
   const tests =
     assignment.tests.length > 0
       ? assignment.tests
-      : buildModel2FromQuestions(assignment.questions, assignment.duration);
+      : buildMockFromQuestions(assignment.questions, assignment.duration);
   const testSteps = tests.map((test) => ({
     name: test.title,
     description: test.description,
     duration_seconds: test.duration * 60,
-    ...(assignment.modelType === "model_3"
-      ? {
-          children: test.sets.map((set) => ({
-            kind: "set",
-            name: set.title,
-            description: set.description,
-            duration_seconds: set.duration * 60,
-            questions: questionsFor(set.questionIds, set.questions),
-          })),
-        }
-      : { questions: questionsFor(test.questionIds, test.questions) }),
+    questions: questionsFor(test.questionIds, test.questions),
   }));
 
-  // One selected model only: the wizard persists the instructor's chosen
+  // One selected module only: the wizard persists the instructor's chosen
   // modelType instead of all three, so structure/validation/preview agree.
   const modelMeta = {
-    model_1: {
-      code: "model_1",
-      name: "Direct MCQ",
-      description: "All questions in one direct MCQ paper.",
+    practice: {
+      code: "practice",
+      name: "Practice",
+      description: "All questions in one untimed practice set.",
     },
-    model_2: { code: "model_2", name: "Tests", description: "Questions split into timed tests." },
-    model_3: {
-      code: "model_3",
-      name: "Tests & Sets",
-      description: "Timed tests containing question sets.",
+    mock: {
+      code: "mock",
+      name: "Mock Test",
+      description: "Testbook-style timed sections, one per category.",
     },
   }[assignment.modelType];
   const modelSteps =
-    assignment.modelType === "model_1"
+    assignment.modelType === "practice"
       ? [
           {
             name: "MCQ",

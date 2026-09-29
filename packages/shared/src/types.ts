@@ -50,6 +50,27 @@ export type AssignmentStatus = "draft" | "published" | "archived";
 export type AssignmentDifficulty = "easy" | "medium" | "hard";
 export type AssignmentExecutionMode = "sequential" | "parallel";
 
+/** Exam modules: how a set of questions is taken. Codes match the backend ExamModule. */
+export type ExamModule = "practice" | "mock";
+
+export const EXAM_MODULE_META: Record<
+  ExamModule,
+  { label: string; tagline: string; proctored: boolean; untimed: boolean }
+> = {
+  practice: {
+    label: "Practice",
+    tagline: "Untimed study with inline explanations.",
+    proctored: false,
+    untimed: true,
+  },
+  mock: {
+    label: "Mock Test",
+    tagline: "Timed Testbook-style sections under exam conditions.",
+    proctored: true,
+    untimed: false,
+  },
+};
+
 export interface AssignmentModelPreview {
   id: number;
   code: string;
@@ -135,6 +156,8 @@ export interface AssignmentTakeQuestion {
   marks: number;
   difficulty: AssignmentDifficulty;
   topic: string;
+  /** Present only in practice mode (inline study aid). */
+  explanation?: string;
 }
 
 export interface AssignmentTakeStep {
@@ -309,6 +332,92 @@ export interface AssignmentHierarchyNode {
   category?: string;
   sub_category_id?: number;
   sub_category?: string;
+}
+
+export interface PackCategoryRef {
+  id: number;
+  name: string;
+  sub_category: { id: number; name: string };
+  category: { id: number; name: string };
+}
+
+export interface PackListItem {
+  id: number;
+  title: string;
+  description: string;
+  cover: string;
+  price: string;
+  original_price: string;
+  is_free: boolean;
+  status: string;
+  question_count: number;
+  allowed_modules: ExamModule[];
+  max_attempts: number;
+  owner_name: string;
+  inter_category: PackCategoryRef | null;
+  created_at: string;
+  owned: boolean;
+  attempts_used: number;
+  attempts_left: number | null;
+}
+
+export interface PackModuleInfo {
+  code: ExamModule;
+  label: string;
+  proctored: boolean;
+  untimed: boolean;
+}
+
+export interface PackDetail extends PackListItem {
+  topics: [string, number][];
+  difficulty_mix: Record<string, number>;
+  total_marks: string;
+  modules: PackModuleInfo[];
+}
+
+export interface PackAdminDetail extends PackDetail {
+  questions: {
+    id: number;
+    question: string;
+    question_image: string;
+    options: AssignmentOption[];
+    correct_answer: number;
+    explanation: string;
+    marks: string;
+    difficulty: string;
+    topic: string;
+    position: number;
+  }[];
+  test_size: number;
+  test_duration_seconds: number;
+  set_size: number;
+  set_duration_seconds: number;
+  execution_mode: AssignmentExecutionMode;
+  passing_percentage: string;
+  negative_marking: boolean;
+  version: number;
+  updated_at: string;
+  duration_label: string;
+}
+
+export interface BankQuestion {
+  id: number;
+  question: string;
+  question_image: string;
+  options: AssignmentOption[];
+  correct_answer: number;
+  explanation: string;
+  marks: string;
+  difficulty: string;
+  topic: string;
+  assignment_id: number;
+  assignment_title: string;
+}
+
+export interface PurchaseRequiredError {
+  code: "purchase_required";
+  pack_id: number;
+  price: string;
 }
 
 export type Tier = "Iron" | "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond" | "Ascendant" | "Immortal" | "Radiant";

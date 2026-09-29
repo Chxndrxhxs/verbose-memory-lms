@@ -514,7 +514,7 @@ function LessonEditor({ lesson, onUpdate, uploading, onUpload, onUploadMedia }: 
 
 export function ChapterSection({ chapter, uploadingId, onRename, onDelete, onAddLesson, onUpdateLesson, onDeleteLesson, onUploadLesson, onUploadQuizMedia }: Props) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+    <div className="rounded-2xl border border-zinc-200/70 bg-zinc-50/70 p-5 sm:p-6">
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="shrink-0 cursor-move select-none text-zinc-300">⠿</span>
@@ -533,12 +533,12 @@ export function ChapterSection({ chapter, uploadingId, onRename, onDelete, onAdd
         </div>
       </div>
 
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-4 space-y-3">
         {chapter.lessons.map((l) => {
           const meta = LESSON_KIND_BADGE[l.kind];
           const Icon = meta.Icon;
           return (
-            <li key={l.id} className="rounded-xl border border-zinc-200 bg-white p-3">
+            <li key={l.id} className="rounded-2xl border border-zinc-200/70 bg-white p-4 sm:p-5">
               <div className="flex items-start gap-2">
                 <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs ${meta.badge}`}>
                   <Icon size={14} strokeWidth={2.5} />
@@ -579,9 +579,9 @@ export function ChapterSection({ chapter, uploadingId, onRename, onDelete, onAdd
 
       <button
         onClick={onAddLesson}
-        className="mt-3 w-full rounded-full border border-zinc-200 bg-white py-2 text-xs font-semibold hover:bg-zinc-100"
+        className="mt-4 h-12 w-full rounded-full border border-zinc-200 bg-white text-sm font-semibold hover:bg-zinc-100"
       >
-        <span className="inline-flex items-center gap-1"><Plus size={13} /> Add lesson</span>
+        <span className="inline-flex items-center gap-1.5"><Plus size={14} /> Add lesson</span>
       </button>
     </div>
   );

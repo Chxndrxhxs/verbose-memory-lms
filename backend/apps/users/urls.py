@@ -1,7 +1,6 @@
 from django.urls import path
 
 from .views import (
-    BecomeAdminView,
     BecomeInstructorView,
     CompleteProfileView,
     CookieRefreshView,
@@ -18,6 +17,5 @@ urlpatterns = [
     path("auth/logout", LogoutView.as_view()),
     path("auth/complete-profile", CompleteProfileView.as_view()),
     path("auth/become-instructor", BecomeInstructorView.as_view()),
-    path("auth/become-admin", BecomeAdminView.as_view()),
     path("users/me", MeView.as_view()),
 ]

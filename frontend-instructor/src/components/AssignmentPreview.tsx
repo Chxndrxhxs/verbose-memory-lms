@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Clock, ChevronLeft, ChevronRight, AlertTriangle } from "@masterlms/shared";
 import { absoluteMediaUrl, optionImage, optionText } from "@masterlms/shared";
 import { cn } from "../lib/utils";
+import { builderCardClass } from "../lib/builder";
 import type { Assignment } from "../types/assignment";
 import { MODEL_LABELS, getTotalQuestions, getTotalMarks } from "../types/assignment";
 
@@ -9,8 +10,16 @@ type Props = {
   assignment: Assignment;
 };
 
-function PreviewTimer({ duration }: { duration: number }) {
-  const [remaining] = useState(duration * 60);
+function PreviewTimer({ minutes }: { minutes: number }) {
+  const total = Math.max(0, Math.round(minutes * 60));
+  const [remaining, setRemaining] = useState(total);
+  useEffect(() => {
+    if (total <= 0) return;
+    const timer = setInterval(() => {
+      setRemaining((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [total]);
   const h = Math.floor(remaining / 3600);
   const m = Math.floor((remaining % 3600) / 60);
   const s = remaining % 60;
@@ -111,42 +120,48 @@ function PreviewQuestionCard({
 }
 
 export function AssignmentPreviewStep({ assignment }: Props) {
-  const [previewNav, setPreviewNav] = useState({ testIdx: 0, setIdx: 0, qIdx: 0 });
+  const sections = getPreviewSections(assignment);
+  const [sectionIdx, setSectionIdx] = useState(0);
+  const [qIdx, setQIdx] = useState(0);
 
-  const getPreviewQuestions = () => {
-    if (assignment.modelType === "model_1") {
-      return assignment.questions;
-    }
-    const test = assignment.tests[previewNav.testIdx];
-    if (!test) return [];
-    if (assignment.modelType === "model_2") {
-      return test.questions;
-    }
-    const set = test.sets[previewNav.setIdx];
-    return set?.questions ?? [];
+  const safeSection = Math.min(sectionIdx, Math.max(0, sections.length - 1));
+  const current = sections[safeSection] ?? {
+    key: "empty",
+    label: "",
+    minutes: 0,
+    questions: [] as Assignment["questions"],
+  };
+  const currentQuestions = current.questions;
+  const safeQ = Math.min(qIdx, Math.max(0, currentQuestions.length - 1));
+  const active = currentQuestions[safeQ];
+
+  const pickSection = (i: number) => {
+    setSectionIdx(i);
+    setQIdx(0);
   };
 
-  const previewQuestions = getPreviewQuestions();
-
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-bold text-zinc-900">Student Preview</h2>
-      <p className="mt-1 text-sm text-zinc-500">
-        This is how students will see the assignment.
+    <div className={builderCardClass}>
+      <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+        Student view
+      </p>
+      <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">Student preview</h2>
+      <p className="mt-1.5 text-[15px] text-zinc-500">
+        Click through exactly as a student would.
       </p>
 
-      <div className="mt-4 rounded-xl bg-[#f6f5f1] p-5">
-        <div className="flex items-center justify-between">
+      <div className="mt-6 rounded-2xl bg-[#f6f5f1] p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-bold text-zinc-900">
               {assignment.title || "Untitled Assignment"}
             </h3>
             <p className="mt-0.5 text-xs text-zinc-500">
-              {MODEL_LABELS[assignment.modelType]} · {getTotalQuestions(assignment)} questions ·{" "}
-              {getTotalMarks(assignment)} marks
+              {MODEL_LABELS[assignment.modelType]} · {getTotalQuestions(assignment)}{" "}
+              questions · {getTotalMarks(assignment)} marks
             </p>
           </div>
-          <PreviewTimer duration={assignment.duration} />
+          <PreviewTimer key={current.key} minutes={current.minutes} />
         </div>
 
         {assignment.instructions && (
@@ -156,59 +171,36 @@ export function AssignmentPreviewStep({ assignment }: Props) {
         )}
       </div>
 
-      {assignment.modelType !== "model_1" && assignment.tests.length > 0 && (
-        <div className="mt-4">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
-            {assignment.tests.map((test, i) => (
-              <button
-                key={test.id}
-                onClick={() =>
-                  setPreviewNav({ testIdx: i, setIdx: 0, qIdx: 0 })
-                }
-                className={cn(
-                  "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                  previewNav.testIdx === i
-                    ? "bg-zinc-900 text-white"
-                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-                )}
-              >
-                {test.title}
-              </button>
-            ))}
-          </div>
-
-          {assignment.modelType === "model_3" &&
-            assignment.tests[previewNav.testIdx]?.sets.length > 0 && (
-              <div className="mt-2 flex items-center gap-2 overflow-x-auto pb-2">
-                {assignment.tests[previewNav.testIdx].sets.map((set, i) => (
-                  <button
-                    key={set.id}
-                    onClick={() =>
-                      setPreviewNav((p) => ({ ...p, setIdx: i, qIdx: 0 }))
-                    }
-                    className={cn(
-                      "shrink-0 rounded-full border px-3 py-1 text-[10px] font-semibold transition-colors",
-                      previewNav.setIdx === i
-                        ? "border-zinc-900 bg-zinc-900 text-white"
-                        : "border-zinc-300 text-zinc-600 hover:bg-zinc-50"
-                    )}
-                  >
-                    {set.title}
-                  </button>
-                ))}
-              </div>
-            )}
+      {sections.length > 1 && (
+        <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-2">
+          {sections.map((section, i) => (
+            <button
+              key={section.key}
+              onClick={() => pickSection(i)}
+              className={cn(
+                "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                safeSection === i
+                  ? "bg-zinc-900 text-white"
+                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200",
+              )}
+            >
+              {section.label}
+            </button>
+          ))}
         </div>
       )}
 
-      <div className="mt-4 space-y-3">
-        {previewQuestions.map((q, i) => (
-          <PreviewQuestionCard key={q.id} question={q} index={i} />
-        ))}
-      </div>
-
-      {previewQuestions.length === 0 && (
-        <div className="mt-6 flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 py-10 text-center">
+      {active ? (
+        <div className="mt-4">
+          <PreviewQuestionCard key={active.id} question={active} index={safeQ} />
+        </div>
+      ) : (
+        <div
+          className={cn(
+            "mt-4 flex flex-col items-center justify-center rounded-xl",
+            "border border-dashed border-zinc-300 py-10 text-center",
+          )}
+        >
           <AlertTriangle size={20} className="text-zinc-400" />
           <p className="mt-2 text-sm text-zinc-500">
             No questions to preview for this section.
@@ -216,19 +208,68 @@ export function AssignmentPreviewStep({ assignment }: Props) {
         </div>
       )}
 
-      <div className="mt-6 flex items-center justify-between rounded-xl bg-zinc-50 p-4 text-sm text-zinc-600">
-        <button className="inline-flex items-center gap-1.5 text-xs text-zinc-500">
+      <div
+        className={cn(
+          "mt-4 flex items-center justify-between rounded-xl bg-zinc-50",
+          "p-4 text-sm text-zinc-600",
+        )}
+      >
+        <button
+          onClick={() => setQIdx((i) => Math.max(0, i - 1))}
+          disabled={safeQ <= 0}
+          className="inline-flex items-center gap-1.5 text-xs text-zinc-500 disabled:opacity-30"
+        >
           <ChevronLeft size={14} /> Previous
         </button>
         <span className="text-xs text-zinc-400">
-          {previewQuestions.length > 0
-            ? `Question ${previewNav.qIdx + 1} of ${previewQuestions.length}`
+          {currentQuestions.length > 0
+            ? `Question ${safeQ + 1} of ${currentQuestions.length}`
             : "0 questions"}
         </span>
-        <button className="inline-flex items-center gap-1.5 text-xs text-zinc-500">
+        <button
+          onClick={() =>
+            setQIdx((i) => Math.min(Math.max(0, currentQuestions.length - 1), i + 1))
+          }
+          disabled={safeQ >= currentQuestions.length - 1}
+          className="inline-flex items-center gap-1.5 text-xs text-zinc-500 disabled:opacity-30"
+        >
           Next <ChevronRight size={14} />
         </button>
       </div>
     </div>
   );
+}
+
+function getPreviewSections(assignment: Assignment): {
+  key: string;
+  label: string;
+  minutes: number;
+  questions: Assignment["questions"];
+}[] {
+  if (assignment.modelType === "practice" || assignment.tests.length === 0) {
+    return [
+      {
+        key: "pool",
+        label: MODEL_LABELS[assignment.modelType],
+        minutes: assignment.duration,
+        questions: assignment.questions,
+      },
+    ];
+  }
+  if (assignment.modelType === "mock") {
+    return assignment.tests.map((test) => ({
+      key: test.id,
+      label: test.title,
+      minutes: test.duration,
+      questions: test.questions,
+    }));
+  }
+  return [
+    {
+      key: "pool",
+      label: MODEL_LABELS[assignment.modelType],
+      minutes: assignment.duration,
+      questions: assignment.questions,
+    },
+  ];
 }

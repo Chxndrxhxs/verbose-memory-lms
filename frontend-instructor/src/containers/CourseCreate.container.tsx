@@ -561,7 +561,7 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
     <div className="min-h-screen bg-[#f6f5f1]">
       <InstructorHeader />
       {step === 0 ? (
-        <div className="w-full px-4 py-3 sm:px-6">
+        <div className="mx-auto w-full max-w-[1120px] px-4 py-8 sm:px-6">
           <CourseBuilderHeader
             title={values.title}
             saving={saving || publishing || autoSaving}
@@ -571,10 +571,10 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
             onPublish={() => setPublishOpen(true)}
             onSave={() => saveCourse(false)}
           />
-          <div className="mt-4">
+          <div className="mt-5">
             <StepIndicator step={0} canGoBuilder={Boolean(courseId)} onNavigate={setStep} />
           </div>
-          <div className="mt-4">
+          <div className="mt-6">
             <CourseCreateStep1
               values={values}
               errors={errors}
@@ -587,9 +587,9 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
           </div>
         </div>
       ) : (
-        <div className="w-full px-4 py-3 sm:px-6">
+        <div className="mx-auto w-full max-w-[1120px] px-4 py-8 sm:px-6">
           <CourseBuilderHeader title={values.title} saving={saving || publishing || autoSaving} saveStatus={saveStatus} onPreview={() => setPreviewOpen(true)} onPublish={() => setPublishOpen(true)} onSave={() => saveCourse(false)} />
-          <div className="mt-4">
+          <div className="mt-5">
             <StepIndicator step={1} canGoBuilder={Boolean(courseId)} onNavigate={setStep} />
           </div>
           <CourseCreateStep2

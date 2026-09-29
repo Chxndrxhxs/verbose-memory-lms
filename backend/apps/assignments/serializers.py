@@ -63,6 +63,7 @@ class QuestionPayloadSerializer(serializers.Serializer):
     marks = serializers.FloatField(required=False, min_value=0, default=1)
     difficulty = serializers.CharField(required=False, allow_blank=True, default="medium")
     topic = serializers.CharField(required=False, allow_blank=True, default="")
+    source = serializers.JSONField(required=False, default=dict)
 
     def validate(self, attrs):
         if attrs["correct_answer"] >= len(attrs["options"]):
@@ -92,7 +93,7 @@ class StepPayloadSerializer(serializers.Serializer):
 
 
 class ModelPayloadSerializer(serializers.Serializer):
-    code = serializers.CharField(allow_blank=True)
+    code = serializers.ChoiceField(choices=["practice", "mock"])
     name = serializers.CharField()
     description = serializers.CharField(required=False, allow_blank=True, default="")
     execution_mode = serializers.ChoiceField(

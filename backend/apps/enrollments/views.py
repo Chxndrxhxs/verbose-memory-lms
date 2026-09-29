@@ -8,7 +8,13 @@ from core.pagination import paginate_queryset_view
 
 from .models import ActivityEvent, Certificate, Enrollment
 from .serializers import ActivityEventSerializer, CertificateSerializer, EnrollmentSerializer
-from .services import activity_last_six_months, enroll, log_event, mark_lesson_done
+from .services import (
+    activity_last_six_months,
+    enroll,
+    grade_quiz_answers,
+    log_event,
+    mark_lesson_done,
+)
 
 
 @api_view(["POST"])
@@ -83,17 +89,10 @@ def complete_lesson(request, course_id: int):
 @permission_classes([IsAuthenticated])
 def quiz_attempt(request, course_id: int):
     lesson_id = request.data.get("lesson_id")
-    try:
-        score = int(request.data.get("score"))
-        total = int(request.data.get("total"))
-    except (TypeError, ValueError):
+    answers = request.data.get("answers")
+    if not isinstance(answers, dict):
         return Response(
-            {"data": None, "error": "score and total must be integers"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    if total <= 0 or not 0 <= score <= total:
-        return Response(
-            {"data": None, "error": "score must be between 0 and total"},
+            {"data": None, "error": "answers must be an object keyed by question index"},
             status=status.HTTP_400_BAD_REQUEST,
         )
     if not Enrollment.objects.filter(learner=request.user, course_id=course_id).exists():
@@ -111,6 +110,12 @@ def quiz_attempt(request, course_id: int):
     if lesson.kind != "quiz":
         return Response(
             {"data": None, "error": "Lesson is not a quiz"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    score, total = grade_quiz_answers(lesson.quiz_data, answers)
+    if total <= 0:
+        return Response(
+            {"data": None, "error": "Quiz has no questions"},
             status=status.HTTP_400_BAD_REQUEST,
         )
     prior = ActivityEvent.objects.filter(

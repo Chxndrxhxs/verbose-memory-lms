@@ -3,8 +3,19 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getAssignmentCatalog,
   getAssignmentCategories,
+  getMyPacks,
+  getPacks,
+  type PackListItem,
 } from "@masterlms/shared";
 import { AssignmentCatalog } from "../components/AssignmentCatalog";
+
+function packInCategory(pack: PackListItem, categoryId: number | null, subId: number | null, interId: number | null): boolean {
+  const chain = pack.inter_category;
+  if (interId != null) return chain?.id === interId;
+  if (subId != null) return chain?.sub_category.id === subId;
+  if (categoryId != null) return chain?.category.id === categoryId;
+  return true;
+}
 
 export function AssignmentCatalogContainer() {
   const treeQuery = useQuery({
@@ -14,6 +25,14 @@ export function AssignmentCatalogContainer() {
   const itemsQuery = useQuery({
     queryKey: ["published-assignments"],
     queryFn: getAssignmentCatalog,
+  });
+  const packsQuery = useQuery({
+    queryKey: ["packs"],
+    queryFn: () => getPacks(),
+  });
+  const myPacksQuery = useQuery({
+    queryKey: ["my-packs"],
+    queryFn: getMyPacks,
   });
 
   const [categoryId, setCategoryId] = useState<number | null>(null);
@@ -49,12 +68,25 @@ export function AssignmentCatalogContainer() {
     return items;
   }, [itemsQuery.data, categoryId, subCategoryId, interCategoryId]);
 
+  const { ownedPacks, packsForSale } = useMemo(() => {
+    const ownedIds = new Set((myPacksQuery.data ?? []).map((p) => p.id));
+    const inScope = (packsQuery.data ?? []).filter((p) =>
+      packInCategory(p, categoryId, subCategoryId, interCategoryId),
+    );
+    return {
+      ownedPacks: inScope.filter((p) => p.owned || ownedIds.has(p.id)),
+      packsForSale: inScope.filter((p) => !p.owned && !ownedIds.has(p.id)),
+    };
+  }, [packsQuery.data, myPacksQuery.data, categoryId, subCategoryId, interCategoryId]);
+
   return (
     <AssignmentCatalog
       categories={treeQuery.data ?? []}
       assignments={filtered}
-      isLoading={treeQuery.isLoading || itemsQuery.isLoading}
-      error={(treeQuery.error ?? itemsQuery.error) as Error | null}
+      ownedPacks={ownedPacks}
+      packsForSale={packsForSale}
+      isLoading={treeQuery.isLoading || itemsQuery.isLoading || packsQuery.isLoading}
+      error={(treeQuery.error ?? itemsQuery.error ?? packsQuery.error) as Error | null}
       categoryId={categoryId}
       subCategoryId={subCategoryId}
       interCategoryId={interCategoryId}

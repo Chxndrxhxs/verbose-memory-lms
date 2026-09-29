@@ -14,7 +14,6 @@ from core.pagination import EnvelopePagination, paginate_queryset_view
 from .models import (
     Assignment,
     AssignmentAttempt,
-    AssignmentModel,
     AssignmentQuestion,
     Category,
     InterCategory,
@@ -27,7 +26,9 @@ from .serializers import (
     StructurePayloadSerializer,
 )
 from .services import (
+    AttemptDenied,
     assignment_payload,
+    begin_attempt,
     category_tree_payload,
     collect_leaf_steps,
     extract_document_questions,
@@ -39,7 +40,6 @@ from .services import (
     replace_assignment_structure,
     save_assignment_fields,
     save_attempt_answers,
-    start_attempt,
     submit_attempt,
     take_structure,
 )
@@ -76,7 +76,9 @@ def catalog_tree(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def published_list(request):
-    qs = Assignment.objects.filter(status=Assignment.Status.PUBLISHED).select_related(
+    qs = Assignment.objects.filter(
+        status=Assignment.Status.PUBLISHED, pack__isnull=True
+    ).select_related(
         "inter_category", "inter_category__sub_category", "inter_category__sub_category__category"
     )
     q = request.query_params.get("q", "").strip()
@@ -115,6 +117,17 @@ def detail(request, assignment_id: int):
         return Response(
             {"data": None, "error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND
         )
+    # Pack exam instances are only reachable through the pack flow: managers
+    # always, learners only with a purchase (the take screen needs the
+    # security/results flags; the answer key is never included here).
+    if assignment.pack_id and not _can_manage(request.user):
+        from apps.packs.models import PackPurchase
+
+        owned = PackPurchase.objects.filter(learner=request.user, pack=assignment.pack).exists()
+        if not owned:
+            return Response(
+                {"data": None, "error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND
+            )
     # A catalog page must never disclose the answer key before an attempt starts.
     return ok(assignment_payload(assignment, include_models=False))
 
@@ -125,6 +138,10 @@ def model_choices(request, assignment_id: int):
     try:
         assignment = Assignment.objects.get(id=assignment_id, status=Assignment.Status.PUBLISHED)
     except Assignment.DoesNotExist:
+        return Response(
+            {"data": None, "error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND
+        )
+    if assignment.pack_id:
         return Response(
             {"data": None, "error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND
         )
@@ -166,35 +183,19 @@ def start(request, assignment_id: int):
             status=status.HTTP_403_FORBIDDEN,
         )
 
+    if assignment.pack_id:
+        from apps.packs.services import PackDenied, consume_pack_attempt
+
+        try:
+            consume_pack_attempt(request.user, assignment.pack, assignment, model_id)
+        except PackDenied as exc:
+            return Response({"data": None, "error": exc.payload}, status=exc.status_code)
+
     grade_expired_attempts()
-    existing = AssignmentAttempt.objects.filter(
-        learner=request.user,
-        assignment=assignment,
-        model_id=model_id,
-        status=AssignmentAttempt.Status.IN_PROGRESS,
-    ).first()
-    if existing:
-        return ok({"attempt": _attempt_brief(existing), "structure": take_structure(existing)})
-
-    if assignment.max_attempts > 0:
-        used = AssignmentAttempt.objects.filter(
-            learner=request.user,
-            assignment=assignment,
-            status__in=[AssignmentAttempt.Status.COMPLETED, AssignmentAttempt.Status.EXPIRED],
-        ).count()
-        if used >= assignment.max_attempts:
-            return Response(
-                {"data": None, "error": "Maximum attempts reached"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-    if not assignment.models.filter(id=model_id, is_published=True).exists():
-        return Response(
-            {"data": None, "error": "Model is not available"}, status=status.HTTP_400_BAD_REQUEST
-        )
-
-    model = AssignmentModel.objects.get(id=model_id)
-    attempt = start_attempt(request.user, assignment, model)
+    try:
+        attempt = begin_attempt(request.user, assignment, model_id)
+    except AttemptDenied as exc:
+        return Response({"data": None, "error": str(exc)}, status=exc.status_code)
     return ok({"attempt": _attempt_brief(attempt), "structure": take_structure(attempt)})
 
 
@@ -558,7 +559,10 @@ def admin_duplicate(request, assignment_id: int):
 @api_view(["POST", "PUT"])
 @permission_classes([IsInstructor])
 def admin_generate_questions(request):
-    return ok(generate_questions_from_document(request.data))
+    try:
+        return ok(generate_questions_from_document(request.data))
+    except ValueError as exc:
+        return Response({"data": None, "error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["POST"])

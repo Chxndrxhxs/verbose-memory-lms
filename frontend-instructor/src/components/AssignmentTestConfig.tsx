@@ -10,17 +10,20 @@ import {
   ArrowUp,
   ArrowDown,
 } from "@masterlms/shared";
-import { optionImage, optionText } from "@masterlms/shared";
+import { cn } from "../lib/utils";
+import { builderCardClass } from "../lib/builder";
 import type {
   Assignment,
-  AssignmentSet,
   AssignmentTest,
   AssignmentQuestion,
 } from "../types/assignment";
 import {
   createEmptyTest,
-  createEmptySet,
   createEmptyQuestion,
+  buildMockFromQuestions,
+  formatMinutes,
+  totalConfiguredMinutes,
+  unplacedPoolQuestions,
 } from "../types/assignment";
 
 type Props = {
@@ -28,205 +31,25 @@ type Props = {
   onChange: (patch: Partial<Assignment>) => void;
 };
 
-function SetPanel({
-  set,
-  targetTests,
-  onUpdate,
-  onDelete,
-  onDuplicate,
-  onMoveToTest,
-}: {
-  set: AssignmentSet;
-  targetTests: { id: string; title: string }[];
-  onUpdate: (patch: Partial<AssignmentSet>) => void;
-  onDelete: () => void;
-  onDuplicate: () => void;
-  onMoveToTest: (testId: string) => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const [editingTitle, setEditingTitle] = useState(false);
-
-  const addQuestion = () => {
-    onUpdate({ questions: [...set.questions, createEmptyQuestion()] });
-  };
-
-  const deleteQuestion = (id: string) => {
-    onUpdate({ questions: set.questions.filter((q) => q.id !== id) });
-  };
-
-  const moveQuestion = (id: string, dir: "up" | "down") => {
-    const idx = set.questions.findIndex((q) => q.id === id);
-    if (idx < 0) return;
-    const target = dir === "up" ? idx - 1 : idx + 1;
-    if (target < 0 || target >= set.questions.length) return;
-    const next = [...set.questions];
-    [next[idx], next[target]] = [next[target], next[idx]];
-    onUpdate({ questions: next });
-  };
-
-  return (
-    <div className="rounded-lg border border-zinc-200 bg-zinc-50 ml-4">
-      <div className="flex items-center gap-2 px-3 py-2.5">
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-2"
-        >
-          {expanded ? (
-            <ChevronUp size={14} className="text-zinc-400" />
-          ) : (
-            <ChevronDown size={14} className="text-zinc-400" />
-          )}
-          <Layers size={14} className="text-zinc-500" />
-          {editingTitle ? (
-            <input
-              autoFocus
-              value={set.title}
-              onChange={(e) => onUpdate({ title: e.target.value })}
-              onBlur={() => setEditingTitle(false)}
-              onKeyDown={(e) => e.key === "Enter" && setEditingTitle(false)}
-              className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-sm font-semibold outline-none"
-            />
-          ) : (
-            <span
-              className="text-sm font-semibold text-zinc-700 hover:text-zinc-900 cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditingTitle(true);
-              }}
-            >
-              {set.title}
-            </span>
-          )}
-          <span className="text-[10px] text-zinc-400">
-            {set.questions.length} Q · {set.duration}m
-          </span>
-        </button>
-        <div className="ml-auto flex items-center gap-1">
-          <input
-            type="number"
-            min={1}
-            value={set.duration}
-            onChange={(e) =>
-              onUpdate({ duration: Math.max(1, Number(e.target.value) || 1) })
-            }
-            className="w-14 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs outline-none focus:border-zinc-900"
-            title="Duration (minutes)"
-          />
-          <span className="text-[10px] text-zinc-400">min</span>
-          {targetTests.length > 0 && (
-            <select
-              onChange={(e) => {
-                if (e.target.value) onMoveToTest(e.target.value);
-                e.target.value = "";
-              }}
-              defaultValue=""
-              className="rounded border border-zinc-200 bg-white px-1.5 py-1 text-[10px] outline-none"
-              title="Move set to another test"
-            >
-              <option value="" disabled>
-                Move to test…
-              </option>
-              {targetTests.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.title}
-                </option>
-              ))}
-            </select>
-          )}
-          <button
-            onClick={onDuplicate}
-            className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700"
-          >
-            <Copy size={12} />
-          </button>
-          <button
-            onClick={onDelete}
-            className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:bg-red-50 hover:text-red-500"
-          >
-            <Trash2 size={12} />
-          </button>
-        </div>
-      </div>
-
-      {expanded && (
-        <div className="border-t border-zinc-200 px-3 py-3">
-          {set.questions.map((q, i) => (
-            <div
-              key={q.id}
-              className="mb-1.5 flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm"
-            >
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[9px] font-bold text-zinc-600">
-                {i + 1}
-              </span>
-              <span className="min-w-0 flex-1 truncate text-zinc-700">
-                {q.question || (
-                  <span className="text-zinc-400 italic">Untitled</span>
-                )}
-              </span>
-              <span className="text-[10px] text-zinc-400">
-                {q.options.filter((o) => optionText(o).trim() || Boolean(optionImage(o))).length} opts
-              </span>
-              <button
-                onClick={() => moveQuestion(q.id, "up")}
-                disabled={i === 0}
-                className="flex h-5 w-5 items-center justify-center rounded text-zinc-300 hover:text-zinc-600 disabled:opacity-30"
-              >
-                <ArrowUp size={12} />
-              </button>
-              <button
-                onClick={() => moveQuestion(q.id, "down")}
-                disabled={i === set.questions.length - 1}
-                className="flex h-5 w-5 items-center justify-center rounded text-zinc-300 hover:text-zinc-600 disabled:opacity-30"
-              >
-                <ArrowDown size={12} />
-              </button>
-              <button
-                onClick={() => deleteQuestion(q.id)}
-                className="flex h-5 w-5 items-center justify-center rounded text-zinc-300 hover:text-red-500"
-              >
-                <Trash2 size={10} />
-              </button>
-            </div>
-          ))}
-          <button
-            onClick={addQuestion}
-            className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-zinc-700"
-          >
-            <Plus size={11} /> Add question
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function TestPanel({
   test,
-  modelType,
-  testTitles,
   index,
   totalTests,
   onUpdate,
   onDelete,
   onDuplicate,
-  onAddSet,
   onMoveUp,
   onMoveDown,
-  onMoveSetToTest,
   availableQuestions,
 }: {
   test: AssignmentTest;
-  modelType: "model_2" | "model_3";
-  testTitles: { id: string; title: string }[];
   index: number;
   totalTests: number;
   onUpdate: (patch: Partial<AssignmentTest>) => void;
   onDelete: () => void;
   onDuplicate: () => void;
-  onAddSet: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
-  onMoveSetToTest: (setId: string) => (testId: string) => void;
   availableQuestions: AssignmentQuestion[];
 }) {
   const [expanded, setExpanded] = useState(true);
@@ -234,32 +57,6 @@ function TestPanel({
 
   const addQuestionToTest = () => {
     onUpdate({ questions: [...test.questions, createEmptyQuestion()] });
-  };
-
-  const updateSet = (setId: string, patch: Partial<AssignmentSet>) => {
-    onUpdate({
-      sets: test.sets.map((s) => (s.id === setId ? { ...s, ...patch } : s)),
-    });
-  };
-
-  const deleteSet = (setId: string) => {
-    onUpdate({ sets: test.sets.filter((s) => s.id !== setId) });
-  };
-
-  const duplicateSet = (setId: string) => {
-    const original = test.sets.find((s) => s.id === setId);
-    if (!original) return;
-    const copy: AssignmentSet = {
-      ...createEmptySet(`${original.title} (copy)`),
-      questions: original.questions.map((q) => ({
-        ...q,
-        id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      })),
-    };
-    const idx = test.sets.findIndex((s) => s.id === setId);
-    const next = [...test.sets];
-    next.splice(idx + 1, 0, copy);
-    onUpdate({ sets: next });
   };
 
   const moveQuestionInTest = (id: string, dir: "up" | "down") => {
@@ -370,143 +167,178 @@ function TestPanel({
             />
           </div>
 
-          {modelType === "model_3" ? (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-zinc-500">
-                  Sets ({test.sets.length})
-                </span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-zinc-500">
+                Questions ({test.questions.length})
+              </span>
+              <div className="flex items-center gap-2">
+                {availableQuestions.length > 0 && (
+                  <select
+                    onChange={(e) => {
+                      const qId = e.target.value;
+                      const q = availableQuestions.find(
+                        (aq) => aq.id === qId
+                      );
+                      if (q) {
+                        onUpdate({
+                          questionIds: [...test.questionIds, q.id],
+                          questions: [...test.questions, { ...q }],
+                        });
+                      }
+                      e.target.value = "";
+                    }}
+                    defaultValue=""
+                    className="rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs outline-none"
+                  >
+                    <option value="" disabled>
+                      Assign question…
+                    </option>
+                    {availableQuestions.map((q) => (
+                      <option key={q.id} value={q.id}>
+                        {q.question.slice(0, 40) || "Untitled"}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <button
-                  onClick={onAddSet}
+                  onClick={addQuestionToTest}
                   className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-zinc-700"
                 >
-                  <Plus size={11} /> Add set
+                  <Plus size={11} /> Add question
                 </button>
               </div>
-              {test.sets.map((s) => (
-                <SetPanel
-                  key={s.id}
-                  set={s}
-                  targetTests={testTitles.filter((t) => t.id !== test.id)}
-                  onUpdate={(patch) => updateSet(s.id, patch)}
-                  onDelete={() => deleteSet(s.id)}
-                  onDuplicate={() => duplicateSet(s.id)}
-                  onMoveToTest={(targetTestId) =>
-                    onMoveSetToTest(s.id)(targetTestId)
-                  }
-                />
-              ))}
-              {test.sets.length === 0 && (
-                <p className="py-3 text-center text-xs text-zinc-400">
-                  No sets yet. Click "Add set" to start.
-                </p>
-              )}
             </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-zinc-500">
-                  Questions ({test.questions.length})
+            {test.questions.map((q, i) => (
+              <div
+                key={q.id}
+                className="flex items-center gap-2 rounded-lg bg-zinc-50 px-3 py-2 text-sm"
+              >
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[9px] font-bold text-zinc-600">
+                  {i + 1}
                 </span>
-                <div className="flex items-center gap-2">
-                  {availableQuestions.length > 0 && (
-                    <select
-                      onChange={(e) => {
-                        const qId = e.target.value;
-                        const q = availableQuestions.find(
-                          (aq) => aq.id === qId
-                        );
-                        if (q) {
-                          onUpdate({
-                            questions: [
-                              ...test.questions,
-                              { ...q, id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` },
-                            ],
-                          });
-                        }
-                        e.target.value = "";
-                      }}
-                      defaultValue=""
-                      className="rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs outline-none"
-                    >
-                      <option value="" disabled>
-                        Assign question…
-                      </option>
-                      {availableQuestions.map((q) => (
-                        <option key={q.id} value={q.id}>
-                          {q.question.slice(0, 40) || "Untitled"}
-                        </option>
-                      ))}
-                    </select>
+                <span className="min-w-0 flex-1 truncate text-zinc-700">
+                  {q.question || (
+                    <span className="text-zinc-400 italic">Untitled</span>
                   )}
-                  <button
-                    onClick={addQuestionToTest}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-zinc-700"
-                  >
-                    <Plus size={11} /> Add question
-                  </button>
-                </div>
-              </div>
-              {test.questions.map((q, i) => (
-                <div
-                  key={q.id}
-                  className="flex items-center gap-2 rounded-lg bg-zinc-50 px-3 py-2 text-sm"
+                </span>
+                <button
+                  onClick={() => moveQuestionInTest(q.id, "up")}
+                  disabled={i === 0}
+                  className="flex h-5 w-5 items-center justify-center rounded text-zinc-300 hover:text-zinc-600 disabled:opacity-30"
                 >
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[9px] font-bold text-zinc-600">
-                    {i + 1}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-zinc-700">
-                    {q.question || (
-                      <span className="text-zinc-400 italic">Untitled</span>
-                    )}
-                  </span>
-                  <button
-                    onClick={() => moveQuestionInTest(q.id, "up")}
-                    disabled={i === 0}
-                    className="flex h-5 w-5 items-center justify-center rounded text-zinc-300 hover:text-zinc-600 disabled:opacity-30"
-                  >
-                    <ArrowUp size={12} />
-                  </button>
-                  <button
-                    onClick={() => moveQuestionInTest(q.id, "down")}
-                    disabled={i === test.questions.length - 1}
-                    className="flex h-5 w-5 items-center justify-center rounded text-zinc-300 hover:text-zinc-600 disabled:opacity-30"
-                  >
-                    <ArrowDown size={12} />
-                  </button>
-                  <button
-                    onClick={() =>
-                      onUpdate({
-                        questions: test.questions.filter(
-                          (tq) => tq.id !== q.id
-                        ),
-                      })
-                    }
-                    className="flex h-5 w-5 items-center justify-center rounded text-zinc-300 hover:text-red-500"
-                  >
-                    <Trash2 size={10} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+                  <ArrowUp size={12} />
+                </button>
+                <button
+                  onClick={() => moveQuestionInTest(q.id, "down")}
+                  disabled={i === test.questions.length - 1}
+                  className="flex h-5 w-5 items-center justify-center rounded text-zinc-300 hover:text-zinc-600 disabled:opacity-30"
+                >
+                  <ArrowDown size={12} />
+                </button>
+                <button
+                  onClick={() =>
+                    onUpdate({
+                      questions: test.questions.filter(
+                        (tq) => tq.id !== q.id
+                      ),
+                    })
+                  }
+                  className="flex h-5 w-5 items-center justify-center rounded text-zinc-300 hover:text-red-500"
+                >
+                  <Trash2 size={10} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
+function UnplacedPanel({
+  unplaced,
+  targets,
+  emptyTargets,
+  onPlace,
+}: {
+  unplaced: AssignmentQuestion[];
+  targets: { id: string; label: string }[];
+  emptyTargets: boolean;
+  onPlace: (question: AssignmentQuestion, targetId: string) => void;
+}) {
+  const [choices, setChoices] = useState<Record<string, string>>({});
+  return (
+    <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <p className="text-xs font-bold text-amber-800">
+        {unplaced.length} pooled question{unplaced.length === 1 ? "" : "s"} not in
+        any section — they won&apos;t reach students until placed.
+      </p>
+      {emptyTargets ? (
+        <p className="mt-1 text-xs text-amber-700">
+          Add a test below (or auto-arrange) to place them.
+        </p>
+      ) : (
+        <ul className="mt-2 max-h-48 space-y-1.5 overflow-y-auto">
+          {unplaced.map((q) => {
+            const chosen = choices[q.id] ?? targets[0]?.id ?? "";
+            return (
+              <li
+                key={q.id}
+                className="flex items-center gap-2 rounded-lg bg-white px-3 py-1.5"
+              >
+                <span className="min-w-0 flex-1 truncate text-xs text-zinc-700">
+                  {q.question || <span className="italic text-zinc-400">Untitled</span>}
+                </span>
+                <select
+                  value={chosen}
+                  onChange={(e) =>
+                    setChoices((prev) => ({ ...prev, [q.id]: e.target.value }))
+                  }
+                  className={cn(
+                    "max-w-36 truncate rounded-lg border border-zinc-200 bg-white",
+                    "px-2 py-1 text-[11px] outline-none",
+                  )}
+                >
+                  {targets.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => chosen && onPlace(q, chosen)}
+                  className={cn(
+                    "shrink-0 rounded-full bg-zinc-900 px-3 py-1 text-[11px]",
+                    "font-semibold text-white",
+                  )}
+                >
+                  Place
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function AssignmentTestConfigStep({ assignment, onChange }: Props) {
-  if (assignment.modelType === "model_1") {
+  if (assignment.modelType === "practice") {
     return (
-      <div className="rounded-2xl bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-bold text-zinc-900">Configuration</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          Model 1 (Direct MCQ) doesn&apos;t require test/set configuration.
+      <div className={builderCardClass}>
+        <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+          Sections
+        </p>
+        <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">Configuration</h2>
+        <p className="mt-1.5 text-[15px] text-zinc-500">
+          Practice doesn&apos;t require test/set configuration.
           Questions are placed directly under the assignment.
         </p>
-        <div className="mt-4 rounded-xl bg-zinc-50 p-4">
-          <p className="text-xs text-zinc-600">
+        <div className="mt-6 rounded-2xl border border-zinc-200/70 bg-zinc-50/70 p-5">
+          <p className="text-sm text-zinc-600">
             Your assignment has {assignment.questions.length} question(s) with a
             total duration of {assignment.duration} minute(s). Adjust these in
             the Basic Info step or the Preview step.
@@ -517,15 +349,9 @@ export function AssignmentTestConfigStep({ assignment, onChange }: Props) {
   }
 
   // Drafts created before question arrays were added can still be opened safely.
-  // model_3 reuses the same `tests` array: each test's `sets` hold the arranged
-  // questions, so there is exactly one TestPanel source of truth.
   const tests = assignment.tests.map((test) => ({
     ...test,
     questions: test.questions ?? [],
-    sets: (test.sets ?? []).map((set) => ({
-      ...set,
-      questions: set.questions ?? [],
-    })),
   }));
 
   const addTest = () => {
@@ -560,28 +386,11 @@ export function AssignmentTestConfigStep({ assignment, onChange }: Props) {
         ...q,
         id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       })),
-      sets: original.sets.map((s) => ({
-        ...createEmptySet(s.title),
-        duration: s.duration,
-        questions: s.questions.map((q) => ({
-          ...q,
-          id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        })),
-      })),
     };
     const idx = tests.findIndex((t) => t.id === testId);
     const next = [...tests];
     next.splice(idx + 1, 0, copy);
     onChange({ tests: next });
-  };
-
-  const addSetToTest = (testId: string) => {
-    const test = tests.find((t) => t.id === testId);
-    if (!test) return;
-    const setNum = test.sets.length + 1;
-    updateTest(testId, {
-      sets: [...test.sets, createEmptySet(`Set ${setNum}`)],
-    });
   };
 
   const moveTest = (testId: string, dir: "up" | "down") => {
@@ -594,94 +403,136 @@ export function AssignmentTestConfigStep({ assignment, onChange }: Props) {
     onChange({ tests: next });
   };
 
-  const buildMoveSetToTest =
-    (setId: string) =>
-    (targetTestId: string) => {
-      const sourceIdx = tests.findIndex((t) =>
-        t.sets.some((s) => s.id === setId)
-      );
-      const source = tests[sourceIdx];
-      const set = source?.sets.find((s) => s.id === setId);
-      if (!source || !set) return;
-      const targetIdx = tests.findIndex(
-        (t) => t.id === targetTestId
-      );
-      if (targetIdx < 0) return;
-      const next = tests.map((t, i) => {
-        if (i === sourceIdx) {
-          return { ...t, sets: t.sets.filter((s) => s.id !== setId) };
-        }
-        if (i === targetIdx) {
-          return { ...t, sets: [...t.sets, set] };
-        }
-        return t;
-      });
-      onChange({ tests: next });
-    };
-
   const availableQuestions = assignment.questions.filter(
     (q) =>
       !tests.some((t) =>
         t.questions.some((tq) => tq.id === q.id)
       )
   );
+  const unplaced = unplacedPoolQuestions(assignment);
+  const placedCount = assignment.questions.length - unplaced.length;
+  const totalMinutes = totalConfiguredMinutes(assignment);
+
+  const autoArrange = () => {
+    if (assignment.questions.length === 0) return;
+    if (
+      tests.length > 0 &&
+      !window.confirm(
+        "Replace the current test arrangement with an automatic split by category?"
+      )
+    ) {
+      return;
+    }
+    onChange({
+      tests: buildMockFromQuestions(assignment.questions, assignment.duration),
+    });
+  };
+
+  const placeUnplaced = (question: AssignmentQuestion, targetId: string) => {
+    onChange({
+      tests: tests.map((t) =>
+        t.id === targetId
+          ? {
+              ...t,
+              questionIds: [...t.questionIds, question.id],
+              questions: [...t.questions, { ...question }],
+            }
+          : t
+      ),
+    });
+  };
+
+  const setOptions = tests.map((t) => ({ id: t.id, label: t.title }));
 
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm">
-      <div className="flex items-center justify-between">
+    <div className={builderCardClass}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-zinc-900">
-            Configure {assignment.modelType === "model_2" ? "Tests" : "Tests & Sets"}
+          <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+            Sections
+          </p>
+          <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">
+            Configure mock test sections
           </h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Organize questions into{" "}
-            {assignment.modelType === "model_2"
-              ? "tests"
-              : "tests and sets"}
-            {" "}with individual durations.
+          <p className="mt-1.5 text-[15px] text-zinc-500">
+            {tests.length} test{tests.length === 1 ? "" : "s"} · {placedCount} of{" "}
+            {assignment.questions.length} questions placed
+            {unplaced.length > 0 && (
+              <span className="font-semibold text-amber-700">
+                {" "}· {unplaced.length} unplaced
+              </span>
+            )}{" "}
+            · {formatMinutes(totalMinutes)} total
           </p>
         </div>
-        <button
-          onClick={addTest}
-          className="inline-flex items-center gap-1.5 rounded-full bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:opacity-90"
-        >
-          <Plus size={13} /> Add test
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={autoArrange}
+            disabled={assignment.questions.length === 0}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border",
+              "border-zinc-300 px-4 py-2 text-xs font-semibold",
+              "hover:bg-zinc-50 disabled:opacity-40",
+            )}
+            title="Split the pool into tests by category"
+          >
+            <Layers size={13} /> Auto-arrange
+          </button>
+          <button
+            onClick={addTest}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full bg-zinc-900",
+              "px-4 py-2 text-xs font-semibold text-white hover:opacity-90",
+            )}
+          >
+            <Plus size={13} /> Add test
+          </button>
+        </div>
       </div>
+
+      {unplaced.length > 0 && (
+        <UnplacedPanel
+          unplaced={unplaced}
+          targets={setOptions}
+          emptyTargets={tests.length === 0}
+          onPlace={placeUnplaced}
+        />
+      )}
 
       <div className="mt-4 space-y-4">
         {tests.map((test, i) => (
           <TestPanel
             key={test.id}
             test={test}
-            modelType={assignment.modelType as "model_2" | "model_3"}
-            testTitles={tests.map((t) => ({
-              id: t.id,
-              title: t.title,
-            }))}
             index={i}
             totalTests={tests.length}
             onUpdate={(patch) => updateTest(test.id, patch)}
             onDelete={() => deleteTest(test.id)}
             onDuplicate={() => duplicateTest(test.id)}
-            onAddSet={() => addSetToTest(test.id)}
             onMoveUp={() => moveTest(test.id, "up")}
             onMoveDown={() => moveTest(test.id, "down")}
-            onMoveSetToTest={buildMoveSetToTest}
             availableQuestions={availableQuestions}
           />
         ))}
       </div>
 
       {tests.length === 0 && (
-        <div className="mt-6 flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 py-12 text-center">
+        <div
+          className={cn(
+            "mt-6 flex flex-col items-center justify-center rounded-xl",
+            "border border-dashed border-zinc-300 py-12 text-center",
+          )}
+        >
           <p className="text-sm font-semibold text-zinc-600">No tests yet</p>
           <p className="mt-1 text-xs text-zinc-400">
             Add a test to organize your questions.
           </p>
           <button
             onClick={addTest}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-zinc-900 px-4 py-2 text-xs font-semibold text-white"
+            className={cn(
+              "mt-3 inline-flex items-center gap-1.5 rounded-full bg-zinc-900",
+              "px-4 py-2 text-xs font-semibold text-white",
+            )}
           >
             <Plus size={13} /> Add test
           </button>

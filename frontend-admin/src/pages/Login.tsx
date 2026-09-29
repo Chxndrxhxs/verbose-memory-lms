@@ -71,14 +71,15 @@ export default function Login() {
         method: "POST",
         body: JSON.stringify({ mobile, code }),
       });
-      if (data.user.role !== "admin") {
-        await api("/auth/become-admin", { method: "POST" });
-      }
       const me = await api<VerifyUser>("/users/me");
       return { me, isNew: data.is_new };
     },
     onSuccess: ({ me }) => {
       verifyDone.current = true;
+      if (me.role !== "admin") {
+        showToast("This account is not an admin. Ask an existing admin to grant access.");
+        return;
+      }
       setUser({
         name: me.name || "Admin",
         email: me.email,

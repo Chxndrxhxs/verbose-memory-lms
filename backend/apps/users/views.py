@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .authentication import auth_app, clear_auth_cookies, cookie_names, set_auth_cookies
 from .serializers import (
     CompleteProfileSerializer,
     SendOTPSerializer,
@@ -15,32 +16,6 @@ from .serializers import (
 )
 from .services import send_otp
 
-ACCESS_MAX_AGE = 1800
-REFRESH_MAX_AGE = 604800
-
-
-def set_auth_cookies(res: Response, tokens: dict) -> Response:
-    secure = not settings.DEBUG
-    res.set_cookie(
-        "access_token",
-        tokens["access"],
-        httponly=True,
-        secure=secure,
-        samesite="Lax",
-        max_age=ACCESS_MAX_AGE,
-        path="/",
-    )
-    res.set_cookie(
-        "refresh_token",
-        tokens["refresh"],
-        httponly=True,
-        secure=secure,
-        samesite="Lax",
-        max_age=REFRESH_MAX_AGE,
-        path="/",
-    )
-    return res
-
 
 class SendOTPView(APIView):
     permission_classes = [AllowAny]
@@ -48,8 +23,20 @@ class SendOTPView(APIView):
     def post(self, request):
         s = SendOTPSerializer(data=request.data)
         s.is_valid(raise_exception=True)
-        otp = send_otp(s.validated_data["mobile"])
-        return Response({"data": {"message": "OTP sent", "mock_code": otp.code}, "error": None})
+        send_otp(s.validated_data["mobile"])
+        payload: dict = {"message": "OTP sent"}
+        # Dev only: tests and local toasts still need the code. Never in prod.
+        if settings.DEBUG:
+            from .models import OTP as OTPModel
+
+            latest = (
+                OTPModel.objects.filter(mobile=s.validated_data["mobile"], is_used=False)
+                .order_by("-created_at")
+                .first()
+            )
+            if latest is not None:
+                payload["mock_code"] = latest.code
+        return Response({"data": payload, "error": None})
 
 
 class VerifyOTPView(APIView):
@@ -69,7 +56,7 @@ class VerifyOTPView(APIView):
                 "error": None,
             }
         )
-        return set_auth_cookies(res, tokens)
+        return set_auth_cookies(res, tokens, auth_app(request))
 
 
 class MeView(APIView):
@@ -79,17 +66,13 @@ class MeView(APIView):
     def delete(self, request):
         request.user.delete()
         res = Response({"data": {"message": "Account deleted"}, "error": None})
-        res.delete_cookie("access_token", path="/")
-        res.delete_cookie("refresh_token", path="/")
-        return res
+        return clear_auth_cookies(res, auth_app(request))
 
 
 class LogoutView(APIView):
     def post(self, request):
         res = Response({"data": {"message": "Logged out"}, "error": None})
-        res.delete_cookie("access_token", path="/")
-        res.delete_cookie("refresh_token", path="/")
-        return res
+        return clear_auth_cookies(res, auth_app(request))
 
 
 class CompleteProfileView(APIView):
@@ -112,19 +95,13 @@ class BecomeInstructorView(APIView):
         return Response({"data": UserSerializer(request.user).data, "error": None})
 
 
-class BecomeAdminView(APIView):
-    def post(self, request):
-        if request.user.role != "admin":
-            request.user.role = "admin"
-            request.user.save(update_fields=["role"])
-        return Response({"data": UserSerializer(request.user).data, "error": None})
-
-
 class CookieRefreshView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        raw = request.COOKIES.get("refresh_token")
+        app = auth_app(request)
+        _, refresh_name = cookie_names(app)
+        raw = request.COOKIES.get(refresh_name)
         if not raw:
             return Response(
                 {"data": None, "error": "Missing refresh token"},
@@ -148,4 +125,5 @@ class CookieRefreshView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         tokens = tokens_for(user)
-        return set_auth_cookies(Response({"data": {"refreshed": True}, "error": None}), tokens)
+        res = Response({"data": {"refreshed": True}, "error": None})
+        return set_auth_cookies(res, tokens, app)

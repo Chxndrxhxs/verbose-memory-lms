@@ -6,15 +6,19 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Eraser,
   PhoneOff,
   AlertCircle,
   Flag,
-  Lock,
   type AssignmentAttemptBrief,
 } from "@masterlms/shared";
 import { absoluteMediaUrl, optionImage, optionText } from "@masterlms/shared";
-import type { QuestionRow } from "../hooks/useAssignmentQuestionState";
+import { cn } from "../lib/utils";
+import type {
+  QuestionRow,
+  QuestionSection,
+} from "../hooks/useAssignmentQuestionState";
 import { LiveCamera } from "./LiveCamera";
 import { SubmitConfirmModal } from "./SubmitConfirmModal";
 import { TopNav } from "./TopNav";
@@ -27,12 +31,26 @@ type Counts = {
   total: number;
 };
 
+const chip = "rounded-full px-2 py-0.5 text-[11px]";
+
+const navBtn = cn(
+  "inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5",
+  "text-sm font-semibold transition",
+);
+
+const actionBtn = cn(
+  "inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5",
+  "text-sm font-semibold transition",
+);
+
 type Props = {
   title: string | null;
   attempt: AssignmentAttemptBrief;
   questions: QuestionRow[];
+  sections: QuestionSection[];
   counts: Counts;
   currentIndex: number;
+  currentSectionIndex: number;
   saveStatus: "idle" | "saving" | "saved" | "error";
   violations: number;
   isFullscreen: boolean;
@@ -41,20 +59,25 @@ type Props = {
   onMarkForReview: () => void;
   onClear: () => void;
   onGoTo: (index: number) => void;
+  onGoToSection: (sectionIndex: number) => void;
   onNext: () => void;
   onPrevious: () => void;
   onEnterFullscreen: () => void;
   onSubmit: () => void;
   onAutoSubmit: () => void;
   submitting: boolean;
+  /** Practice mode: untimed, unproctored, inline explanations. */
+  practice: boolean;
 };
 
 export function AssignmentTakeView({
   title,
   attempt,
   questions,
+  sections,
   counts,
   currentIndex,
+  currentSectionIndex,
   saveStatus,
   violations,
   isFullscreen,
@@ -63,12 +86,14 @@ export function AssignmentTakeView({
   onMarkForReview,
   onClear,
   onGoTo,
+  onGoToSection,
   onNext,
   onPrevious,
   onEnterFullscreen,
   onSubmit,
   onAutoSubmit,
   submitting,
+  practice,
 }: Props) {
   const [now, setNow] = useState(() => Date.now());
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -83,9 +108,9 @@ export function AssignmentTakeView({
   }, []);
 
   useEffect(() => {
-    if (secondsLeft <= 0) onAutoSubmit();
+    if (!practice && secondsLeft <= 0) onAutoSubmit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secondsLeft]);
+  }, [secondsLeft, practice]);
 
   const current = questions[currentIndex];
 
@@ -98,10 +123,49 @@ export function AssignmentTakeView({
     return () => window.removeEventListener("keydown", onKey);
   }, [confirmOpen]);
 
+  // Keyboard answering: A–D / 1–4 to pick, arrows to move.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (confirmOpen || submitting) return;
+      const target = event.target as HTMLElement | null;
+      if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const optionCount = questions[currentIndex]?.options.length ?? 0;
+      const key = event.key.toLowerCase();
+      const letters = ["a", "b", "c", "d", "e", "f"];
+      const letterIdx = letters.indexOf(key);
+      if (letterIdx >= 0 && letterIdx < optionCount) {
+        event.preventDefault();
+        onAnswer(letterIdx);
+        return;
+      }
+      if (key >= "1" && key <= "6") {
+        const idx = Number(key) - 1;
+        if (idx < optionCount) {
+          event.preventDefault();
+          onAnswer(idx);
+        }
+        return;
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        onNext();
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        onPrevious();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [confirmOpen, submitting, currentIndex, questions, onAnswer, onNext, onPrevious]);
+
   const handlePaletteClick = (index: number) => {
     onGoTo(index);
     if (window.innerWidth < 1024) setPaletteOpen(false);
   };
+
+  const answeredPct =
+    counts.total > 0 ? Math.round((counts.answered / counts.total) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-[#f6f5f1]">
@@ -113,15 +177,32 @@ export function AssignmentTakeView({
         saveStatus={saveStatus}
         violations={violations}
         isFullscreen={isFullscreen}
+        practice={practice}
         onSubmit={() => setConfirmOpen(true)}
         submitting={submitting}
       />
 
       <div className="mx-auto max-w-7xl px-3 py-5 sm:px-6">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-zinc-200">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+              style={{ width: `${answeredPct}%` }}
+            />
+          </div>
+          <p className="shrink-0 text-xs font-semibold text-zinc-500 tabular-nums">
+            {counts.answered} of {counts.total} answered
+          </p>
+        </div>
+
         {/* Mobile palette toggle */}
         <button
           onClick={() => setPaletteOpen((v) => !v)}
-          className="mb-4 flex w-full items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-700 transition lg:hidden"
+          className={cn(
+            "mb-4 flex w-full items-center justify-between rounded-xl border",
+            "border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-700",
+            "transition lg:hidden",
+          )}
         >
           <span className="flex items-center gap-2">
             <Flag size={16} className="text-zinc-400" />
@@ -130,36 +211,39 @@ export function AssignmentTakeView({
               {counts.total}
             </span>
           </span>
-          <ChevronDownIcon open={paletteOpen} />
+          <ChevronDown
+            size={15}
+            className={cn("text-zinc-400 transition-transform", paletteOpen && "rotate-180")}
+          />
         </button>
 
         {paletteOpen && (
           <div className="mb-4 lg:hidden">
             <QuestionPalette
               questions={questions}
+              sections={sections}
               currentIndex={currentIndex}
+              currentSectionIndex={currentSectionIndex}
               onSelect={handlePaletteClick}
+              onSelectSection={onGoToSection}
             />
           </div>
         )}
 
-        {secondsLeft <= 300 && !submitting && (
-          <div className="mt-2 flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+        {!practice && secondsLeft <= 300 && !submitting && (
+          <div
+            className={cn(
+              "mt-2 flex items-center gap-2 rounded-2xl border border-red-200",
+              "bg-red-50 px-4 py-3 text-xs font-semibold text-red-700",
+            )}
+          >
             <Clock size={14} />
-            Time is almost up! {formatCountdown(secondsLeft)} remaining — your assignment will be
-            submitted automatically.
+            Time is almost up! {formatCountdown(secondsLeft)} remaining — your
+            assignment will be submitted automatically.
           </div>
         )}
 
-        {!isFullscreen && (
-          <div className="mt-2 flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-900 px-4 py-2.5 text-[11px] font-semibold text-white">
-            <Lock size={13} />
-            Lockdown mode: keyboard shortcuts, Esc, right-click and browser inspect tools are disabled
-            during the exam.
-          </div>
-        )}
-
-        {!isFullscreen && (
+        {!practice && (
           <ProctorBanner
             violations={violations}
             isFullscreen={isFullscreen}
@@ -167,27 +251,50 @@ export function AssignmentTakeView({
           />
         )}
 
-        <div className="mt-2 flex flex-col gap-6 lg:flex-row">
+        <div className="mt-4 flex flex-col gap-6 lg:flex-row">
           {/* Question area */}
           <div className="min-w-0 flex-1 space-y-4">
+            {sections.length > 1 && (
+              <SectionTabs
+                sections={sections}
+                questions={questions}
+                currentSectionIndex={currentSectionIndex}
+                onSelect={onGoToSection}
+              />
+            )}
             {current && (
               <div className="rounded-[22px] border bg-white p-5 sm:p-6">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-medium leading-relaxed sm:text-[15px]">
-                    <span className="mr-2 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-bold text-zinc-600">
-                      {current.index + 1}
-                    </span>
-                    {current.question}
-                  </p>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-semibold text-zinc-500">
-                      {current.marks} {Number(current.marks) === 1 ? "mark" : "marks"}
-                    </span>
-                    {current.markedForReview && (
-                      <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-semibold text-orange-600">
-                        Marked for review
-                      </span>
+                <div className="flex items-start gap-3">
+                  <span
+                    className={cn(
+                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+                      "bg-zinc-900 text-xs font-bold text-white",
                     )}
+                  >
+                    {current.index + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm leading-relaxed font-medium sm:text-[15px]">
+                      {current.question}
+                    </p>
+                    <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <span className={cn(chip, "bg-zinc-100 font-semibold text-zinc-500")}>
+                        {current.marks}{" "}
+                        {Number(current.marks) === 1 ? "mark" : "marks"}
+                      </span>
+                      {current.topic && (
+                        <span className={cn(chip, "bg-sky-100 font-bold text-sky-700")}>
+                          {current.topic}
+                        </span>
+                      )}
+                      {current.markedForReview && (
+                        <span
+                          className={cn(chip, "bg-orange-100 font-semibold text-orange-600")}
+                        >
+                          Marked for review
+                        </span>
+                      )}
+                    </p>
                   </div>
                 </div>
                 {current.questionImage && (
@@ -197,11 +304,6 @@ export function AssignmentTakeView({
                     className="mt-3 h-44 w-full rounded-xl border border-zinc-200 object-contain"
                   />
                 )}
-                {current.topic && (
-                  <p className="ml-8 mt-1 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
-                    {current.topic} · {current.difficulty}
-                  </p>
-                )}
                 <div className="mt-4 space-y-2">
                   {current.options.map((option, oi) => {
                     const checked = current.selected === oi;
@@ -210,16 +312,22 @@ export function AssignmentTakeView({
                       <button
                         key={oi}
                         onClick={() => onAnswer(oi)}
-                        className={`flex w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm transition ${
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-xl border",
+                          "px-3.5 py-2.5 text-left text-sm transition",
                           checked
                             ? "border-zinc-900 bg-zinc-900 text-white"
-                            : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
-                        }`}
+                            : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400",
+                        )}
                       >
                         <span
-                          className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-                            checked ? "bg-white text-zinc-900" : "bg-zinc-100 text-zinc-500"
-                          }`}
+                          className={cn(
+                            "inline-flex h-5 w-5 shrink-0 items-center justify-center",
+                            "rounded-full text-[11px] font-bold",
+                            checked
+                              ? "bg-white text-zinc-900"
+                              : "bg-zinc-100 text-zinc-500",
+                          )}
                         >
                           {String.fromCharCode(65 + oi)}
                         </span>
@@ -227,7 +335,10 @@ export function AssignmentTakeView({
                           <img
                             src={absoluteMediaUrl(image) ?? image}
                             alt={optionText(option)}
-                            className="h-16 w-24 shrink-0 rounded-md border border-zinc-200 bg-white object-contain"
+                            className={cn(
+                              "h-16 w-24 shrink-0 rounded-md border border-zinc-200",
+                              "bg-white object-contain",
+                            )}
                           />
                         )}
                         <span className="min-w-0">{optionText(option)}</span>
@@ -236,39 +347,64 @@ export function AssignmentTakeView({
                     );
                   })}
                 </div>
-                {current.selected !== undefined && (
-                  <p className="mt-3 text-[11px] font-semibold text-emerald-600">
-                    Selected option {String.fromCharCode(65 + current.selected)}
-                  </p>
+                {practice && current.selected !== undefined && current.explanation && (
+                  <div
+                    className={cn(
+                      "mt-3 rounded-xl bg-emerald-50 p-3 text-xs leading-relaxed",
+                      "text-emerald-900",
+                    )}
+                  >
+                    <p className="font-bold">Explanation</p>
+                    <p className="mt-0.5">{current.explanation}</p>
+                  </div>
                 )}
               </div>
             )}
 
             {/* Navigation buttons */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white p-4">
+            <div
+              className={cn(
+                "flex flex-wrap items-center justify-between gap-3",
+                "rounded-2xl border bg-white p-4",
+              )}
+            >
               <button
                 onClick={onPrevious}
                 disabled={currentIndex === 0}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 disabled:cursor-not-allowed disabled:opacity-40"
+                className={cn(
+                  navBtn,
+                  "border border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400",
+                  "disabled:cursor-not-allowed disabled:opacity-40",
+                )}
               >
                 <ChevronLeft size={15} /> Previous
               </button>
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={onClear}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100"
+                  className={cn(
+                    actionBtn,
+                    "border border-red-200 bg-red-50 text-red-600 hover:bg-red-100",
+                  )}
                 >
-                  <Eraser size={14} /> Clear Answer
+                  <Eraser size={14} /> Clear
                 </button>
                 <button
                   onClick={onMarkForReview}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-3.5 py-2.5 text-sm font-semibold text-orange-600 transition hover:bg-orange-100"
+                  className={cn(
+                    actionBtn,
+                    "border border-orange-200 bg-orange-50 text-orange-600",
+                    "hover:bg-orange-100",
+                  )}
                 >
-                  <Flag size={14} /> Mark for Review
+                  <Flag size={14} /> Review later
                 </button>
                 <button
                   onClick={onNext}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50"
+                  className={cn(
+                    actionBtn,
+                    "bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-50",
+                  )}
                 >
                   Save &amp; Next <ChevronRight size={15} />
                 </button>
@@ -278,6 +414,7 @@ export function AssignmentTakeView({
             <div className="flex items-center justify-between px-1 text-xs text-zinc-400">
               <span>
                 Question {currentIndex + 1} of {questions.length}
+                <span className="hidden sm:inline"> · press A–D to answer, ← → to move</span>
               </span>
               <span className="flex items-center gap-3">
                 {violations > 0 && (
@@ -301,11 +438,14 @@ export function AssignmentTakeView({
 
           {/* Palette sidebar */}
           <aside className="hidden w-64 shrink-0 lg:block xl:w-72">
-            <div className={`sticky ${isFullscreen ? "top-[80px]" : "top-[150px]"}`}>
+            <div className={cn("sticky", isFullscreen ? "top-[80px]" : "top-[150px]")}>
               <QuestionPalette
                 questions={questions}
+                sections={sections}
                 currentIndex={currentIndex}
+                currentSectionIndex={currentSectionIndex}
                 onSelect={handlePaletteClick}
+                onSelectSection={onGoToSection}
               />
             </div>
           </aside>
@@ -333,6 +473,7 @@ function TopBar({
   saveStatus,
   violations,
   isFullscreen,
+  practice,
   onSubmit,
   submitting,
 }: {
@@ -342,14 +483,16 @@ function TopBar({
   saveStatus: "idle" | "saving" | "saved" | "error";
   violations: number;
   isFullscreen: boolean;
+  practice: boolean;
   onSubmit: () => void;
   submitting: boolean;
 }) {
   return (
     <div
-      className={`sticky z-20 border-b border-zinc-200 bg-white/95 px-3 py-3 backdrop-blur sm:px-6 ${
-        isFullscreen ? "top-0" : "top-[53px]"
-      }`}
+      className={cn(
+        "sticky z-20 border-b border-zinc-200 bg-white/95 px-3 py-3 backdrop-blur sm:px-6",
+        isFullscreen ? "top-0" : "top-[53px]",
+      )}
     >
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
@@ -360,28 +503,55 @@ function TopBar({
         </div>
         <div className="flex items-center gap-3">
           {saveStatus === "error" && (
-            <span className="hidden items-center gap-1 text-xs font-semibold text-red-500 sm:inline-flex">
+            <span
+              className={cn(
+                "hidden items-center gap-1 text-xs font-semibold text-red-500",
+                "sm:inline-flex",
+              )}
+            >
               <AlertCircle size={12} /> Offline — retrying
             </span>
           )}
           {violations > 0 && (
-            <span className="hidden items-center gap-1 text-xs font-semibold text-amber-600 sm:inline-flex">
+            <span
+              className={cn(
+                "hidden items-center gap-1 text-xs font-semibold text-amber-600",
+                "sm:inline-flex",
+              )}
+            >
               <PhoneOff size={12} /> {violations} violation{violations === 1 ? "" : "s"}
             </span>
           )}
-          <div
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold tabular-nums ${
-              secondsLeft < 60
-                ? "animate-pulse bg-red-100 text-red-700"
-                : "bg-zinc-900 text-white"
-            }`}
-          >
-            <Clock size={14} /> {formatCountdown(secondsLeft)}
-          </div>
+          {practice ? (
+            <div
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full bg-emerald-100",
+                "px-3 py-1.5 text-sm font-bold text-emerald-800",
+              )}
+            >
+              <Clock size={14} /> Untimed practice
+            </div>
+          ) : (
+            <div
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5",
+                "text-sm font-bold tabular-nums",
+                secondsLeft < 60
+                  ? "animate-pulse bg-red-100 text-red-700"
+                  : "bg-zinc-900 text-white",
+              )}
+            >
+              <Clock size={14} /> {formatCountdown(secondsLeft)}
+            </div>
+          )}
           <button
             onClick={onSubmit}
             disabled={submitting}
-            className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full bg-emerald-600",
+              "px-4 py-2 text-sm font-semibold text-white transition",
+              "hover:bg-emerald-700 disabled:opacity-60",
+            )}
           >
             Submit
           </button>
@@ -402,37 +572,36 @@ function ProctorBanner({
 }) {
   return (
     <div
-      className={`mt-2 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-xs ${
+      className={cn(
+        "mt-4 flex flex-wrap items-center justify-between gap-3",
+        "rounded-2xl border px-4 py-3 text-xs",
         isFullscreen
           ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-          : "border-amber-200 bg-amber-50 text-amber-800"
-      }`}
+          : "border-amber-200 bg-amber-50 text-amber-800",
+      )}
     >
       <span className="flex items-center gap-2">
         <AlertTriangle size={14} />
         {isFullscreen ? (
           <>
-            Fullscreen is active. This exam is monitored with your camera ON — switching tabs,
-            copying content, or disconnecting the camera is recorded and may auto-submit your
-            attempt.
+            Fullscreen is on. Tab switches, copying, and camera disconnects are
+            recorded{violations > 0 && ` — ${violations} recorded so far`} and may
+            auto-submit your attempt.
           </>
         ) : (
           <>
-            This exam is monitored with your camera ON. You must stay in fullscreen — leaving it,
-            switching tabs, copying content, or disconnecting the camera is recorded and may
-            auto-submit your attempt.
+            This exam is monitored — stay in fullscreen. Shortcuts, right-click and
+            inspect tools are disabled while you take it.
           </>
-        )}
-        {violations > 0 && (
-          <strong className={isFullscreen ? "text-emerald-700" : "text-amber-700"}>
-            {violations} {violations === 1 ? "violation" : "violations"} recorded.
-          </strong>
         )}
       </span>
       {!isFullscreen && (
         <button
           onClick={onEnterFullscreen}
-          className="rounded-full bg-amber-600 px-3 py-1.5 font-semibold text-white transition hover:bg-amber-700"
+          className={cn(
+            "rounded-full bg-amber-600 px-3 py-1.5 font-semibold text-white",
+            "transition hover:bg-amber-700",
+          )}
         >
           Enter fullscreen
         </button>
@@ -441,14 +610,73 @@ function ProctorBanner({
   );
 }
 
-function QuestionPalette({
+function SectionTabs({
+  sections,
   questions,
-  currentIndex,
+  currentSectionIndex,
   onSelect,
 }: {
+  sections: QuestionSection[];
   questions: QuestionRow[];
+  currentSectionIndex: number;
+  onSelect: (sectionIndex: number) => void;
+}) {
+  return (
+    <div
+      className="flex gap-2 overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-2"
+      role="tablist"
+      aria-label="Exam sections"
+    >
+      {sections.map((section, i) => {
+        const rows = questions.slice(section.startIndex, section.endIndex + 1);
+        const answered = rows.filter((q) => q.status === "answered").length;
+        const active = i === currentSectionIndex;
+        return (
+          <button
+            key={`${section.stepId}-${i}`}
+            role="tab"
+            aria-selected={active}
+            onClick={() => onSelect(i)}
+            className={cn(
+              "min-w-0 flex-1 rounded-xl px-3 py-2 text-left transition",
+              active
+                ? "bg-zinc-900 text-white shadow-sm"
+                : "bg-zinc-50 text-zinc-700 hover:bg-zinc-100",
+            )}
+          >
+            <span className="block truncate text-xs font-bold">
+              {section.name}
+            </span>
+            <span
+              className={cn(
+                "mt-0.5 block text-[11px] tabular-nums",
+                active ? "text-white/70" : "text-zinc-400",
+              )}
+            >
+              {answered}/{rows.length} done · Q{section.startIndex + 1}–
+              {section.endIndex + 1}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function QuestionPalette({
+  questions,
+  sections,
+  currentIndex,
+  currentSectionIndex,
+  onSelect,
+  onSelectSection,
+}: {
+  questions: QuestionRow[];
+  sections: QuestionSection[];
   currentIndex: number;
+  currentSectionIndex: number;
   onSelect: (index: number) => void;
+  onSelectSection: (sectionIndex: number) => void;
 }) {
   const counts = useMemo(
     () => ({
@@ -459,6 +687,7 @@ function QuestionPalette({
     }),
     [questions],
   );
+  const grouped = sections.length > 1;
 
   return (
     <div className="rounded-[22px] border bg-white p-5">
@@ -466,33 +695,78 @@ function QuestionPalette({
         Question Palette
       </p>
 
-      <div className="mt-3 grid grid-cols-6 gap-1.5 sm:grid-cols-8 lg:grid-cols-6">
-        {questions.map((q, i) => {
-          const isCurrent = i === currentIndex;
-          const classes = PALETTE_COLORS[q.status];
-          return (
-            <button
-              key={`${q.stepId}-${q.questionId}`}
-              onClick={() => onSelect(i)}
-              title={`Question ${i + 1} — ${q.status.replace("-", " ")}`}
-              aria-label={`Question ${i + 1}: ${q.status.replace("-", " ")}`}
-              className={`inline-flex h-8 w-8 items-center justify-center rounded text-[11px] font-bold transition ${
-                isCurrent
-                  ? "ring-2 ring-zinc-900 ring-offset-2 border-zinc-900 text-zinc-900"
-                  : ""
-              } ${classes}`}
-            >
-              {i + 1}
-            </button>
-          );
-        })}
-      </div>
+      {grouped ? (
+        <div className="mt-3 space-y-4">
+          {sections.map((section, si) => (
+            <div key={`${section.stepId}-${si}`}>
+              <button
+                onClick={() => onSelectSection(si)}
+                className={cn(
+                  "mb-1.5 flex w-full items-center justify-between text-[11px] font-bold",
+                  si === currentSectionIndex ? "text-zinc-900" : "text-zinc-500",
+                )}
+              >
+                <span className="truncate">{section.name}</span>
+                <span className="ml-2 shrink-0 tabular-nums text-zinc-400">
+                  Q{section.startIndex + 1}–{section.endIndex + 1}
+                </span>
+              </button>
+              <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8 lg:grid-cols-5">
+                {questions
+                  .slice(section.startIndex, section.endIndex + 1)
+                  .map((q) => {
+                    const i = q.index;
+                    const isCurrent = i === currentIndex;
+                    return (
+                      <button
+                        key={`${q.stepId}-${q.questionId}`}
+                        onClick={() => onSelect(i)}
+                        title={`Question ${i + 1} — ${q.status.replace("-", " ")}`}
+                        aria-label={`Question ${i + 1}: ${q.status.replace("-", " ")}`}
+                        className={cn(
+                          "inline-flex h-9 w-9 items-center justify-center rounded-lg",
+                          "text-xs font-bold transition",
+                          PALETTE_COLORS[q.status],
+                          isCurrent && "ring-2 ring-zinc-900 ring-offset-2",
+                        )}
+                      >
+                        {i + 1}
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-3 grid grid-cols-6 gap-1.5 sm:grid-cols-8 lg:grid-cols-5">
+          {questions.map((q, i) => {
+            const isCurrent = i === currentIndex;
+            return (
+              <button
+                key={`${q.stepId}-${q.questionId}`}
+                onClick={() => onSelect(i)}
+                title={`Question ${i + 1} — ${q.status.replace("-", " ")}`}
+                aria-label={`Question ${i + 1}: ${q.status.replace("-", " ")}`}
+                className={cn(
+                  "inline-flex h-9 w-9 items-center justify-center rounded-lg",
+                  "text-xs font-bold transition",
+                  PALETTE_COLORS[q.status],
+                  isCurrent && "ring-2 ring-zinc-900 ring-offset-2",
+                )}
+              >
+                {i + 1}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="mt-4 space-y-1.5 border-t border-zinc-100 pt-3 text-[11px]">
         <LegendRow color="bg-emerald-500" label="Answered" value={counts.answered} />
         <LegendRow color="bg-red-500" label="Unanswered" value={counts.unanswered} />
-        <LegendRow color="bg-orange-500" label="Review Later" value={counts.review} />
-        <LegendRow color="bg-zinc-800" label="Not Visited" value={counts.notVisited} />
+        <LegendRow color="bg-orange-500" label="Review later" value={counts.review} />
+        <LegendRow color="bg-zinc-300" label="Not visited" value={counts.notVisited} />
       </div>
     </div>
   );
@@ -516,20 +790,10 @@ function LegendRow({
 }) {
   return (
     <div className="flex items-center gap-2 text-zinc-600">
-      <span className={`h-3 w-3 rounded ${color}`} />
+      <span className={cn("h-3 w-3 rounded", color)} />
       <span>{label}</span>
       <span className="ml-auto font-bold tabular-nums">{value}</span>
     </div>
-  );
-}
-
-function ChevronDownIcon({ open }: { open: boolean }) {
-  return (
-    <span
-      className={`inline-block h-2.5 w-2.5 border-b-2 border-r-2 border-zinc-500 transition-transform ${
-        open ? "-translate-y-0.5 rotate-45" : "translate-y-0.5 rotate-[225deg]"
-      }`}
-    />
   );
 }
 

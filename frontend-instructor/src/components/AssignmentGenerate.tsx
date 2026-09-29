@@ -1,6 +1,17 @@
-import { useState } from "react";
-import { Sparkles, Settings2, Database, AlertTriangle, FileText } from "@masterlms/shared";
-import type { Assignment, QuestionGenerationConfig, QuestionDifficulty } from "../types/assignment";
+import { useRef, useState } from "react";
+import {
+  AlertTriangle,
+  Database,
+  FileText,
+  Plus,
+  Sparkles,
+  X,
+} from "@masterlms/shared";
+import type {
+  Assignment,
+  AssignmentQuestion,
+  QuestionDifficulty,
+} from "../types/assignment";
 import { generateSampleQuestions } from "../utils/questionGenerator";
 import {
   assignmentService,
@@ -9,634 +20,630 @@ import {
 } from "../services/assignment.service";
 import { ApiError } from "../lib/api";
 import { cn } from "../lib/utils";
+import {
+  builderCardClass,
+  builderEyebrowClass,
+  builderFieldClass,
+  builderLabelClass,
+} from "../lib/builder";
 
 type Props = {
   assignment: Assignment;
   onChange: (patch: Partial<Assignment>) => void;
 };
 
-const DEFAULT_CONFIG: QuestionGenerationConfig = {
-  numberOfQuestions: 10,
-  questionType: "mcq",
-  difficulty: "medium",
-  marksPerQuestion: 1,
-  numberOfOptions: 4,
-  generateExplanations: true,
-  distributeEvenly: true,
-  topicDistribution: {},
-};
+type Notice = { kind: "success" | "error" | "info"; text: string; detail?: string };
+
+const inputClass = builderFieldClass;
+
+const topicInput = cn(
+  "min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white",
+  "px-4 py-3 text-sm outline-none focus:border-zinc-900",
+);
+
+function makeId(prefix: string): string {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeDifficulty(
+  value: unknown,
+  fallback: QuestionDifficulty,
+): QuestionDifficulty {
+  return value === "easy" || value === "medium" || value === "hard"
+    ? value
+    : fallback;
+}
+
+function toPoolQuestion(
+  raw: ExtractedQuestionRaw | Record<string, unknown>,
+  fallbackMarks: number,
+  fallbackDifficulty: QuestionDifficulty,
+): AssignmentQuestion {
+  const get = (key: string) =>
+    (raw as Record<string, unknown>)[key] ??
+    (raw as Record<string, unknown>)[camelToSnake(key)];
+  const optionsRaw = get("options");
+  const options = Array.isArray(optionsRaw) ? [...optionsRaw] : [];
+  while (options.length < 2) options.push("");
+  return {
+    id: makeId("q"),
+    question: String(get("question") ?? ""),
+    questionImage: String(get("questionImage") ?? "") || "",
+    options,
+    correctAnswer: Number(get("correctAnswer") ?? 0),
+    explanation: String(get("explanation") ?? ""),
+    marks: Number(get("marks") ?? fallbackMarks),
+    difficulty: normalizeDifficulty(get("difficulty"), fallbackDifficulty),
+    topic: String(get("topic") ?? ""),
+  };
+}
+
+function camelToSnake(key: string): string {
+  return key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+}
 
 export function AssignmentGenerateStep({ assignment, onChange }: Props) {
-  const [config, setConfig] = useState<QuestionGenerationConfig>(DEFAULT_CONFIG);
+  const [count, setCount] = useState(10);
+  const [difficulty, setDifficulty] = useState<QuestionDifficulty>("medium");
+  const [marksPerQuestion, setMarksPerQuestion] = useState(1);
+  const [numberOfOptions, setNumberOfOptions] = useState(4);
+  const [generateExplanations, setGenerateExplanations] = useState(true);
+  const [topics, setTopics] = useState<[string, number][]>([]);
+  const [newTopic, setNewTopic] = useState("");
+
   const [generating, setGenerating] = useState(false);
   const [extracting, setExtracting] = useState(false);
-  const [showConfig, setShowConfig] = useState(false);
-  const [useLocalFallback, setUseLocalFallback] = useState(false);
-  const [apiOutput, setApiOutput] = useState<
-    "success" | "unavailable" | "extracted" | "extract-error" | ""
-  >("");
-  const [extractError, setExtractError] = useState<string | null>(null);
-  const [needsReviewCount, setNeedsReviewCount] = useState(0);
-  const [missingFigureCount, setMissingFigureCount] = useState(0);
+  const [aiUnavailable, setAiUnavailable] = useState(false);
+  const [extractNotice, setExtractNotice] = useState<Notice | null>(null);
+  const [generateNotice, setGenerateNotice] = useState<Notice | null>(null);
   const [extractProgress, setExtractProgress] = useState<{
     done: number;
     total: number;
     pending: number[];
   } | null>(null);
+  const runId = useRef(0);
 
-  const applyExtractResult = (result: ExtractQuestionsResult) => {
-    const list: ExtractedQuestionRaw[] = Array.isArray(result.questions)
-      ? result.questions
-      : [];
-    const questions = list.map((q) => ({
-      id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      question: String(q.question ?? ""),
-      questionImage: String(q.questionImage ?? q.question_image ?? "") || "",
-      options: Array.isArray(q.options) ? q.options : [],
-      correctAnswer: Number(q.correctAnswer ?? q.correct_answer ?? 0),
-      explanation: String(q.explanation ?? ""),
-      marks: Number(q.marks ?? config.marksPerQuestion),
-      difficulty: (q.difficulty as QuestionDifficulty) ?? config.difficulty,
-      topic: String(q.topic ?? ""),
-    }));
-    if (questions.length > 0) {
-      onChange({
-        questions: [...assignment.questions, ...questions],
-        totalMarks:
-          assignment.totalMarks +
-          questions.reduce(
-            (sum: number, question: { marks: number }) => sum + question.marks,
-            0
-          ),
-      });
-      setNeedsReviewCount((prev) =>
-        prev + list.filter((q) => q.needs_review || q.has_answer === false).length
-      );
-      setMissingFigureCount((prev) =>
-        prev + list.filter((q) => q.missing_figure).length
-      );
-    }
-    return list.length;
+  const hasSource = Boolean(assignment.sourceDocument);
+  const topicDistribution: Record<string, number> = Object.fromEntries(
+    topics.filter(([name, n]) => name.trim() && n > 0),
+  );
+
+  const appendQuestions = (fresh: AssignmentQuestion[]) => {
+    if (fresh.length === 0) return 0;
+    onChange({
+      questions: [...assignment.questions, ...fresh],
+      totalMarks:
+        assignment.totalMarks + fresh.reduce((sum, q) => sum + q.marks, 0),
+    });
+    return fresh.length;
   };
 
-  const handleGenerate = async () => {
-    setGenerating(true);
-    setApiOutput("");
-    try {
-      const response = await fetch(
-        `${
-          (import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1").replace(/\/$/, "")
-        }/admin/assignments/generate-questions`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            source_document: assignment.sourceDocument,
-            numberOfQuestions: config.numberOfQuestions,
-            difficulty: config.difficulty,
-            marksPerQuestion: config.marksPerQuestion,
-            numberOfOptions: config.numberOfOptions,
-            generateExplanations: config.generateExplanations,
-            distributeEvenly: config.distributeEvenly,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        setApiOutput("unavailable");
-        return;
-      }
-
-      const json = await response.json();
-      const raw = Array.isArray(json.data)
-        ? json.data
-        : json.data?.questions ?? json.questions ?? [];
-      const questions = raw.map((q: Record<string, unknown>) => ({
-        id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        question: String(q.question ?? ""),
-        questionImage:
-          String(q.questionImage ?? q.question_image ?? "") || "",
-        options: Array.isArray(q.options) ? q.options : ["", "", "", ""],
-        correctAnswer: Number(q.correctAnswer ?? q.correct_answer ?? 0),
-        explanation: String(q.explanation ?? ""),
-        marks: Number(q.marks ?? config.marksPerQuestion),
-        difficulty: (q.difficulty as QuestionDifficulty) ?? config.difficulty,
-        topic: String(q.topic ?? ""),
-      }));
-      if (questions.length > 0) {
-        onChange({
-          questions: [...assignment.questions, ...questions],
-          totalMarks:
-            assignment.totalMarks +
-            questions.reduce(
-              (sum: number, question: { marks: number }) => sum + question.marks,
-              0
-            ),
-        });
-        setApiOutput("success");
-      } else {
-        setApiOutput("unavailable");
-      }
-    } catch {
-      setApiOutput("unavailable");
-    } finally {
-      setGenerating(false);
+  const summarizeExtract = (list: ExtractedQuestionRaw[]): Notice => {
+    const added = appendQuestions(
+      list.map((q) => toPoolQuestion(q, marksPerQuestion, difficulty)),
+    );
+    if (added === 0) {
+      return { kind: "error", text: "No questions found in this document." };
     }
+    const noAnswer = list.filter(
+      (q) => q.needs_review || q.has_answer === false,
+    ).length;
+    const noFigure = list.filter((q) => q.missing_figure).length;
+    const details = [
+      noAnswer > 0
+        ? `${noAnswer} had no printed answer — set the correct option in Review`
+        : null,
+      noFigure > 0
+        ? `${noFigure} mention a figure that wasn't found — attach it in Review`
+        : null,
+    ].filter(Boolean);
+    return {
+      kind: "success",
+      text: `${added} question${added === 1 ? "" : "s"} added to your pool.`,
+      detail: details.length > 0 ? details.join(". ") + "." : undefined,
+    };
+  };
+
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const pollJob = async (
+    jobId: string,
+    id: number,
+  ): Promise<ExtractQuestionsResult> => {
+    for (;;) {
+      if (id !== runId.current) throw new Error("cancelled");
+      const job = await assignmentService.getExtractJob(jobId);
+      if (id !== runId.current) throw new Error("cancelled");
+      setExtractProgress({
+        done: job.done_pages.length,
+        total: job.total_pages,
+        pending: job.pending_pages,
+      });
+      if (job.status === "done" || job.status === "paused") {
+        return {
+          questions: job.questions,
+          done_pages: job.done_pages,
+          pending_pages: job.pending_pages,
+          skipped_pages: job.skipped_pages,
+          total_pages: job.total_pages,
+          rate_limited: job.status === "paused",
+        };
+      }
+      if (job.status === "failed") {
+        throw new Error(job.error || "Background extract failed");
+      }
+      await wait(5000);
+    }
+  };
+
+  const cancelExtract = () => {
+    runId.current += 1;
+    setExtracting(false);
+    setExtractNotice({
+      kind: "info",
+      text: "Extraction stopped. Questions added so far are kept.",
+    });
   };
 
   const handleExtract = async (resumePending?: number[]) => {
+    const id = runId.current + 1;
+    runId.current = id;
     setExtracting(true);
-    setApiOutput("");
-    setExtractError(null);
-    if (!resumePending) {
-      setNeedsReviewCount(0);
-      setMissingFigureCount(0);
-      setExtractProgress(null);
-    }
-    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-    const pollJob = async (jobId: string): Promise<ExtractQuestionsResult> => {
-      for (;;) {
-        const job = await assignmentService.getExtractJob(jobId);
-        setExtractProgress({
-          done: job.done_pages.length,
-          total: job.total_pages,
-          pending: job.pending_pages,
-        });
-        if (job.status === "done" || job.status === "paused") return job;
-        if (job.status === "failed") throw new Error(job.error || "Background extract failed");
-        await wait(5000);
-      }
-    };
+    setExtractNotice(null);
+    if (!resumePending) setExtractProgress(null);
     let pending = resumePending;
     let attempts = 0;
     try {
       for (;;) {
+        if (id !== runId.current) return;
         attempts += 1;
         let result: ExtractQuestionsResult;
         try {
           const started = await assignmentService.extractQuestions({
             source_document: assignment.sourceDocument,
-            difficulty: config.difficulty,
-            marksPerQuestion: config.marksPerQuestion,
+            difficulty,
+            marksPerQuestion,
             pending_pages: pending,
             async_mode: true,
           });
-          const jobResult = started as ExtractQuestionsResult & { job_id?: string };
-          result = jobResult.job_id ? await pollJob(jobResult.job_id) : jobResult;
+          const job = started as ExtractQuestionsResult & { job_id?: string };
+          result = job.job_id ? await pollJob(job.job_id, id) : job;
         } catch (e) {
           if (e instanceof ApiError && e.status === 429 && attempts <= 3) {
             const payload = (e.payload ?? {}) as { data?: ExtractQuestionsResult };
-            const data = payload.data;
-            if (data) {
-              applyExtractResult(data);
+            if (payload.data) {
+              if (id !== runId.current) return;
+              setExtractNotice(summarizeExtract(payload.data.questions));
               setExtractProgress({
-                done: data.done_pages.length,
-                total: data.total_pages,
-                pending: data.pending_pages,
+                done: payload.data.done_pages.length,
+                total: payload.data.total_pages,
+                pending: payload.data.pending_pages,
               });
-              pending = data.pending_pages;
+              pending = payload.data.pending_pages;
             }
-            setApiOutput("extract-error");
-            setExtractError(
-              `Gemini is rate-limited — retrying in 60s (attempt ${attempts}/3). ` +
-                "Already extracted questions are kept."
-            );
+            setExtractNotice({
+              kind: "info",
+              text:
+                `Rate-limited — resuming automatically (attempt ${attempts}/3). ` +
+                "Added questions are kept. You can cancel anytime.",
+            });
             await wait(60000);
             continue;
           }
           throw e;
         }
-        applyExtractResult(result);
+        if (id !== runId.current) return;
+        setExtractNotice(summarizeExtract(result.questions));
+        setExtractProgress(
+          result.total_pages > 0
+            ? {
+                done: result.done_pages.length,
+                total: result.total_pages,
+                pending: result.pending_pages,
+              }
+            : null,
+        );
         if (result.rate_limited && result.pending_pages.length > 0 && attempts <= 3) {
-          setExtractProgress({
-            done: result.done_pages.length,
-            total: result.total_pages,
-            pending: result.pending_pages,
-          });
-          setApiOutput("extract-error");
-          setExtractError(
-            `Gemini is rate-limited — resuming ${result.pending_pages.length} ` +
-              `page(s) in 60s (attempt ${attempts}/3). Already extracted questions are kept.`
-          );
           await wait(60000);
+          if (id !== runId.current) return;
           pending = result.pending_pages;
           continue;
         }
-        if (result.questions.length > 0 || assignment.questions.length > 0) {
-          setApiOutput("extracted");
-          setExtractProgress(
-            result.total_pages > 0
-              ? {
-                  done: result.done_pages.length,
-                  total: result.total_pages,
-                  pending: result.pending_pages,
-                }
-              : null
-          );
-          if (result.rate_limited) {
-            setExtractError(
-              `Stopped early — ${result.pending_pages.length} page(s) still pending. ` +
-                "Click Resume to continue."
-            );
-          }
-        } else {
-          setApiOutput("extract-error");
-          setExtractError("No questions found in this PDF.");
-        }
-        pending = result.pending_pages.length > 0 ? result.pending_pages : undefined;
         break;
       }
     } catch (e) {
-      setApiOutput("extract-error");
-      setExtractError(e instanceof Error ? e.message : String(e));
+      if (id !== runId.current) return;
+      if (e instanceof Error && e.message === "cancelled") return;
+      setExtractNotice({
+        kind: "error",
+        text: e instanceof Error ? e.message : String(e),
+      });
     } finally {
-      setExtracting(false);
+      if (id === runId.current) setExtracting(false);
     }
   };
 
-  const handleLocalGenerate = () => {
-    if (!useLocalFallback) {
-      setUseLocalFallback(true);
-      return;
-    }
+  const handleGenerate = async () => {
     setGenerating(true);
+    setGenerateNotice(null);
+    setAiUnavailable(false);
     try {
-      const generated = generateSampleQuestions({
-        count: config.numberOfQuestions,
-        difficulty: config.difficulty,
-        marksPerQuestion: config.marksPerQuestion,
-        numberOfOptions: config.numberOfOptions,
-        generateExplanations: config.generateExplanations,
-        topicDistribution: config.topicDistribution,
+      const raw = await assignmentService.generateFromDocument({
+        source_document: assignment.sourceDocument,
+        numberOfQuestions: count,
+        difficulty,
+        marksPerQuestion,
+        numberOfOptions,
+        generateExplanations,
+        topicDistribution,
       });
-      onChange({
-        questions: [...assignment.questions, ...generated],
-        totalMarks:
-          assignment.totalMarks +
-          generated.reduce((sum, q) => sum + q.marks, 0),
-      });
+      const added = appendQuestions(
+        raw.map((q) => toPoolQuestion(q, marksPerQuestion, difficulty)),
+      );
+      if (added > 0) {
+        setGenerateNotice({
+          kind: "success",
+          text: `${added} question${added === 1 ? "" : "s"} added to your pool.`,
+        });
+      } else {
+        setGenerateNotice({ kind: "error", text: "Nothing was generated." });
+      }
+    } catch (e) {
+      if (Object.keys(topicDistribution).length === 0 && !hasSource) {
+        setGenerateNotice({
+          kind: "error",
+          text: "Add at least one topic first — the AI needs something to ask about.",
+        });
+      } else if (e instanceof ApiError) {
+        setGenerateNotice({ kind: "error", text: e.message });
+      } else {
+        setAiUnavailable(true);
+      }
     } finally {
       setGenerating(false);
     }
   };
 
-  return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-bold text-zinc-900">Questions from your PDF</h2>
-      <p className="mt-1 text-sm text-zinc-500">
-        Use the questions already printed in the uploaded file, or generate new
-        ones about its content.
-      </p>
+  const handleSampleGenerate = () => {
+    setGenerating(true);
+    try {
+      const generated = generateSampleQuestions({
+        count,
+        difficulty,
+        marksPerQuestion,
+        numberOfOptions,
+        generateExplanations,
+        topicDistribution,
+      });
+      const added = appendQuestions(generated);
+      setGenerateNotice(
+        added > 0
+          ? {
+              kind: "success",
+              text: `${added} placeholder question${added === 1 ? "" : "s"} added.`,
+              detail: "Review and edit every one before publishing.",
+            }
+          : { kind: "error", text: "Nothing was generated." },
+      );
+    } finally {
+      setGenerating(false);
+    }
+  };
 
-      <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => handleExtract()}
-            disabled={extracting || !assignment.sourceDocument}
-            className={cn(
-              "inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all",
-              extracting ? "bg-zinc-400 cursor-wait" : "bg-emerald-600 hover:bg-emerald-700"
-            )}
-          >
-            <FileText size={16} className={extracting ? "animate-pulse" : ""} />
-            {extracting ? "Extracting…" : "Use PDF questions"}
-          </button>
-          {extractProgress && extractProgress.pending.length > 0 && !extracting && (
-            <button
-              onClick={() => handleExtract(extractProgress.pending)}
-              className="inline-flex items-center gap-2 rounded-full border border-emerald-600 px-5 py-2.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              Resume ({extractProgress.pending.length} pages left)
-            </button>
-          )}
-          <p className="text-xs text-zinc-500">
-            Copies numbered questions + options verbatim, including figures.
-            Best when the PDF is a question paper.
+  const addTopic = () => {
+    const name = newTopic.trim();
+    if (!name) return;
+    setTopics((prev) => [...prev, [name, count]]);
+    setNewTopic("");
+  };
+
+  const poolCount = assignment.questions.length;
+
+  return (
+    <div className="space-y-6">
+      <div className={builderCardClass}>
+        <p className={builderEyebrowClass}>From a document</p>
+        <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">Copy from your PDF</h2>
+        <p className="mt-1.5 text-[15px] text-zinc-500">
+          Copies the numbered questions and options already printed in the file —
+          best when the upload is a question paper.
+        </p>
+        {!hasSource ? (
+          <p className="mt-5 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-5 text-sm text-zinc-500">
+            No document uploaded yet. Go back one step to upload, or generate
+            questions below without one.
           </p>
-        </div>
-        {extractProgress && extractProgress.total > 0 && (
-          <div className="mt-3">
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
-              <div
-                className="h-full rounded-full bg-emerald-600 transition-all duration-500"
-                style={{
-                  width: `${Math.round(
-                    (extractProgress.done / Math.max(1, extractProgress.total)) * 100
-                  )}%`,
-                }}
-              />
+        ) : (
+          <div className="mt-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => handleExtract()}
+                disabled={extracting}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full px-5 py-2.5",
+                  "text-sm font-semibold text-white shadow-sm",
+                  extracting
+                    ? "cursor-wait bg-zinc-400"
+                    : "bg-emerald-600 hover:bg-emerald-700",
+                )}
+              >
+                <FileText size={16} className={extracting ? "animate-pulse" : ""} />
+                {extracting ? "Extracting…" : "Use PDF questions"}
+              </button>
+              {extracting ? (
+                <button
+                  onClick={cancelExtract}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full border",
+                    "border-zinc-300 px-4 py-2.5 text-xs font-semibold hover:bg-zinc-50",
+                  )}
+                >
+                  <X size={13} /> Cancel
+                </button>
+              ) : (
+                extractProgress &&
+                extractProgress.pending.length > 0 && (
+                  <button
+                    onClick={() => handleExtract(extractProgress.pending)}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-full border",
+                      "border-emerald-600 px-5 py-2.5 text-sm font-semibold",
+                      "text-emerald-700 hover:bg-emerald-50",
+                    )}
+                  >
+                    Resume ({extractProgress.pending.length} pages left)
+                  </button>
+                )
+              )}
             </div>
-            <p className="mt-1 text-xs text-zinc-500">
-              {extractProgress.done} of {extractProgress.total} pages done
-              {extractProgress.pending.length > 0
-                ? ` — ${extractProgress.pending.length} pending`
-                : ""}
-              .
-            </p>
-          </div>
-        )}
-        {!assignment.sourceDocument && (
-          <p className="mt-2 text-xs text-amber-600">
-            Upload a PDF first to enable extraction.
-          </p>
-        )}
-        {apiOutput === "extracted" && (
-          <div className="mt-3 rounded-lg bg-emerald-50 p-3">
-            <p className="text-xs font-semibold text-emerald-800">
-              {assignment.questions.length} question(s) ready from your PDF
-            </p>
-            <p className="mt-0.5 text-xs text-emerald-600">
-              {needsReviewCount > 0
-                ? `${needsReviewCount} question(s) had no printed answer — review the correct option before publishing.`
-                : "Proceed to the next step to review and edit them."}
-            </p>
-            {missingFigureCount > 0 && (
-              <p className="mt-0.5 text-xs font-semibold text-amber-700">
-                {missingFigureCount} question(s) mention a figure that wasn&apos;t
-                found in the PDF — attach it manually in the Review step.
+            {extractProgress && extractProgress.total > 0 && (
+              <ProgressBar done={extractProgress.done} total={extractProgress.total} />
+            )}
+            {extractProgress && extractProgress.pending.length > 0 && !extracting && (
+              <p className="mt-1 text-xs text-zinc-500">
+                {extractProgress.done} of {extractProgress.total} pages done —{" "}
+                {extractProgress.pending.length} pending.
               </p>
             )}
-          </div>
-        )}
-        {apiOutput === "extract-error" && extractError && (
-          <div className="mt-3 flex items-start gap-2 rounded-lg bg-red-50 p-3 text-xs text-red-700">
-            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-            <span>{extractError}</span>
+            {extractNotice && <NoticeBox notice={extractNotice} />}
           </div>
         )}
       </div>
 
-      <h3 className="mt-6 text-sm font-bold text-zinc-900">Or generate new questions</h3>
-      <p className="mt-1 text-xs text-zinc-500">
-        Write fresh questions about the document content with AI.
-      </p>
+      <div className={builderCardClass}>
+        <p className={builderEyebrowClass}>New with AI</p>
+        <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">Write new questions with AI</h2>
+        <p className="mt-1.5 text-[15px] text-zinc-500">
+          {hasSource
+            ? "Fresh questions about the document content."
+            : "Fresh questions about your topics below — no upload needed."}
+        </p>
 
-      <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div>
-          <label className="block text-xs font-semibold text-zinc-600">
+        <div className="mt-6 grid grid-cols-2 gap-5 lg:grid-cols-4">
+          <label className={builderLabelClass}>
             Questions
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={count}
+              onChange={(e) =>
+                setCount(Math.max(1, Number(e.target.value) || 1))
+              }
+              className={inputClass}
+            />
           </label>
-          <input
-            type="number"
-            min={1}
-            max={100}
-            value={config.numberOfQuestions}
-            onChange={(e) =>
-              setConfig({
-                ...config,
-                numberOfQuestions: Math.max(1, Number(e.target.value) || 1),
-              })
-            }
-            className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none focus:border-zinc-900"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-zinc-600">
+          <label className={builderLabelClass}>
             Difficulty
+            <select
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value as QuestionDifficulty)}
+              className={cn(inputClass, "bg-white")}
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
           </label>
-          <select
-            value={config.difficulty}
-            onChange={(e) =>
-              setConfig({
-                ...config,
-                difficulty: e.target.value as QuestionDifficulty,
-              })
-            }
-            className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none focus:border-zinc-900"
-          >
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-zinc-600">
-            Marks / Question
+          <label className={builderLabelClass}>
+            Marks each
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={marksPerQuestion}
+              onChange={(e) =>
+                setMarksPerQuestion(Math.max(1, Number(e.target.value) || 1))
+              }
+              className={inputClass}
+            />
           </label>
-          <input
-            type="number"
-            min={1}
-            max={100}
-            value={config.marksPerQuestion}
-            onChange={(e) =>
-              setConfig({
-                ...config,
-                marksPerQuestion: Math.max(1, Number(e.target.value) || 1),
-              })
-            }
-            className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none focus:border-zinc-900"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-zinc-600">
+          <label className={builderLabelClass}>
             Options
+            <select
+              value={numberOfOptions}
+              onChange={(e) => setNumberOfOptions(Number(e.target.value))}
+              className={cn(inputClass, "bg-white")}
+            >
+              <option value={3}>3 options</option>
+              <option value={4}>4 options</option>
+              <option value={5}>5 options</option>
+            </select>
           </label>
-          <select
-            value={config.numberOfOptions}
-            onChange={(e) =>
-              setConfig({
-                ...config,
-                numberOfOptions: Number(e.target.value),
-              })
-            }
-            className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none focus:border-zinc-900"
-          >
-            <option value={3}>3 options</option>
-            <option value={4}>4 options</option>
-            <option value={5}>5 options</option>
-          </select>
         </div>
-      </div>
 
-      <div className="mt-4 flex items-center gap-4">
-        <button
-          onClick={() => setShowConfig(!showConfig)}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-700"
-        >
-          <Settings2 size={13} />
-          {showConfig ? "Hide options" : "More options"}
-        </button>
-      </div>
-
-      {showConfig && (
-        <div className="mt-3 rounded-xl bg-zinc-50 p-4">
-          <div className="space-y-3">
-            <label className="flex items-center gap-2.5 text-sm text-zinc-700">
-              <input
-                type="checkbox"
-                checked={config.generateExplanations}
-                onChange={(e) =>
-                  setConfig({
-                    ...config,
-                    generateExplanations: e.target.checked,
-                  })
-                }
-                className="h-4 w-4 rounded accent-zinc-900"
-              />
-              Generate explanations
-            </label>
-            <label className="flex items-center gap-2.5 text-sm text-zinc-700">
-              <input
-                type="checkbox"
-                checked={config.distributeEvenly}
-                onChange={(e) => {
-                  const distributeEvenly = e.target.checked;
-                  if (distributeEvenly && Object.keys(config.topicDistribution).length === 0) {
-                    const topics: Record<string, number> = {};
-                    for (const t of [
-                      "Overview & Introduction",
-                      "Core Concepts",
-                      "Methodology",
-                      "Applications",
-                    ]) {
-                      const share = Math.round(
-                        config.numberOfQuestions / 4
-                      );
-                      if (share > 0) topics[t] = share;
+        <div className="mt-6 rounded-2xl border border-zinc-200/70 bg-zinc-50/70 p-5 sm:p-6">
+          <p className="text-sm font-bold text-zinc-900">
+            Topics{" "}
+            <span className="font-normal text-zinc-500">
+              —{" "}
+              {hasSource
+                ? "optional, controls what the questions cover"
+                : "required without an upload: what the AI should ask about"}
+            </span>
+          </p>
+          {topics.length > 0 && (
+            <div className="mt-4 space-y-2.5">
+              {topics.map(([name, n], i) => (
+                <div key={`${name}-${i}`} className="flex items-center gap-2.5">
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) =>
+                      setTopics((prev) =>
+                        prev.map((row, j) => (j === i ? [e.target.value, row[1]] : row)),
+                      )
                     }
-                    setConfig({ ...config, distributeEvenly, topicDistribution: topics });
-                  } else {
-                    setConfig({ ...config, distributeEvenly });
-                  }
-                }}
-                className="h-4 w-4 rounded accent-zinc-900"
-              />
-              Distribute evenly across document topics
-            </label>
-          </div>
-
-          {config.distributeEvenly &&
-            Object.keys(config.topicDistribution).length > 0 && (
-              <div className="mt-3 rounded-lg border border-zinc-200 bg-white p-3">
-                <p className="text-xs font-semibold text-zinc-600">
-                  Topic distribution
-                </p>
-                <div className="mt-2 space-y-2">
-                  {Object.entries(config.topicDistribution).map(
-                    ([topic, count]) => (
-                      <div
-                        key={topic}
-                        className="flex items-center gap-2"
-                      >
-                        <input
-                          type="text"
-                          value={topic}
-                          onChange={(e) => {
-                            const next = {
-                              ...config.topicDistribution,
-                              [e.target.value]:
-                                config.topicDistribution[topic],
-                            };
-                            delete next[topic];
-                            setConfig({
-                              ...config,
-                              topicDistribution: next,
-                            });
-                          }}
-                          className="flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs outline-none focus:border-zinc-900"
-                        />
-                        <input
-                          type="number"
-                          min={0}
-                          value={count}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              topicDistribution: {
-                                ...config.topicDistribution,
-                                [topic]:
-                                  Math.max(0, Number(e.target.value) || 0),
-                              },
-                            })
-                          }
-                          className="w-16 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:border-zinc-900"
-                        />
-                      </div>
-                    )
-                  )}
+                    aria-label="Topic name"
+                    className={topicInput}
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    value={n}
+                    onChange={(e) =>
+                      setTopics((prev) =>
+                        prev.map((row, j) =>
+                          j === i
+                            ? [row[0], Math.max(1, Number(e.target.value) || 1)]
+                            : row,
+                        ),
+                      )
+                    }
+                    title="Questions on this topic"
+                    aria-label="Questions on this topic"
+                    className={cn(
+                      "w-20 rounded-xl border border-zinc-200 bg-white",
+                      "px-3 py-3 text-sm outline-none focus:border-zinc-900",
+                    )}
+                  />
+                  <button
+                    onClick={() => setTopics((prev) => prev.filter((_, j) => j !== i))}
+                    className="rounded-xl p-2.5 text-zinc-400 hover:bg-red-50 hover:text-red-500"
+                    title="Remove topic"
+                    aria-label="Remove topic"
+                  >
+                    <X size={15} />
+                  </button>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
+          )}
+          <div className="mt-4 flex items-center gap-2.5">
+            <input
+              type="text"
+              value={newTopic}
+              onChange={(e) => setNewTopic(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addTopic()}
+              placeholder="e.g. Percentage"
+              aria-label="New topic"
+              className={topicInput}
+            />
+            <button
+              onClick={addTopic}
+              className={cn(
+                "inline-flex h-12 shrink-0 items-center gap-1.5 rounded-full border",
+                "border-zinc-300 px-4 text-sm font-semibold hover:bg-white",
+              )}
+            >
+              <Plus size={14} /> Add topic
+            </button>
+          </div>
+          <label className="mt-4 flex items-center gap-2.5 text-sm text-zinc-600">
+            <input
+              type="checkbox"
+              checked={generateExplanations}
+              onChange={(e) => setGenerateExplanations(e.target.checked)}
+              className="h-4 w-4 accent-zinc-900"
+            />
+            Write an explanation for each answer
+          </label>
         </div>
-      )}
 
-      <div className="mt-6 space-y-3">
-        <div className="flex items-center gap-3">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           <button
             onClick={handleGenerate}
-            disabled={generating || !assignment.sourceDocument}
+            disabled={generating}
             className={cn(
-              "inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all",
-              generating
-                ? "bg-zinc-400 cursor-wait"
-                : "bg-[#3478ff] hover:bg-[#2a60cc]"
+              "inline-flex h-12 items-center gap-2 rounded-full px-6",
+              "text-[15px] font-semibold text-white shadow-sm",
+              generating ? "cursor-wait bg-zinc-400" : "bg-[#3478ff] hover:bg-[#2a60cc]",
             )}
           >
             <Sparkles size={16} className={generating ? "animate-spin" : ""} />
-            {generating ? "Generating…" : "Generate Questions"}
+            {generating ? "Generating…" : "Generate questions"}
           </button>
-          {!assignment.sourceDocument && (
-            <p className="text-xs text-amber-600">
-              Upload a PDF first to enable generation.
-            </p>
-          )}
         </div>
+        {generateNotice && <NoticeBox notice={generateNotice} />}
 
-        {apiOutput === "unavailable" && (
-          <div className="flex items-center gap-2 rounded-xl bg-red-50 p-3 text-xs text-red-700">
-            <AlertTriangle size={14} />
-            <span>
-              AI generation service isn&apos;t reachable on this server. You can
-              continue in
-            </span>
+        {aiUnavailable && (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+            <p className="flex items-start gap-2.5 text-sm text-amber-800">
+              <Database size={15} className="mt-0.5 shrink-0" />
+              <span>
+                The AI service isn&apos;t reachable, so these would be local
+                placeholders — review and edit every one before publishing.
+              </span>
+            </p>
             <button
-              onClick={() => {
-                setUseLocalFallback(true);
-                setApiOutput("");
-              }}
-              className="font-semibold underline"
+              onClick={handleSampleGenerate}
+              disabled={generating}
+              className={cn(
+                "mt-4 inline-flex h-11 items-center gap-2 rounded-full border",
+                "border-amber-300 bg-white px-5 text-sm font-semibold",
+                "hover:bg-amber-100 disabled:opacity-50",
+              )}
             >
-              sample mode
+              <Database size={14} />
+              {generating ? "Generating…" : "Generate placeholders instead"}
             </button>
           </div>
         )}
-
-        {useLocalFallback && (
-          <>
-            <div className="flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-700">
-              <Database size={14} className="mt-0.5" />
-              <span>
-                Sample mode is active: questions are generated locally as
-                placeholders for demonstration. Review and edit every question
-                before publishing.
-              </span>
-            </div>
-            <button
-              onClick={handleLocalGenerate}
-              disabled={generating}
-              className="inline-flex items-center gap-2 rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
-            >
-              <Database size={15} />
-              {generating ? "Generating…" : "Generate sample questions"}
-            </button>
-          </>
-        )}
       </div>
 
-      {assignment.questions.length > 0 && (
-        <div className="mt-4 rounded-xl bg-emerald-50 p-3">
-          <p className="text-xs font-semibold text-emerald-800">
-            {assignment.questions.length} question(s) ready
-          </p>
-          <p className="mt-0.5 text-xs text-emerald-600">
-            Proceed to the next step to review and edit them.
-          </p>
-        </div>
+      {poolCount > 0 && (
+        <p className="rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
+          {poolCount} question{poolCount === 1 ? "" : "s"} in your pool — continue to
+          review them.
+        </p>
       )}
     </div>
   );
 }
+
+function ProgressBar({ done, total }: { done: number; total: number }) {
+  const pct = Math.round((done / Math.max(1, total)) * 100);
+  return (
+    <div className="mt-3">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
+        <div
+          className="h-full rounded-full bg-emerald-600 transition-all duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="mt-1 text-xs text-zinc-500">
+        {done} of {total} pages done.
+      </p>
+    </div>
+  );
+}
+
+function NoticeBox({ notice }: { notice: Notice }) {
+  return (
+    <div
+      className={cn(
+        "mt-4 flex items-start gap-2.5 rounded-2xl border p-4 text-sm",
+        notice.kind === "success" && "border-emerald-200 bg-emerald-50 text-emerald-800",
+        notice.kind === "error" && "border-red-200 bg-red-50 text-red-700",
+        notice.kind === "info" && "border-zinc-200 bg-zinc-100 text-zinc-600",
+      )}
+    >
+      {notice.kind === "error" && <AlertTriangle size={14} className="mt-0.5 shrink-0" />}
+      <span>
+        <span className="font-semibold">{notice.text}</span>
+        {notice.detail && <span className="mt-0.5 block">{notice.detail}</span>}
+      </span>
+    </div>
+  );
+}
+

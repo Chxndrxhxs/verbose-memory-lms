@@ -32,6 +32,8 @@ export type LearnLesson = {
 export type LearnSection = { id: number; title: string; lessons: LearnLesson[] };
 export type LearnTab = "overview" | "notes" | "qna";
 
+type QuizVerdict = { score: number; total: number } | null;
+
 type Props = {
   courseId: string;
   title: string;
@@ -50,6 +52,8 @@ type Props = {
   note: string;
   quizAnswers: Record<number, number | string>;
   quizSubmitted: boolean;
+  quizVerdict: QuizVerdict;
+  quizGrading: boolean;
   quizAttempt: number | null;
   quizBest: number | null;
   showRating: boolean;
@@ -73,7 +77,8 @@ export function LearnView(p: Props) {
   const {
     courseId, title, progress, active, activeLesson, embedUrl, textBody,
     pdfUrl, audioUrl, sections, completed, openSections, tab, note,
-    quizAnswers, quizSubmitted, quizAttempt, quizBest, showRating, selectedRating, submittingRating,
+    quizAnswers, quizSubmitted, quizVerdict, quizGrading, quizAttempt, quizBest,
+    showRating, selectedRating, submittingRating,
     userRating, toast,
   } = p;
   return (
@@ -199,10 +204,17 @@ export function LearnView(p: Props) {
                       )}
                     </div>
                   ))}
-                  {!quizSubmitted ? (
+                    {!quizSubmitted ? (
                     <button onClick={p.onSubmitQuiz} className="rounded-full bg-[#0f172a] px-5 py-2 text-sm font-semibold text-white">Submit quiz</button>
+                  ) : quizVerdict == null ? (
+                    <div className="rounded-xl bg-zinc-100 p-3 text-sm text-zinc-600">
+                      {quizGrading ? "Grading your answers…" : "Submitted — waiting for the grade."}
+                      {quizAttempt != null && quizBest != null && (
+                        <span className="mt-1 block text-xs text-zinc-500">Attempt {quizAttempt} · Best so far {quizBest}</span>
+                      )}
+                    </div>
                   ) : (
-                    <div className="rounded-xl bg-emerald-500 text-white p-3 text-sm">Score: {activeLesson.quiz_data.filter((q, qi)=> quizCorrect(q, quizAnswers[qi])).length}/{activeLesson.quiz_data.length} — {(()=>{ const s = activeLesson.quiz_data!.filter((q, qi)=> quizCorrect(q, quizAnswers[qi])).length; return s === activeLesson.quiz_data!.length ? "Perfect! ✓" : "Keep practicing"; })()}{quizAttempt != null && quizBest != null && activeLesson.quiz_data.length > 0 && <span className="mt-1 block text-xs text-white/85">Attempt {quizAttempt} · Best {quizBest}/{activeLesson.quiz_data.length}</span>}</div>
+                    <div className="rounded-xl bg-emerald-500 text-white p-3 text-sm">Score: {quizVerdict.score}/{quizVerdict.total} — {quizVerdict.score === quizVerdict.total ? "Perfect! ✓" : "Keep practicing"}{quizAttempt != null && quizBest != null && quizVerdict.total > 0 && <span className="mt-1 block text-xs text-white/85">Attempt {quizAttempt} · Best {quizBest}/{quizVerdict.total}</span>}</div>
                   )}
                 </div>
               </div>

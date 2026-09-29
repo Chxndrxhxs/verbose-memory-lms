@@ -43,12 +43,13 @@ masterlms/
 └── backend/
     ├── config/            # settings, urls, wsgi (PAGE_SIZE=12, CookieJWT)
     ├── apps/
-│   ├── users/         # User + OTP + JWT + avatar URLField
+│   ├── users/         # User + OTP + per-app JWT cookies (X-App) + avatar URLField
 │   ├── courses/       # Course / Section / Lesson + Review (rating 1-5, average_rating)
 │   ├── enrollments/   # Enrollment + LessonCompletion + Certificate (QTNXT-XXXX) + activity/leaderboard/timeline
-│   ├── assignments/   # Assignment / Question / Attempt + categories + PDF extract/generate (Gemini)
-│   ├── adminpanel/    # Admin dashboard, users, courses, enrollments, payments
-│   └── payments/      # Payment (Razorpay mock/live) + Invoice
+│   ├── assignments/   # Assignment / Question / Attempt + categories + PDF extract/generate (LLM)
+│   ├── packs/         # QuestionPack + PackPurchase + learner store + admin builder APIs
+│   ├── adminpanel/    # Admin dashboard, users, courses, enrollments, payments + create_admin command
+│   └── payments/      # Payment (course or pack, Razorpay live or ALLOW_MOCK_PAYMENTS mock) + Invoice
 └── .env.example
 ```
 
@@ -102,7 +103,9 @@ uv sync
 uv run python manage.py migrate
 
 # 1e. (Optional) Create admin
-uv run python manage.py createsuperuser
+uv run python manage.py create_admin --mobile 9876543210 --name "Admin" --email admin@qtnxt.com
+# Promotes (or creates) that mobile to role=admin, is_staff/is_superuser. Sign in via OTP on :5175.
+# Alternative: uv run python manage.py createsuperuser (then set role='admin' for panel access).
 
 # 1f. Run
 uv run python manage.py runserver 8000
@@ -123,6 +126,7 @@ DATABASE_URL=mysql://root:password@localhost:3306/masterlms
 # or without DATABASE_URL: DB_ENGINE/DB_NAME/DB_USER/DB_PASSWORD/DB_HOST/DB_PORT
 RAZORPAY_KEY_ID=rzp_test_xxx
 RAZORPAY_KEY_SECRET=xxx
+ALLOW_MOCK_PAYMENTS=True
 LLM_API_KEY=your_ai_studio_key_here
 LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
 LLM_MODEL=gemini-2.0-flash
@@ -130,9 +134,9 @@ LLM_EXTRACT_MAX_RETRIES=6
 ```
 
 - Without `DATABASE_URL` the app uses `backend/db.sqlite3` — fine for quick start.
-- Without Razorpay keys, payments run in **mock** mode (`order_mock_*`, `pay_mock_*`) — enroll still works.
-- Without `LLM_API_KEY`, assignment PDF extract/generate endpoints return 503 — everything else still works.
-- See `backend/.env.example` for the full list (CORS/CSRF, DB splits, LLM retries).
+- Mock payments are **opt-in**: `ALLOW_MOCK_PAYMENTS=True` mints `order_mock_*` orders (verified without signature). Missing Razorpay keys alone do **not** enable mock mode — without keys and without the flag, order creation fails.
+- Without `LLM_API_KEY`, assignment PDF extract/generate endpoints return 503 — everything else still works. `LLM_MODEL` defaults to `gpt-4o-mini` (OpenAI); set `LLM_BASE_URL` to the Gemini OpenAI-compatible endpoint + e.g. `LLM_MODEL=gemini-2.0-flash` to use AI Studio.
+- See `backend/.env.example` for the full list (CORS/CSRF, `CORS_ALLOW_ALL_ORIGINS`, DB splits, LLM retries).
 
 ### 2. Shared + Frontend — install once at repo root
 
@@ -183,7 +187,7 @@ pnpm dev:instructor
 pnpm dev:admin
 ```
 
-Login flow: `GET /auth/send-otp` (dev returns `mock_code: "1234"`) → `POST /auth/verify-otp` → httpOnly `access_token`/`refresh_token` cookies + `POST /auth/complete-profile` (avatar via `POST /upload/` → URL).
+Login flow: `POST /auth/send-otp` (in `DEBUG`, response includes a random `mock_code` — read it from the response, there is no fixed `1234`) → `POST /auth/verify-otp` → httpOnly per-app `*_access_token`/`*_refresh_token` cookies (`X-App: learner|instructor|admin`, see Auth flow) + `PATCH /auth/complete-profile` (avatar via `POST /upload/` → URL).
 
 ### 5. Verify setup
 
@@ -242,8 +246,7 @@ uv run ruff check . && uv run ruff format .
 | `POST` | `/auth/refresh` | — | Rotate cookies |
 | `POST` | `/auth/logout` | — | Clear cookies |
 | `PATCH` | `/auth/complete-profile` | `{name, email, age, avatar: URL}` | `avatar` is `URLField` — upload via `/upload/` first |
-| `POST` | `/auth/become-instructor` | — | Promote to instructor |
-| `POST` | `/auth/become-admin` | — | Promote to admin |
+| `POST` | `/auth/become-instructor` | — | Promote learner → instructor (once only) |
 | `GET`/`DELETE` | `/users/me` | — | Profile |
 
 ### Courses
@@ -277,10 +280,25 @@ uv run ruff check . && uv run ruff format .
 ### Payments / Invoices
 | Method | Path | Notes |
 | --- | --- | --- |
-| `POST` | `/payments/create-order` | `{course_id}` → `order_id`, `amount` (paise), `currency`, `key_id`, `mock:true` if no keys |
-| `POST` | `/payments/verify` | `{razorpay_order_id, razorpay_payment_id, razorpay_signature, course_id}` → `PAID` + `enroll()` |
-| `GET` | `/payments/my-payments` | Paid `Payment`s with nested `course` (`amount` paise, `razorpay_*`, `created_at`) |
+| `POST` | `/payments/create-order` | `{course_id}` **or** `{pack_id}` (exactly one) → `order_id`, `amount` (paise), `currency`, `key_id`, `mock:true` only when `ALLOW_MOCK_PAYMENTS=True` |
+| `POST` | `/payments/verify` | `{razorpay_order_id, razorpay_payment_id, razorpay_signature, course_id}` or `{..., pack_id}` → `PAID` + `enroll()` / grant pack purchase. `order_mock_*` accepted only when `ALLOW_MOCK_PAYMENTS=True` |
+| `GET` | `/payments/my-payments` | Paid `Payment`s with nested `course`/`pack` (`amount` paise, `razorpay_*`, `created_at`) |
 | `POST` | `/upload/` | `multipart file → {url}` (`/media/...`) |
+
+### Question packs
+| Method | Path | Notes |
+| --- | --- | --- |
+| `GET` | `/packs/` | Published packs (learner store) |
+| `GET` | `/packs/mine/` | My purchased packs |
+| `GET` | `/packs/{id}/` | Pack detail + modules/questions |
+| `POST` | `/packs/{id}/start` | Start pack attempt |
+| `POST` | `/packs/{id}/claim` | Claim free (`price = 0`) pack, no payment |
+| `GET/POST` | `/admin/packs/` | List / create (instructor or admin) |
+| `GET/PATCH` | `/admin/packs/{id}/` | Detail / update |
+| `GET` | `/admin/packs/question-bank/` | Bank topics/questions for builder |
+| `POST` | `/admin/packs/{id}/questions` | Attach bank questions |
+| `POST` | `/admin/packs/{id}/publish` `/unpublish` | Lifecycle |
+| `GET` | `/admin/packs/{id}/purchases` | Who bought this pack |
 
 ### Assignments (learner)
 | Method | Path | Notes |
@@ -308,21 +326,24 @@ uv run ruff check . && uv run ruff format .
 | Method | Path | Notes |
 | --- | --- | --- |
 | `GET` | `/admin/dashboard` | Counts + recent users/courses |
-| `GET` | `/admin/users` `/admin/users/{id}` | Users list / detail |
+| `GET` | `/admin/users` | Users list (`?q=&role=`) |
+| `GET/PATCH/DELETE` | `/admin/users/{id}` | Detail / update (`{name, role, city}` — how admins promote) / delete |
 | `GET` | `/admin/courses` `/admin/courses/{id}` | Courses list / detail |
 | `POST` | `/admin/courses/{id}/status` | Publish / unpublish |
 | `GET` | `/admin/enrollments` | Enrollments list |
-| `GET` | `/admin/payments` | Payments list |
+| `DELETE` | `/admin/enrollments/{id}` | Remove enrollment |
+| `GET` | `/admin/payments` | Payments list (courses + packs) |
 
 Response shape: `{data, error, meta: {page, total}}` (courses list paginated).
 
 ## Auth flow & Cookies
-1. `POST /auth/send-otp` → 4-digit (returned `mock_code` for dev).
-2. `POST /auth/verify-otp` → creates user if new, returns JWT + `httpOnly` `access_token`/`refresh_token`, frontend `credentials:"include"`, backend `CookieJWTAuthentication`.
+1. `POST /auth/send-otp` → random 4-digit (in `DEBUG`, returned as `mock_code` in the response — no fixed code; expires in 5 min, resend invalidates old codes, 5 wrong tries lock it).
+2. `POST /auth/verify-otp` → creates user if new, returns user + `httpOnly` cookies, frontend `credentials:"include"`. Cookies are **per-app** via `X-App: learner|instructor|admin` (`learner_access_token`, `instructor_*`, `admin_*`); logins/refresh/logout in one app never touch the others.
 3. New users → `/complete-profile` (name/email/age/avatar via `uploadFile` → `absoluteMediaUrl`).
-4. `POST /auth/become-instructor` upgrades role.
+4. `POST /auth/become-instructor` upgrades learner → instructor (once only, 400 on repeat).
+5. Admins are **not** self-serve (`POST /auth/become-admin` returns 404). Create via `uv run python manage.py create_admin --mobile <10-digit>` or have an existing admin `PATCH /admin/users/{id}` `{role: "admin"}`.
 
-Roles checked in `IsInstructorOrReadOnly` (courses) and `IsAuthenticated` (enroll/pay).
+Roles checked in `IsInstructorOrReadOnly` (courses), `IsAdmin` (`role=admin` or `is_staff`, admin panel) and `IsAuthenticated` (enroll/pay).
 
 ## Frontend ↔ Backend wiring
 - `VITE_API_URL` default `http://localhost:8000/api/v1`, `TanStack Query` for server state, `Protected` redirects.
@@ -341,7 +362,7 @@ Roles checked in `IsInstructorOrReadOnly` (courses) and `IsAuthenticated` (enrol
 - **Course detail (learner)** — `What you'll learn` `bg-[#fdfdfc] grid sm:grid-cols-2 ✓`, Curriculum accordion `rounded-2xl border` with `LESSON_KIND_BADGE` 5×5 circles + `Plus/Minus` lucide (`bg-[#3478ff]` when open), `duration` + `Quiz` pill, sticky enroll card `₹` (`₹` not `$`) with razorpay `QTNXT` name.
 - **Learn (learner)** — `completed` hydrated from `GET /me/courses` (`completed_lessons`), `progress = completed.size/total`, `Mark complete` per lesson (`POST /lessons/complete`), persisted `progress` + `LessonCompletion` drives `GET /me/activity/`. Sidebar progress bar + `Course content` accordion. Below `Back to course` when `progress===100` shows `Mark course as complete →`; on click reveals 5× `Star` rating (`amber-400`); `Submit rating` → `POST /rate/` + `POST /certificate` (idempotent `QTNXT-XXXXXXXX`), then `You rated N ★` + `Average rating updated on course details & cards`. Average shown everywhere via `average_rating`/`rating`.
 - **Profile (learner)** — `TopNav` sticky, header redesigned from `bg-white/10` cards to ink card `bg-[#0f172a]` with mesh blobs (`#1e3a5f`/`amber-400/10`) + `Q` watermark, `rounded-[20px]` avatar with `✓`, `LEARNER` pill, `name 22/26px black`, `Enrolled/Completed/Avg. progress` as `border-t` 3-col with `uppercase tracking-[0.15em]` labels (no backdrop cards). Below: `Edit profile` (upload via `/upload/`), `Account` + danger zone, `My courses` with progress bars, `Payment activity` (invoices from `GET /payments/my-payments`, `QTNXT-000012 • date • pay_… • Paid` + `amount` `₹` + `Invoice` print window), `Certificates Achieved` (`GET /me/certificates`, grid `sm:grid-cols-2` cards `Certified` emerald, `Learner/Enrolled/Completed` dates, `View certificate` → modal `border-[3px] border-[#0f172a]` professional template `Q QTNXT • Certificate of Completion • This certifies that {learner_name} • has successfully completed {course.title} • Enrolled on / Completed on • Certificate ID • qtnxt.com/verify/... • Print/Save PDF`), heatmap moved to `/activity`.
-- **Activity (learner)** — full-width, GitHub-style tracker for `Mark as done` + quizzes: 3 stat cards (`Lessons done`/`Active days`/`Busiest day`), `Contribution graph` `rounded-[20px] border` with `last 26 weeks` pill, `Mon/Wed/Fri` gutter + month labels, `13×13 rounded-[3px] border` cells `zinc-100 → #dbeafe → #93c5fd → #2563eb → #0f172a` (ink scale, not emerald clone), hover `title` with `N lessons on YYYY-MM-DD`, `Less/More` legend matching scale.
+- **Activity (learner)** — full-width, GitHub-style tracker for `Mark as done` + quizzes: 3 stat cards (`Lessons done`/`Active days`/`Busiest day`), `Contribution graph` `rounded-[20px] border` with `last 26 weeks` pill, `Sun/Wed/Fri` gutter + month labels, `22px rounded-md border` cells `zinc-100 → #dbeafe → #93c5fd → #2563eb → #0f172a` (ink scale, not emerald clone), hover `title` with `N lessons on YYYY-MM-DD`, `Less/More` legend matching scale.
 - **Instructor profile** — now `InstructorHeader` sticky, `w-full` layout (no `max-w-[1080px]`), same avatar upload fix, pricing `₹` in `Your courses`.
 
 ## Code style
@@ -350,12 +371,12 @@ Roles checked in `IsInstructorOrReadOnly` (courses) and `IsAuthenticated` (enrol
 - Tailwind v4 only (`@import "tailwindcss"`), `cn()`, `@theme` tokens, mobile-first `sm:`/`lg:`, `dark:` not needed.
 
 ## Testing
-- **Backend:** `uv run pytest` (OTP + course CRUD/publish + enrollments progress + payments mock + reviews + certificates).
-- **Frontend:** `pnpm -r build` + per-app `tsc --noEmit` + `oxlint` must pass; Vitest + RTL + msw + Playwright not installed yet (planned).
+- **Backend:** `uv run pytest` (OTP + per-app cookies + course CRUD/publish + enrollments progress + mock-gated payments + packs + reviews + certificates + admin panel).
+- **Frontend:** `pnpm -r build` + `pnpm -r exec tsc --noEmit` + `pnpm -r lint` (`oxlint`) must pass; Vitest + RTL + msw + Playwright not installed yet (planned).
 
 ## Roadmap
-- [x] httpOnly JWT cookies · [x] `/upload/` · [x] `toEmbed` yt/embed+iframe+shorts · [x] 2-step instructor builder (subtitle/description/learn/price ₹) · [x] lean learner cards (₹, subtitle 2 lines, instructor + counts, enrolled→Go to course) · [x] search + grid/list (both apps) · [x] persisted progress (`LessonCompletion` + `completed_lessons`) · [x] QTNXT rebrand + full-width centered nav + gradient hero (bigger/wider, banners removed) + sticky navbar · [x] `Mark course as complete` at 100% → star rating → `average_rating` + `rating_count` on cards/detail · [x] `Review` + `Certificate` (QTNXT-XXXX, enrolled/completed dates, professional print template) in profile + `Payment activity` invoices (Razorpay mock/live, ₹) + `Activity` GitHub heatmap with QTNXT ink scale + profile navbar + full-width instructor routes + profile header redesign
-- [ ] Real Razorpay keys (currently mock when `RAZORPAY_KEY_ID` missing) · [ ] Playwright E2E · [ ] Certificate verification page `qtnxt.com/verify/:id`
+- [x] httpOnly per-app JWT cookies (`X-App`, one session per app) · [x] `/upload/` · [x] `toEmbed` yt/embed+iframe+shorts · [x] 2-step instructor builder (subtitle/description/learn/price ₹) · [x] lean learner cards (₹, subtitle 2 lines, instructor + counts, enrolled→Go to course) · [x] search + grid/list (both apps) · [x] persisted progress (`LessonCompletion` + `completed_lessons`) · [x] QTNXT rebrand + full-width centered nav + gradient hero (bigger/wider, banners removed) + sticky navbar · [x] `Mark course as complete` at 100% → star rating → `average_rating` + `rating_count` on cards/detail · [x] `Review` + `Certificate` (QTNXT-XXXX, enrolled/completed dates, professional print template) in profile + `Payment activity` invoices (Razorpay live or `ALLOW_MOCK_PAYMENTS` mock, ₹) + `Activity` GitHub heatmap with QTNXT ink scale + profile navbar + full-width instructor routes + profile header redesign · [x] question packs (learner store + instructor 4-step builder + pack payments) · [x] `create_admin` CLI, `become-admin` self-promotion removed
+- [ ] Real Razorpay keys (mock only when `ALLOW_MOCK_PAYMENTS=True`) · [ ] Playwright E2E · [ ] Certificate verification page `qtnxt.com/verify/:id`
 
 ## Troubleshooting
 

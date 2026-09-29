@@ -108,6 +108,16 @@ class Assignment(models.Model):
         blank=True,
         related_name="assignments",
     )
+    # Set when this assignment is a materialised exam instance of a question
+    # pack (one per allowed module). Instances are hidden from the catalog and
+    # only reachable through the pack purchase/start flow.
+    pack = models.ForeignKey(
+        "packs.QuestionPack",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="exam_instances",
+    )
     difficulty = models.CharField(
         max_length=10, choices=Difficulty.choices, default=Difficulty.MEDIUM
     )
@@ -192,8 +202,12 @@ class AssignmentModel(models.Model):
         SEQUENTIAL = "sequential", "Sequential"
         PARALLEL = "parallel", "Parallel"
 
+    class ExamModule(models.TextChoices):
+        PRACTICE = "practice", "Practice"
+        MOCK = "mock", "Mock Test"
+
     assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, related_name="models")
-    code = models.CharField(max_length=30)
+    code = models.CharField(max_length=30, choices=ExamModule.choices)
     name = models.CharField(max_length=120)
     description = models.TextField(blank=True, default="")
     execution_mode = models.CharField(

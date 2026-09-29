@@ -13,6 +13,7 @@ import Leaderboard from "./pages/Leaderboard";
 import Learn from "./pages/Learn";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
+import PackDetail from "./pages/PackDetail";
 import AssignmentDetail from "./pages/AssignmentDetail";
 import AssignmentResult from "./pages/AssignmentResult";
 import AssignmentTake from "./pages/AssignmentTake";
@@ -31,6 +32,7 @@ const router = createBrowserRouter([
   { path: "/activity", element: <Protected><Activity /></Protected> },
   { path: "/leaderboard", element: <Protected><Leaderboard /></Protected> },
   { path: "/assignments", element: <Protected><Assignments /></Protected> },
+  { path: "/packs/:id", element: <PackDetail /> },
   { path: "/assignments/:id", element: <Protected><AssignmentDetail /></Protected> },
   { path: "/assignments/take/:attemptId", element: <Protected><AssignmentTake /></Protected> },
   { path: "/assignments/transcript/:assignmentId", element: <Protected><AssignmentResult /></Protected> },

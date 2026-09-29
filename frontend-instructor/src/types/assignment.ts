@@ -1,6 +1,17 @@
-import { optionImage, optionText, type AssignmentOption } from "@masterlms/shared";
+import {
+  optionImage,
+  optionText,
+  type AssignmentOption,
+  type ExamModule,
+} from "@masterlms/shared";
 
-export type AssignmentModelType = "model_1" | "model_2" | "model_3";
+export type AssignmentModelType = ExamModule;
+
+/** Map pre-rename draft codes to current modules so old drafts keep working. */
+export function normalizeModelType(raw: unknown): AssignmentModelType {
+  if (raw === "model_1" || raw === "practice") return "practice";
+  return "mock";
+}
 
 export type AssignmentStatus = "draft" | "published" | "archived";
 
@@ -27,11 +38,11 @@ export interface AssignmentTest {
   duration: number;
   questionIds: string[];
   questions: AssignmentQuestion[];
-  sets: AssignmentSet[];
   randomizeQuestions: boolean;
   passingPercentage: number;
 }
 
+/** @deprecated suite removed; kept so old drafts still parse. */
 export interface AssignmentSet {
   id: string;
   title: string;
@@ -41,6 +52,7 @@ export interface AssignmentSet {
   questions: AssignmentQuestion[];
 }
 
+/** @deprecated suite removed; kept so old drafts still parse. */
 export interface AssignmentModel3Test {
   id: string;
   title: string;
@@ -51,7 +63,7 @@ export interface AssignmentModel3Test {
   passingPercentage: number;
 }
 
-/** @deprecated model_3 now reuses AssignmentTest/tests; kept for old drafts. */
+/** @deprecated suite removed; kept so old drafts still parse. */
 export type LegacyModel3Tests = AssignmentModel3Test[];
 
 export interface Assignment {
@@ -71,7 +83,7 @@ export interface Assignment {
   endDate: string;
   questions: AssignmentQuestion[];
   tests: AssignmentTest[];
-  /** @deprecated use tests[].sets for model_3; read for old drafts only. */
+  /** @deprecated suite removed; read for old drafts only. */
   model3Tests: AssignmentModel3Test[];
   randomizeQuestions: boolean;
   randomizeOptions: boolean;
@@ -127,15 +139,13 @@ export interface TopicInfo {
 }
 
 export const MODEL_LABELS: Record<AssignmentModelType, string> = {
-  model_1: "Direct MCQ",
-  model_2: "Tests",
-  model_3: "Tests & Sets",
+  practice: "Practice",
+  mock: "Mock Test",
 };
 
 export const MODEL_DESCRIPTIONS: Record<AssignmentModelType, string> = {
-  model_1: "Questions generated directly from your content. Best for simple assessments.",
-  model_2: "Questions organized into separate tests, each with its own duration.",
-  model_3: "Tests containing sets, each with its own duration and question groupings.",
+  practice: "Untimed practice with inline explanations. Best for study.",
+  mock: "Testbook-style sections: each category (Quant, English, …) is a timed section.",
 };
 
 export const DIFFICULTY_LABELS: Record<QuestionDifficulty, string> = {
@@ -170,6 +180,7 @@ export function createEmptyQuestion(marks = 1): AssignmentQuestion {
   };
 }
 
+/** @deprecated suite removed. */
 export function createEmptySet(title?: string): AssignmentSet {
   return {
     id: `set_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -189,12 +200,12 @@ export function createEmptyTest(title?: string): AssignmentTest {
     duration: 60,
     questionIds: [],
     questions: [],
-    sets: [],
     randomizeQuestions: false,
     passingPercentage: 50,
   };
 }
 
+/** @deprecated suite removed. */
 export function createEmptyModel3Test(title?: string): AssignmentModel3Test {
   return {
     id: `test_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -210,7 +221,7 @@ export function createEmptyModel3Test(title?: string): AssignmentModel3Test {
 export function createEmptyAssignment(): Assignment {
   return {
     id: "",
-    modelType: "model_1",
+    modelType: "practice",
     title: "",
     description: "",
     instructions: "",
@@ -246,71 +257,50 @@ export function getQuestionsByIds(
     .filter((q): q is AssignmentQuestion => Boolean(q));
 }
 
-export function getModel1Questions(assignment: Assignment): AssignmentQuestion[] {
+export function getPracticeQuestions(assignment: Assignment): AssignmentQuestion[] {
   return assignment.questions;
 }
 
-export function getModel2Questions(assignment: Assignment): AssignmentQuestion[] {
+export function getMockQuestions(assignment: Assignment): AssignmentQuestion[] {
   return assignment.tests.flatMap((t) =>
     getQuestionsByIds(assignment.questions, t.questionIds)
   );
 }
 
-export function getModel3Questions(assignment: Assignment): AssignmentQuestion[] {
-  const tests =
-    assignment.tests.length > 0
-      ? assignment.tests
-      : assignment.model3Tests.map((t) => ({
-          id: t.id,
-          title: t.title,
-          description: t.description,
-          duration: t.duration,
-          questionIds: [] as string[],
-          questions: [] as AssignmentQuestion[],
-          sets: t.sets,
-          randomizeQuestions: t.randomizeQuestions,
-          passingPercentage: t.passingPercentage,
-        }));
-  return tests.flatMap((t) =>
-    t.sets.flatMap((s) => getQuestionsByIds(assignment.questions, s.questionIds))
-  );
+/** @deprecated suite removed; use getMockQuestions. */
+export function getSuiteQuestions(assignment: Assignment): AssignmentQuestion[] {
+  return getMockQuestions(assignment);
 }
 
 export function getModelQuestions(
   assignment: Assignment,
   model: AssignmentModelType
 ): AssignmentQuestion[] {
-  if (model === "model_1") return getModel1Questions(assignment);
-  if (model === "model_2") return getModel2Questions(assignment);
-  return getModel3Questions(assignment);
+  if (model === "practice") return getPracticeQuestions(assignment);
+  return getMockQuestions(assignment);
 }
 
-export function countModel2Questions(assignment: Assignment): number {
+export function countMockQuestions(assignment: Assignment): number {
   return assignment.tests.reduce((sum, t) => sum + t.questionIds.length, 0);
 }
 
-export function countModel3Questions(assignment: Assignment): number {
-  const tests = assignment.tests.length > 0 ? assignment.tests : [];
-  const legacy = tests.length === 0 ? assignment.model3Tests : [];
-  return (
-    tests.reduce((sum, t) => sum + t.sets.reduce((s, set) => s + set.questionIds.length, 0), 0) +
-    legacy.reduce((sum, t) => sum + t.sets.reduce((s, set) => s + set.questionIds.length, 0), 0)
-  );
+/** @deprecated suite removed; use countMockQuestions. */
+export function countSuiteQuestions(assignment: Assignment): number {
+  return countMockQuestions(assignment);
 }
 
 export function countQuestions(assignment: Assignment, model: AssignmentModelType): number {
-  if (model === "model_1") return assignment.questions.length;
-  if (model === "model_2") return countModel2Questions(assignment);
-  return countModel3Questions(assignment);
+  if (model === "practice") return assignment.questions.length;
+  return countMockQuestions(assignment);
 }
 
 export function getTotalQuestions(assignment: Assignment): number {
-  if (assignment.modelType === "model_1") return assignment.questions.length;
+  if (assignment.modelType === "practice") return assignment.questions.length;
   return countQuestions(assignment, assignment.modelType);
 }
 
 export function getTotalMarks(assignment: Assignment): number {
-  if (assignment.modelType === "model_1") {
+  if (assignment.modelType === "practice") {
     return assignment.questions.reduce((sum, q) => sum + q.marks, 0);
   }
   return getModelTotalMarks(assignment, assignment.modelType);
@@ -324,7 +314,6 @@ export function getModelTotalMarks(
 }
 
 const MAX_TEST_QUESTIONS = 12;
-const MAX_SET_QUESTIONS = 8;
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -351,7 +340,7 @@ function proportionalDurations(total: number, counts: number[]): number[] {
   return counts.map((c) => Math.max(1, Math.round((total * c) / sum)));
 }
 
-export function buildModel2FromQuestions(
+export function buildMockFromQuestions(
   questions: AssignmentQuestion[],
   totalDuration: number
 ): AssignmentTest[] {
@@ -374,30 +363,20 @@ export function buildModel2FromQuestions(
   return tests;
 }
 
-export function buildModel3FromQuestions(
+/** @deprecated suite removed; use buildMockFromQuestions. */
+export function buildSuiteFromQuestions(
   questions: AssignmentQuestion[],
-  totalDuration: number
+  totalDuration: number,
 ): AssignmentModel3Test[] {
-  if (questions.length === 0) return [];
-  const tests: AssignmentModel3Test[] = [];
-  const groups = groupQuestionsByTopic(questions);
-  for (const [topic, group] of groups) {
-    const test = createEmptyModel3Test(topic);
-    test.sets = chunkArray(group, MAX_SET_QUESTIONS).map((chunk, i) => {
-      const set = createEmptySet(`Set ${i + 1}`);
-      set.questionIds = chunk.map((q) => q.id);
-      set.questions = chunk;
-      return set;
-    });
-    const setDurations = proportionalDurations(
-      totalDuration,
-      test.sets.map((s) => s.questionIds.length)
-    );
-    test.sets.forEach((s, i) => (s.duration = setDurations[i]));
-    test.duration = test.sets.reduce((sum, s) => sum + s.duration, 0);
-    tests.push(test);
-  }
-  return tests;
+  return buildMockFromQuestions(questions, totalDuration).map((t) => ({
+    id: t.id,
+    title: t.title,
+    description: t.description,
+    duration: t.duration,
+    sets: [],
+    randomizeQuestions: t.randomizeQuestions,
+    passingPercentage: t.passingPercentage,
+  }));
 }
 
 export function ensureModelsCollectPool(assignment: Assignment): Assignment {
@@ -413,33 +392,30 @@ export function ensureModelsCollectPool(assignment: Assignment): Assignment {
     return { ...s, questionIds, questions: getQuestionsByIds(pool, questionIds) };
   };
 
-  let tests: AssignmentTest[] = assignment.tests.map((t) => ({
-    ...syncTest(t),
-    sets: (t.sets ?? []).map(syncSet),
-  }));
-  if (tests.length === 0 && assignment.model3Tests.length > 0) {
-    tests = assignment.model3Tests.map((t) => ({
-      id: t.id,
-      title: t.title,
-      description: t.description,
-      duration: t.duration,
-      questionIds: [],
-      questions: [],
-      sets: t.sets.map(syncSet),
-      randomizeQuestions: t.randomizeQuestions,
-      passingPercentage: t.passingPercentage,
-    }));
-  }
+  let tests: AssignmentTest[] = assignment.tests.map((t) => {
+    const synced = syncTest(t);
+    const raw = t as AssignmentTest & { sets?: AssignmentSet[] };
+    return { ...synced, sets: (raw.sets ?? []).map(syncSet) } as AssignmentTest & {
+      sets: AssignmentSet[];
+    };
+  }) as AssignmentTest[];
+  const legacy = tests.length === 0 ? assignment.model3Tests : [];
+  const legacySets = legacy.flatMap((t) => t.sets.map(syncSet));
 
-  const model2Placed = new Set(tests.flatMap((t) => t.questionIds));
-  const model3Placed = new Set(tests.flatMap((t) => t.sets.flatMap((s) => s.questionIds)));
+  const placed = new Set([
+    ...tests.flatMap((t) => t.questionIds),
+    ...tests.flatMap(
+      (t) => ((t as AssignmentTest & { sets?: AssignmentSet[] }).sets ?? []).flatMap((s) => s.questionIds),
+    ),
+    ...legacySets.flatMap((s) => s.questionIds),
+  ]);
   const newIds = assignment.questions
     .map((q) => q.id)
-    .filter((id) => !model2Placed.has(id) && !model3Placed.has(id));
+    .filter((id) => !placed.has(id));
 
   if (newIds.length > 0) {
     if (tests.length === 0 && assignment.questions.length > 0) {
-      tests = buildModel2FromQuestions(assignment.questions, assignment.duration);
+      tests = buildMockFromQuestions(assignment.questions, assignment.duration);
     } else if (tests.length > 0) {
       const first = tests[0];
       const merged: AssignmentTest = {
@@ -501,9 +477,6 @@ export function validateAssignment(assignment: Assignment): AssignmentValidation
   if (!assignment.title.trim()) {
     errors.push({ field: "title", message: "Title is required" });
   }
-  if (!assignment.sourceDocument && !assignment.sourceDocumentName) {
-    errors.push({ field: "sourceDocument", message: "Source PDF is required" });
-  }
 
   if (assignment.questions.length === 0) {
     errors.push({ field: "questions", message: "At least one question is required" });
@@ -522,24 +495,8 @@ export function validateAssignment(assignment: Assignment): AssignmentValidation
         message: "Test duration must be greater than 0",
       });
     }
-    if (assignment.modelType === "model_2" && test.questionIds.length === 0) {
+    if (assignment.modelType === "mock" && test.questionIds.length === 0) {
       errors.push({ field: `test_questions_${test.id}`, message: "Test must contain at least one question" });
-    }
-    if (assignment.modelType === "model_3") {
-      if (test.sets.length === 0) {
-        errors.push({ field: `test_sets_${test.id}`, message: "Test must contain at least one set" });
-      }
-      for (const set of test.sets) {
-        if (!set.title.trim()) {
-          errors.push({ field: `set_title_${set.id}`, message: "Set title is required" });
-        }
-        if (set.duration <= 0) {
-          errors.push({ field: `set_duration_${set.id}`, message: "Set duration must be greater than 0" });
-        }
-        if (set.questionIds.length === 0) {
-          errors.push({ field: `set_questions_${set.id}`, message: "Set must contain at least one question" });
-        }
-      }
     }
   }
 
@@ -557,4 +514,68 @@ export function getCourseOptions(): string[] {
     "Design",
     "Other",
   ];
+}
+
+export function formatMinutes(mins: number): string {
+  const total = Math.max(0, Math.round(mins));
+  if (total < 60) return `${total} min`;
+  const hours = Math.floor(total / 60);
+  const rest = total % 60;
+  return rest === 0 ? `${hours} hr` : `${hours} hr ${rest} min`;
+}
+
+export type QuestionFlag = "empty" | "options" | "answer";
+
+export function questionFlags(q: AssignmentQuestion): QuestionFlag[] {
+  const flags: QuestionFlag[] = [];
+  if (!q.question.trim()) flags.push("empty");
+  const valid = q.options.filter((o) => optionText(o).trim() || optionImage(o));
+  if (valid.length < 2) flags.push("options");
+  const correct = q.options[q.correctAnswer];
+  const correctValid =
+    q.correctAnswer >= 0 &&
+    q.correctAnswer < q.options.length &&
+    typeof correct !== "undefined" &&
+    (optionText(correct).trim() || Boolean(optionImage(correct)));
+  if (!correctValid) flags.push("answer");
+  return flags;
+}
+
+export function needsReviewQuestions(
+  questions: AssignmentQuestion[]
+): AssignmentQuestion[] {
+  return questions.filter((q) => questionFlags(q).length > 0);
+}
+
+export function topicBreakdown(questions: AssignmentQuestion[]): [string, number][] {
+  const counts = new Map<string, number>();
+  for (const q of questions) {
+    const key = q.topic.trim() || "Untagged";
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+export function placedQuestionIds(assignment: Assignment): Set<string> {
+  const ids = new Set<string>();
+  for (const test of assignment.tests) {
+    for (const id of test.questionIds) ids.add(id);
+    const raw = test as AssignmentTest & { sets?: AssignmentSet[] };
+    for (const set of raw.sets ?? []) {
+      for (const id of set.questionIds) ids.add(id);
+    }
+  }
+  return ids;
+}
+
+/** Pool questions not yet placed into any test (mock only). */
+export function unplacedPoolQuestions(assignment: Assignment): AssignmentQuestion[] {
+  if (assignment.modelType === "practice") return [];
+  const placed = placedQuestionIds(assignment);
+  return assignment.questions.filter((q) => !placed.has(q.id));
+}
+
+export function totalConfiguredMinutes(assignment: Assignment): number {
+  if (assignment.modelType === "practice") return assignment.duration;
+  return assignment.tests.reduce((sum, t) => sum + (t.duration || 0), 0);
 }

@@ -53,7 +53,7 @@ def assignment(instructor):
 
 
 def make_model(assignment, duration=60):
-    model = AssignmentModel.objects.create(assignment=assignment, code="A", name="Model A")
+    model = AssignmentModel.objects.create(assignment=assignment, code="mock", name="Model A")
     step = AssignmentModelStep.objects.create(model=model, name="Test 1", duration_seconds=duration)
     question = AssignmentQuestion.objects.create(
         assignment=assignment,
@@ -91,7 +91,7 @@ def test_hierarchy_cascades_and_catalog_only_returns_active_nodes(instructor, le
 
 @pytest.mark.django_db
 def test_nested_model_duration_does_not_double_count_child_steps(assignment):
-    model = AssignmentModel.objects.create(assignment=assignment, code="A", name="Sequential")
+    model = AssignmentModel.objects.create(assignment=assignment, code="mock", name="Sequential")
     parent = AssignmentModelStep.objects.create(model=model, name="Section", duration_seconds=999)
     AssignmentModelStep.objects.create(model=model, parent=parent, name="One", duration_seconds=60)
     AssignmentModelStep.objects.create(model=model, parent=parent, name="Two", duration_seconds=120)

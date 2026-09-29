@@ -14,6 +14,7 @@ urlpatterns = [
     path("api/v1/", include("apps.payments.urls")),
     path("api/v1/", include("apps.adminpanel.urls")),
     path("api/v1/", include("apps.assignments.urls")),
+    path("api/v1/", include("apps.packs.urls")),
     path("teach", RedirectView.as_view(url="/teach/", permanent=False)),
     path("teach/", spa_view("teach")),
     path("teach/<path:path>", spa_view("teach")),

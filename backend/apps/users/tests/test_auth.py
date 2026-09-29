@@ -4,13 +4,24 @@ from rest_framework.test import APIClient
 from apps.users.models import OTP, User
 
 
-def verify_mobile(c: APIClient, mobile: str) -> dict:
+def verify_mobile(c: APIClient, mobile: str, app: str = "") -> dict:
     r = c.post("/api/v1/auth/send-otp", {"mobile": mobile}, format="json")
     assert r.status_code == 200
     code = r.json()["data"]["mock_code"]
-    r = c.post("/api/v1/auth/verify-otp", {"mobile": mobile, "code": code}, format="json")
+    headers = {"HTTP_X_APP": app} if app else {}
+    r = c.post(
+        "/api/v1/auth/verify-otp",
+        {"mobile": mobile, "code": code},
+        format="json",
+        **headers,
+    )
     assert r.status_code == 200
     return r.json()["data"]
+
+
+def me(c: APIClient, app: str = "") -> object:
+    headers = {"HTTP_X_APP": app} if app else {}
+    return c.get("/api/v1/users/me", **headers)
 
 
 @pytest.mark.django_db
@@ -105,13 +116,54 @@ def test_become_instructor_once_only():
 
 
 @pytest.mark.django_db
-def test_become_admin_promotes_fresh_user():
+def test_per_app_logins_do_not_overwrite_each_other():
+    c = APIClient()
+    verify_mobile(c, "9770000001", app="learner")
+    assert "learner_access_token" in c.cookies
+    assert "learner_refresh_token" in c.cookies
+    verify_mobile(c, "9770000002", app="instructor")
+    assert "instructor_access_token" in c.cookies
+    # Each app still resolves its own user from the shared jar.
+    learner = me(c, app="learner")
+    instructor = me(c, app="instructor")
+    assert learner.status_code == 200
+    assert instructor.status_code == 200
+    assert learner.json()["data"]["mobile"] == "9770000001"
+    assert instructor.json()["data"]["mobile"] == "9770000002"
+
+
+@pytest.mark.django_db
+def test_logout_only_clears_own_app_session():
+    c = APIClient()
+    verify_mobile(c, "9770000003", app="learner")
+    verify_mobile(c, "9770000004", app="instructor")
+    r = c.post("/api/v1/auth/logout", HTTP_X_APP="learner")
+    assert r.status_code == 200
+    assert me(c, app="learner").status_code != 200
+    still_in = me(c, app="instructor")
+    assert still_in.status_code == 200
+    assert still_in.json()["data"]["mobile"] == "9770000004"
+
+
+@pytest.mark.django_db
+def test_per_app_refresh_rotates_own_cookies():
+    c = APIClient()
+    verify_mobile(c, "9770000005", app="learner")
+    verify_mobile(c, "9770000006", app="instructor")
+    r = c.post("/api/v1/auth/refresh", HTTP_X_APP="learner")
+    assert r.status_code == 200
+    assert r.json()["data"]["refreshed"] is True
+    assert me(c, app="learner").json()["data"]["mobile"] == "9770000005"
+    assert me(c, app="instructor").json()["data"]["mobile"] == "9770000006"
+
+
+@pytest.mark.django_db
+def test_become_admin_endpoint_removed():
     c = APIClient()
     verify_mobile(c, "9666666666")
     r = c.post("/api/v1/auth/become-admin")
-    assert r.status_code == 200
-    assert r.json()["data"]["role"] == "admin"
-    assert User.objects.get(mobile="9666666666").role == "admin"
-    # idempotent — already admin, still 200
-    r = c.post("/api/v1/auth/become-admin")
-    assert r.status_code == 200
+    # Unknown API paths fall through to the SPA shell (200 HTML), so the
+    # security property is that no promotion happened, not the status code.
+    assert User.objects.get(mobile="9666666666").role == "learner"
+    if r.status_code == 200 and "text/html" not in r.get("Content-Type", ""):
+        assert r.json()["data"]["role"] != "admin"

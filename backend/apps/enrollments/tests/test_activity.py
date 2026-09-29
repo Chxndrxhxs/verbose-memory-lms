@@ -70,7 +70,9 @@ def test_activity_returns_last_six_months(course_with_lesson, learner):
     r = c.get("/api/v1/me/activity/")
     assert r.status_code == 200
     data = r.json()["data"]
-    today = timezone.now().date().isoformat()
+    # The API buckets by IST (Asia/Kolkata); mirror that or this flakes
+    # whenever UTC and IST dates differ (18:30-24:00 UTC).
+    today = timezone.localtime(timezone.now()).date().isoformat()
     today_entry = next((d for d in data if d["date"] == today), None)
     assert today_entry is not None
     assert today_entry["count"] == 1

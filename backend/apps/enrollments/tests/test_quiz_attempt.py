@@ -47,32 +47,68 @@ def quiz_lesson(instructor):
     return course, lesson, text
 
 
-def attempt(c, course_id, lesson_id, score, total):
+def attempt(c, course_id, lesson_id, answers):
     return c.post(
         f"/api/v1/courses/{course_id}/lessons/quiz-attempt",
-        {"lesson_id": lesson_id, "score": score, "total": total},
+        {"lesson_id": lesson_id, "answers": answers},
         format="json",
     )
 
 
 @pytest.mark.django_db
-def test_quiz_attempt_logged_with_attempt_number(learner, quiz_lesson):
+def test_quiz_attempt_graded_server_side(learner, quiz_lesson):
     course, lesson, _ = quiz_lesson
     Enrollment.objects.create(learner=learner, course=course)
     c = APIClient()
     c.force_authenticate(user=learner)
-    r = attempt(c, course.id, lesson.id, 1, 2)
+    # correct answer is option 0 — forged score is ignored, answers are graded
+    r = attempt(c, course.id, lesson.id, {"0": 1})
     assert r.status_code == 200
     assert r.json()["data"] == {
-        "score": 1,
-        "total": 2,
+        "score": 0,
+        "total": 1,
         "passed": False,
         "attempt": 1,
-        "best": 1,
+        "best": 0,
     }
-    r = attempt(c, course.id, lesson.id, 2, 2)
+    r = attempt(c, course.id, lesson.id, {"0": 0})
+    assert r.json()["data"]["score"] == 1
+    assert r.json()["data"]["passed"] is True
     assert r.json()["data"]["attempt"] == 2
-    assert r.json()["data"]["best"] == 2
+    assert r.json()["data"]["best"] == 1
+    assert (
+        ActivityEvent.objects.filter(learner=learner, verb=ActivityEvent.Verb.QUIZ_ATTEMPT).count()
+        == 2
+    )
+
+
+@pytest.mark.django_db
+def test_quiz_attempt_rejects_missing_answers(learner, quiz_lesson):
+    course, lesson, _ = quiz_lesson
+    Enrollment.objects.create(learner=learner, course=course)
+    c = APIClient()
+    c.force_authenticate(user=learner)
+    r = c.post(
+        f"/api/v1/courses/{course.id}/lessons/quiz-attempt",
+        {"lesson_id": lesson.id, "score": 2, "total": 2},
+        format="json",
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.django_db
+def test_quiz_attempt_attempt_numbers_track_best(learner, quiz_lesson):
+    course, lesson, _ = quiz_lesson
+    Enrollment.objects.create(learner=learner, course=course)
+    c = APIClient()
+    c.force_authenticate(user=learner)
+    r = attempt(c, course.id, lesson.id, {"0": 1})
+    assert r.status_code == 200
+    assert r.json()["data"]["attempt"] == 1
+    assert r.json()["data"]["best"] == 0
+    r = attempt(c, course.id, lesson.id, {"0": 0})
+    assert r.json()["data"]["attempt"] == 2
+    assert r.json()["data"]["best"] == 1
     assert r.json()["data"]["passed"] is True
     assert (
         ActivityEvent.objects.filter(learner=learner, verb=ActivityEvent.Verb.QUIZ_ATTEMPT).count()
@@ -85,19 +121,15 @@ def test_quiz_attempt_requires_enrollment(learner, quiz_lesson):
     course, lesson, _ = quiz_lesson
     c = APIClient()
     c.force_authenticate(user=learner)
-    r = attempt(c, course.id, lesson.id, 1, 1)
+    r = attempt(c, course.id, lesson.id, {"0": 0})
     assert r.status_code == 404
 
 
 @pytest.mark.django_db
-def test_quiz_attempt_rejects_non_quiz_and_bad_scores(learner, quiz_lesson):
+def test_quiz_attempt_rejects_non_quiz_lessons(learner, quiz_lesson):
     course, lesson, text = quiz_lesson
     Enrollment.objects.create(learner=learner, course=course)
     c = APIClient()
     c.force_authenticate(user=learner)
-    r = attempt(c, course.id, text.id, 1, 1)
-    assert r.status_code == 400
-    r = attempt(c, course.id, lesson.id, 5, 2)
-    assert r.status_code == 400
-    r = attempt(c, course.id, lesson.id, 1, 0)
+    r = attempt(c, course.id, text.id, {"0": 0})
     assert r.status_code == 400

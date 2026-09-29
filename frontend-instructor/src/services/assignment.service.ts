@@ -151,12 +151,28 @@ export const assignmentService = {
       numberOfOptions: number;
       generateExplanations: boolean;
       distributeEvenly: boolean;
+      topicDistribution?: Record<string, number>;
     }
   ): Promise<{ questions: Assignment["questions"] }> {
     return api(`/admin/assignments/generate-questions`, {
       method: "POST",
       body: JSON.stringify(config),
     });
+  },
+
+  /** Generate fresh questions about an uploaded document (AI, server-side). */
+  async generateFromDocument(
+    config: Record<string, unknown>
+  ): Promise<ExtractedQuestionRaw[]> {
+    const result = await api<
+      ExtractedQuestionRaw[] | { questions?: ExtractedQuestionRaw[] }
+    >(`/admin/assignments/generate-questions`, {
+      method: "POST",
+      body: JSON.stringify(config),
+    });
+    if (Array.isArray(result)) return result;
+    if (result && Array.isArray(result.questions)) return result.questions;
+    return [];
   },
 
   async extractQuestions(config: {

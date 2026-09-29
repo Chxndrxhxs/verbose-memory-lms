@@ -2,6 +2,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from corsheaders.defaults import default_headers as cors_default_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(DEBUG=(bool, False))
@@ -12,10 +13,7 @@ SECRET_KEY = env("SECRET_KEY", default="django-insecure-unset-change-before-depl
 DEBUG = env("DEBUG", default=False)
 # When DEBUG is on and no hosts are configured, allow localhost so `runserver` keeps working.
 # ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"] if DEBUG else [])
-ALLOWED_HOSTS = env.list(
-    "ALLOWED_HOSTS",
-    default=["localhost", "127.0.0.1"]
-)
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -33,6 +31,7 @@ INSTALLED_APPS = [
     "apps.payments",
     "apps.adminpanel",
     "apps.assignments",
+    "apps.packs",
 ]
 
 MIDDLEWARE = [
@@ -112,6 +111,9 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOW_CREDENTIALS = True
+# X-App selects the per-app auth cookie (learner / instructor / admin), so it
+# must be visible to browsers during preflight.
+CORS_ALLOW_HEADERS = list(cors_default_headers) + ["x-app"]
 CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS",
     default=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"],
@@ -128,6 +130,9 @@ SIMPLE_JWT = {
 
 RAZORPAY_KEY_ID = env("RAZORPAY_KEY_ID", default="")
 RAZORPAY_KEY_SECRET = env("RAZORPAY_KEY_SECRET", default="")
+# Explicit opt-in for mock orders — never implied by DEBUG, so a staging env
+# with DEBUG on can never bypass signatures or amounts.
+ALLOW_MOCK_PAYMENTS = env.bool("ALLOW_MOCK_PAYMENTS", default=False)
 
 # LLM provider for document-based question generation.
 # Google AI Studio (Gemini) exposes an OpenAI-compatible endpoint, so the same

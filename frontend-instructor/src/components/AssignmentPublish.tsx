@@ -1,10 +1,18 @@
 import { CheckCircle, AlertCircle, Save } from "@masterlms/shared";
 import { cn } from "../lib/utils";
+import { builderCardClass } from "../lib/builder";
 import type {
   Assignment,
   AssignmentValidationError,
 } from "../types/assignment";
-import { MODEL_LABELS, getTotalQuestions, getTotalMarks } from "../types/assignment";
+import {
+  MODEL_LABELS,
+  formatMinutes,
+  getTotalQuestions,
+  getTotalMarks,
+  topicBreakdown,
+  totalConfiguredMinutes,
+} from "../types/assignment";
 
 type Props = {
   assignment: Assignment;
@@ -12,18 +20,22 @@ type Props = {
 };
 
 export function AssignmentPublishStep({ assignment, errors }: Props) {
+  const totalQuestions = getTotalQuestions(assignment);
+  const untagged = topicBreakdown(assignment.questions).find(
+    ([topic]) => topic === "Untagged",
+  )?.[1] ?? 0;
+  const hasSource = Boolean(
+    assignment.sourceDocument || assignment.sourceDocumentName,
+  );
+
   const checks = [
     {
       label: "Title provided",
       ok: Boolean(assignment.title.trim()),
     },
     {
-      label: "Source PDF uploaded",
-      ok: Boolean(assignment.sourceDocument || assignment.sourceDocumentName),
-    },
-    {
       label: "At least one question",
-      ok: getTotalQuestions(assignment) > 0,
+      ok: totalQuestions > 0,
     },
     {
       label: "All questions have valid options",
@@ -33,62 +45,75 @@ export function AssignmentPublishStep({ assignment, errors }: Props) {
       label: "All questions have a correct answer",
       ok: errors.filter((e) => e.field.startsWith("correct_")).length === 0,
     },
-    ...(assignment.modelType === "model_2"
+    ...(assignment.modelType === "mock"
       ? [
           {
-            label: "At least one test",
+            label: "At least one section",
             ok: assignment.tests.length > 0,
           },
-        ]
-      : []),
-    ...(assignment.modelType === "model_3"
-      ? [
           {
-            label: "Tests have sets",
-            ok:
-              assignment.tests.length > 0 &&
-              assignment.tests.every((test) => test.sets.length > 0),
+            label: "Every section has questions",
+            ok: assignment.tests.every((t) => t.questionIds.length > 0),
           },
           {
-            label: "All sets contain questions",
-            ok: assignment.tests.every((t) =>
-              t.sets.every((s) => s.questions.length > 0)
-            ),
+            label: "20 Quant + 20 English style coverage",
+            ok:
+              topicBreakdown(assignment.questions).filter(
+                ([topic]) => topic !== "Untagged",
+              ).length >= 2,
           },
         ]
       : []),
   ];
 
+  const warnings = [
+    !hasSource &&
+      "No source document — fine for hand-written sets.",
+    untagged > 0 &&
+      `${untagged} question${untagged === 1 ? " is" : "s are"} untagged.`,
+  ].filter(Boolean) as string[];
+
   const allValid = checks.every((c) => c.ok);
+  const summary: [string, string][] = [
+    ["Format", MODEL_LABELS[assignment.modelType]],
+    ["Questions", String(totalQuestions)],
+    ["Total marks", String(getTotalMarks(assignment) || assignment.totalMarks)],
+    ["Duration", formatMinutes(totalConfiguredMinutes(assignment))],
+    ["Passing", `${assignment.passingPercentage}%`],
+    [
+      "Negative marking",
+      assignment.negativeMarking ? `Yes (−${assignment.negativeMarks})` : "No",
+    ],
+  ];
 
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-bold text-zinc-900">Review & Publish</h2>
-      <p className="mt-1 text-sm text-zinc-500">
-        Final check before publishing your assignment.
+    <div className={builderCardClass}>
+      <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+        Final step
+      </p>
+      <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">Review & publish</h2>
+      <p className="mt-1.5 text-[15px] text-zinc-500">
+        Final check before students can see this assignment.
       </p>
 
       <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
         <h3 className="text-sm font-bold text-zinc-900">
           {assignment.title || "Untitled Assignment"}
         </h3>
-        <div className="mt-2 grid grid-cols-2 gap-3 text-xs text-zinc-600 sm:grid-cols-4">
-          <div>
-            <span className="text-zinc-400">Model:</span>{" "}
-            {MODEL_LABELS[assignment.modelType]}
-          </div>
-          <div>
-            <span className="text-zinc-400">Questions:</span>{" "}
-            {getTotalQuestions(assignment)}
-          </div>
-          <div>
-            <span className="text-zinc-400">Total marks:</span>{" "}
-            {getTotalMarks(assignment) || assignment.totalMarks}
-          </div>
-          <div>
-            <span className="text-zinc-400">Duration:</span>{" "}
-            {assignment.duration} min
-          </div>
+        {assignment.description && (
+          <p className="mt-1 line-clamp-2 text-xs text-zinc-500">
+            {assignment.description}
+          </p>
+        )}
+        <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-zinc-600 sm:grid-cols-3">
+          {summary.map(([label, value]) => (
+            <div key={label}>
+              <span className="block text-[10px] font-bold tracking-wide text-zinc-400 uppercase">
+                {label}
+              </span>
+              <span className="font-semibold text-zinc-800">{value}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -117,6 +142,15 @@ export function AssignmentPublishStep({ assignment, errors }: Props) {
           </div>
         ))}
       </div>
+
+      {warnings.map((warning) => (
+        <p
+          key={warning}
+          className="mt-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-800"
+        >
+          {warning}
+        </p>
+      ))}
 
       {errors.length > 0 && (
         <div className="mt-4 rounded-xl bg-red-50 p-4">

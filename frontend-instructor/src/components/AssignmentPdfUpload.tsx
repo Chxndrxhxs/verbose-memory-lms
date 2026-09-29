@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { Upload, X, FileText, AlertCircle } from "@masterlms/shared";
 import { cn } from "../lib/utils";
 import { uploadFile } from "../lib/api";
+import { builderCardClass } from "../lib/builder";
 import type { Assignment } from "../types/assignment";
 
 type Props = {
@@ -101,10 +102,15 @@ export function AssignmentPdfUploadStep({ assignment, onChange }: Props) {
   const hasFile = Boolean(assignment.sourceDocument || assignment.sourceDocumentName);
 
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-bold text-zinc-900">Upload Source Document</h2>
-      <p className="mt-1 text-sm text-zinc-500">
-        Upload the PDF, DOCX, or TXT file that AI will use to generate questions.
+    <div className={builderCardClass}>
+      <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+        Optional source
+      </p>
+      <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">
+        Upload source document
+      </h2>
+      <p className="mt-1.5 text-[15px] text-zinc-500">
+        Upload the PDF, DOCX, or TXT file that AI will use to generate questions. You can skip this and write from topics instead.
       </p>
 
       <div className="mt-6">

@@ -29,7 +29,7 @@ cd backend
 uv sync
 copy .env.example .env   # then edit .env, see §4
 uv run python manage.py migrate
-uv run python manage.py createsuperuser
+uv run python manage.py create_admin --mobile 9876543210 --name "Admin"
 uv run python manage.py check
 
 # Frontends (from repo root)
@@ -54,14 +54,15 @@ Default is sqlite (`backend/db.sqlite3`, zero setup). To use MySQL/MariaDB:
 
 ```env
 SECRET_KEY=<random-32-chars-min>   # never ship the default; JWT signs with this
-DEBUG=True                         # True = fixed OTP 1234, mock payments, /media/ served
+DEBUG=True                         # True = mock_code returned in API response, /media/ served
 ALLOWED_HOSTS=localhost,127.0.0.1,192.168.0.103,183.82.2.222
 CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175
 CSRF_TRUSTED_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175
 # DATABASE_URL=...                # uncomment for MySQL (see §3)
-# RAZORPAY_KEY_ID= / RAZORPAY_KEY_SECRET=   # blank = mock payments (enroll works)
+# RAZORPAY_KEY_ID= / RAZORPAY_KEY_SECRET=   # real keys for live payments
+ALLOW_MOCK_PAYMENTS=True           # True = order_mock_* accepted (local dev only, never prod)
 LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
-LLM_MODEL=gemini-3.6-flash        # 2.0-flash is retired (Google returns 404)
+LLM_MODEL=gemini-2.0-flash        # any OpenAI-compatible model; backend default is gpt-4o-mini
 LLM_API_KEY=AIza...               # real key from https://aistudio.google.com/apikey
 ```
 
@@ -69,8 +70,7 @@ Rules: add every host/IP you open the app with to `ALLOWED_HOSTS` or Django
 returns 400 `DisallowedHost`. **Any `.env` change needs a backend restart.**
 Edit single lines; never rewrite the whole file (you'll lose other settings).
 
-Behaviour switches: `DEBUG=True` → OTP is always `1234`, Razorpay runs in mock
-mode when keys are blank, Gemini extract needs a valid `LLM_API_KEY` regardless.
+Behaviour switches: `DEBUG=True` → OTP `mock_code` is returned in the `send-otp` response (random per request, 5-min expiry) and `/media/` is served; mock Razorpay orders need `ALLOW_MOCK_PAYMENTS=True`; Gemini extract needs a valid `LLM_API_KEY` regardless.
 
 ## 5. Running
 
@@ -111,8 +111,8 @@ Find who holds the port: `netstat -ano | findstr :8000` → `taskkill /PID <pid>
 - `http://<server>:8000/teach/` → instructor studio
 - `http://<server>:8000/admin/` → admin panel
 - `http://<server>:8000/api/v1/courses/` → `{"data":[...]}`
-- Login: mobile (10 digits, starts 6–9) → Send OTP → `1234` → complete profile.
-- Paid enroll works with blank Razorpay keys (mock order `order_mock_*`).
+- Login: mobile (10 digits, starts 6–9) → Send OTP → read `mock_code` from the `send-otp` response (DEBUG only) → complete profile. Admins: create via `create_admin --mobile …` first, then OTP-login on `/admin/`.
+- Paid enroll works in mock mode only when `ALLOW_MOCK_PAYMENTS=True` (mock order `order_mock_*`).
 - Hard-refresh (`Ctrl+Shift+R`) after every frontend rebuild — browsers cache old JS.
 
 ## 8. Troubleshooting
@@ -123,9 +123,9 @@ Find who holds the port: `netstat -ano | findstr :8000` → `taskkill /PID <pid>
 | `NotSupportedError: MariaDB 10.5 or later is required (found 10.4.x)` | XAMPP's MariaDB too old → use sqlite or install MySQL 8 (§3). |
 | `TypeError: failed to fetch` on login | Page can't reach API: backend down, firewall blocking LAN, or stale cached JS → hard-refresh. Same-machine `localhost` vs LAN-IP mix is safe (relative API). |
 | `DisallowedHost` / HTTP 400 everywhere | Host missing from `ALLOWED_HOSTS` → add + restart (§4). |
-| OTP `Invalid or expired OTP` | Code is `1234` only when `DEBUG=True`; expires in 5 min; resend invalidates old codes; 5 wrong tries lock it; max 5 sends/hour. Mobile must match `[6-9]\d{9}`. |
+| OTP `Invalid or expired OTP` | There is no fixed code: in `DEBUG=True`, read `mock_code` from the `send-otp` response; expires in 5 min; resend invalidates old codes; 5 wrong tries lock it; max 5 sends/hour. Mobile must match `[6-9]\d{9}`. |
 | `Enter a valid URL` on profile save | Avatar/cover must be absolute URL (uploaded via `/upload/`), never `data:` or relative path. Fixed in `absoluteMediaUrl` (shared client). |
-| Enroll `Authentication failed` | Dead Razorpay keys force live mode → blank both keys for mock mode (§4). |
+| Enroll `Authentication failed` / order creation fails | Dead Razorpay keys force live mode → set `ALLOW_MOCK_PAYMENTS=True` for local mock mode (§4). Never enable it in prod. |
 | `No questions found in this PDF` | Dead/retired Gemini setup: needs valid `LLM_API_KEY` + current `LLM_MODEL` (§4). Scanned image-only PDFs give `No readable text` instead — use a text PDF or Generate mode. |
 | `rolldown ... Cannot find native binding` on `pnpm dev` | Broken install → `pnpm install --force`; ensure Node ≥20.19 and pnpm 10. |
 | App down after reboot/logout | Expected without autostart — log in (Startup shortcut runs it) or set up NSSM (§5). Check `backend\server.log`. |
@@ -133,6 +133,6 @@ Find who holds the port: `netstat -ano | findstr :8000` → `taskkill /PID <pid>
 
 ## 9. Before exposing to real users
 
-`DEBUG=True`, fixed OTP, mock payments, and dev `SECRET_KEY` are demo settings.
+`DEBUG=True`, OTP `mock_code` in responses, mock payments, and dev `SECRET_KEY` are demo settings.
 For real use: fresh `SECRET_KEY`, `DEBUG=False` (+ serve `/media/` via web server),
-real Razorpay + Gemini keys, MySQL with backups, HTTPS.
+`ALLOW_MOCK_PAYMENTS=False`, real Razorpay + Gemini keys, MySQL with backups, HTTPS.

@@ -69,8 +69,8 @@ def assignment_factory(db, inter_category, instructor):
         )
         models_payload = [
             {
-                "code": "Model 1",
-                "name": "Model 1",
+                "code": "practice",
+                "name": "Practice",
                 "is_published": True,
                 "execution_mode": "sequential",
                 "steps": [
@@ -83,8 +83,8 @@ def assignment_factory(db, inter_category, instructor):
                 ],
             },
             {
-                "code": "Model 2",
-                "name": "Model 2",
+                "code": "mock",
+                "name": "Mock Test",
                 "is_published": True,
                 "execution_mode": "sequential",
                 "steps": [

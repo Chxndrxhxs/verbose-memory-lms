@@ -27,7 +27,7 @@ def step_questions(assignment, model_code):
 def test_start_returns_structure_without_correct_answers(learner_client, assignment_factory):
     assignment = assignment_factory(title="Exam")
     publish(assignment)
-    model = assignment.models.get(code="Model 1")
+    model = assignment.models.get(code="mock")
     r = learner_client.post(
         f"/api/v1/assignments/{assignment.id}/start", {"model_id": model.id}, format="json"
     )
@@ -35,7 +35,7 @@ def test_start_returns_structure_without_correct_answers(learner_client, assignm
     data = r.json()["data"]
     assert data["attempt"]["status"] == "in_progress"
     assert data["attempt"]["seconds_remaining"] > 0
-    assert data["attempt"]["total_questions"] == 3
+    assert data["attempt"]["total_questions"] == 6
     step = data["structure"][0]
     assert step["kind"] == "test"
     assert "correct_answer" not in step["questions"][0]
@@ -43,9 +43,25 @@ def test_start_returns_structure_without_correct_answers(learner_client, assignm
 
 
 @pytest.mark.django_db
+def test_practice_structure_shows_explanations_but_not_answers(learner_client, assignment_factory):
+    assignment = assignment_factory(title="Practice Exam")
+    publish(assignment)
+    model = assignment.models.get(code="practice")
+    r = learner_client.post(
+        f"/api/v1/assignments/{assignment.id}/start", {"model_id": model.id}, format="json"
+    )
+    assert r.status_code == 200
+    data = r.json()["data"]
+    assert data["attempt"]["seconds_remaining"] > 6 * 24 * 3600
+    question = data["structure"][0]["questions"][0]
+    assert "correct_answer" not in question
+    assert "explanation" in question
+
+
+@pytest.mark.django_db
 def test_start_rejects_draft(learner_client, assignment_factory):
     assignment = assignment_factory(title="Hidden")
-    model = assignment.models.get(code="Model 1")
+    model = assignment.models.get(code="practice")
     r = learner_client.post(
         f"/api/v1/assignments/{assignment.id}/start", {"model_id": model.id}, format="json"
     )
@@ -56,13 +72,13 @@ def test_start_rejects_draft(learner_client, assignment_factory):
 def test_save_answers_then_restore_on_refresh(learner_client, assignment_factory):
     assignment = assignment_factory(title="Savable")
     publish(assignment)
-    model = assignment.models.get(code="Model 1")
+    model = assignment.models.get(code="practice")
     start = learner_client.post(
         f"/api/v1/assignments/{assignment.id}/start", {"model_id": model.id}, format="json"
     )
     attempt_id = start.json()["data"]["attempt"]["id"]
-    qs = step_questions(assignment, "Model 1")
-    step_id = first_step_id(assignment, "Model 1")
+    qs = step_questions(assignment, "practice")
+    step_id = first_step_id(assignment, "practice")
     answers = {str(step_id): {str(qs[0].id): 1, str(qs[1].id): 0}}
 
     save = learner_client.post(
@@ -96,7 +112,7 @@ def test_save_answers_rejected_for_other_learner(learner_client, assignment_fact
 
     assignment = assignment_factory(title="Mine")
     publish(assignment)
-    model = assignment.models.get(code="Model 1")
+    model = assignment.models.get(code="practice")
     start = learner_client.post(
         f"/api/v1/assignments/{assignment.id}/start", {"model_id": model.id}, format="json"
     )
@@ -133,10 +149,10 @@ def test_submit_scores_with_negative_marking(learner, learner_client, assignment
         ]
     )
 
-    model = assignment.models.get(code="Model 1")
+    model = assignment.models.get(code="practice")
     attempt = start_attempt(learner, assignment, model)
-    step_id = first_step_id(assignment, "Model 1")
-    qs = step_questions(assignment, "Model 1")
+    step_id = first_step_id(assignment, "practice")
+    qs = step_questions(assignment, "practice")
 
     answers = {
         str(step_id): {
@@ -167,10 +183,10 @@ def test_submit_uses_current_answers(learner, learner_client, assignment_factory
     assignment.negative_marking = True
     assignment.save(update_fields=["status", "negative_marking"])
 
-    model = assignment.models.get(code="Model 1")
+    model = assignment.models.get(code="practice")
     attempt = start_attempt(learner, assignment, model)
-    step_id = first_step_id(assignment, "Model 1")
-    qs = step_questions(assignment, "Model 1")
+    step_id = first_step_id(assignment, "practice")
+    qs = step_questions(assignment, "practice")
     answers = {str(step_id): {str(qs[0].id): 0, str(qs[1].id): 99, str(qs[2].id): 2}}
     finished = submit_attempt(attempt, answers)
     assert finished.correct == 2
@@ -184,12 +200,12 @@ def test_randomized_options_graded_against_snapshot(learner, learner_client, ass
     assignment.randomize_options = True
     assignment.save(update_fields=["status", "randomize_options"])
 
-    model = assignment.models.get(code="Model 1")
+    model = assignment.models.get(code="practice")
     attempt = start_attempt(learner, assignment, model)
     snapshot = attempt.questions_snapshot
 
-    step_id = first_step_id(assignment, "Model 1")
-    qs = step_questions(assignment, "Model 1")
+    step_id = first_step_id(assignment, "practice")
+    qs = step_questions(assignment, "practice")
     answers = {
         str(step_id): {str(q.id): snapshot[str(step_id)][str(q.id)]["correct_answer"] for q in qs}
     }
@@ -203,7 +219,7 @@ def test_randomized_options_graded_against_snapshot(learner, learner_client, ass
 def test_expired_attempt_auto_submitted(learner, learner_client, assignment_factory):
     assignment = assignment_factory(title="Expirable")
     publish(assignment)
-    model = assignment.models.get(code="Model 1")
+    model = assignment.models.get(code="practice")
     attempt = start_attempt(learner, assignment, model)
     attempt.expires_at = timezone.now() - timedelta(seconds=60)
     attempt.save(update_fields=["expires_at"])
@@ -230,7 +246,7 @@ def test_max_attempts_enforced(learner, learner_client, assignment_factory):
     assignment.status = Assignment.Status.PUBLISHED
     assignment.max_attempts = 1
     assignment.save(update_fields=["status", "max_attempts"])
-    model = assignment.models.get(code="Model 1")
+    model = assignment.models.get(code="practice")
 
     attempt = start_attempt(learner, assignment, model)
     submit_attempt(attempt, {})
@@ -246,7 +262,7 @@ def test_max_attempts_enforced(learner, learner_client, assignment_factory):
 def test_resume_returns_structure(learner, learner_client, assignment_factory):
     assignment = assignment_factory(title="Resumable")
     publish(assignment)
-    model = assignment.models.get(code="Model 1")
+    model = assignment.models.get(code="practice")
     attempt = start_attempt(learner, assignment, model)
     r = learner_client.get(f"/api/v1/assignments/attempts/{attempt.id}/")
     assert r.status_code == 200
@@ -259,17 +275,17 @@ def test_resume_returns_structure(learner, learner_client, assignment_factory):
 def test_transcript_after_submission(learner, learner_client, assignment_factory):
     assignment = assignment_factory(title="Transcripts")
     publish(assignment)
-    model = assignment.models.get(code="Model 1")
+    model = assignment.models.get(code="practice")
     attempt = start_attempt(learner, assignment, model)
-    step_id = first_step_id(assignment, "Model 1")
-    qs = step_questions(assignment, "Model 1")
+    step_id = first_step_id(assignment, "practice")
+    qs = step_questions(assignment, "practice")
     answers = {str(step_id): {str(q.id): q.correct_answer for q in qs}}
     submit_attempt(attempt, answers)
 
     r = learner_client.get(f"/api/v1/assignments/transcripts/{assignment.id}/")
     assert r.status_code == 200
     data = r.json()["data"]
-    assert data["transcript"]["model"] == "Model 1"
+    assert data["transcript"]["model"] == "Practice"
     assert data["attempt"]["status"] == "completed"
     assert "review" not in data  # results.show_correct_answers defaults False
 
@@ -278,7 +294,7 @@ def test_transcript_after_submission(learner, learner_client, assignment_factory
 def test_activity_event_logged_on_submit(learner, learner_client, assignment_factory):
     assignment = assignment_factory(title="Logged")
     publish(assignment)
-    model = assignment.models.get(code="Model 1")
+    model = assignment.models.get(code="practice")
     attempt = start_attempt(learner, assignment, model)
     r = learner_client.post(
         f"/api/v1/assignments/{assignment.id}/submit",
