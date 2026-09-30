@@ -11,6 +11,7 @@ import { LessonTypePicker } from "../components/LessonTypePicker";
 import { StudentPreviewModal } from "../components/StudentPreviewModal";
 import { api, absoluteMediaUrl, uploadFile } from "../lib/api";
 import { PublishChecklistModal } from "../components/PublishChecklistModal";
+import { cn } from "../lib/utils";
 import type { Chapter, CourseStep1, Lesson, LessonKind } from "../types/courseCreate";
 
 const step1Schema = z
@@ -592,7 +593,12 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
           </div>
         </div>
       ) : (
-        <div className="mx-auto w-full max-w-[1120px] px-4 py-8 sm:px-6">
+        <div
+          className={cn(
+            "mx-auto w-full px-4 py-8 sm:px-6",
+            chapters.length === 0 ? "max-w-[1120px]" : "max-w-[1440px]",
+          )}
+        >
           <CourseBuilderHeader title={values.title} saving={saving || publishing || autoSaving} saveStatus={saveStatus} onPreview={() => setPreviewOpen(true)} onPublish={() => setPublishOpen(true)} onSave={() => saveCourse(false)} />
           <div className="mt-5">
             <StepIndicator step={1} canGoBuilder={Boolean(courseId)} onNavigate={setStep} />
