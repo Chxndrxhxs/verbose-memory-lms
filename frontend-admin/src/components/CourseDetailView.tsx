@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Check, Eye, EyeOff, Play, Trash2 } from "@masterlms/shared";
+import { ArrowLeft, Check, Eye, EyeOff, Play, Trash2, hasReadableTitle, isImageUrl } from "@masterlms/shared";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -12,7 +12,14 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import type { CourseEditValues } from "../containers/CourseDetail.container";
 
 const schema = z.object({
-  title: z.string().min(1, "Title is required").max(200),
+  title: z
+    .string()
+    .min(1, "Title is required")
+    .max(200, "Title must be 200 characters or fewer")
+    .refine(
+      (v) => v.trim() === "" || hasReadableTitle(v),
+      "Title must contain at least one letter or number",
+    ),
   subtitle: z.string().max(255),
   category: z.string().min(1, "Category is required").max(50),
   description: z.string(),
@@ -21,7 +28,12 @@ const schema = z.object({
     .regex(/^\d{0,7}(\.\d{1,2})?$/, "Enter a valid amount")
     .refine((v) => v === "" || Number(v) > 0, "Price must be greater than 0"),
   pricing_type: z.enum(["free", "one_time"]),
-  cover_image: z.string().url("Enter a valid URL").or(z.literal("")),
+  cover_image: z
+    .string()
+    .refine(
+      (v) => v.trim() === "" || (isImageUrl(v) && /^https?:\/\//i.test(v.trim())),
+      "Cover image must be a valid image URL",
+    ),
   status: z.enum(["draft", "published"]),
   level: z.enum(["beginner", "intermediate", "advanced"]),
   what_you_will_learn: z.string(),

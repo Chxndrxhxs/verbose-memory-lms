@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from core.validators import validate_person_age, validate_person_name
+
 from .models import OTP
 
 User = get_user_model()
@@ -78,7 +80,38 @@ class CompleteProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("name", "email", "age", "city", "avatar")
-        extra_kwargs = {"email": {"required": True}}
+
+    def validate_name(self, value: str) -> str:
+        # A profile name arrives as one string but is stored split across
+        # first_name/last_name, so validate each part with the shared rule.
+        parts = (value or "").strip().split(" ", 1)
+        first = parts[0].strip() if parts else ""
+        last = parts[1].strip() if len(parts) > 1 else ""
+        if len(parts) > 1 and not last:
+            raise serializers.ValidationError("Last name is required.")
+        return " ".join(
+            part
+            for part in (
+                validate_person_name(first, "First name"),
+                validate_person_name(last, "Last name") if last else "",
+            )
+            if part
+        )
+
+    def validate_email(self, value: str) -> str:
+        email = (value or "").strip()
+        if not email:
+            # blank=True on the model means an empty string slips through by
+            # default, which is how a cleared email used to get persisted.
+            raise serializers.ValidationError("Valid email required")
+        return email
+
+    def validate_city(self, value: str) -> str:
+        text = (value or "").strip()
+        return validate_person_name(text, "City") if text else ""
+
+    def validate_age(self, value) -> int | None:
+        return validate_person_age(value)
 
     def update(self, instance, validated_data):
         name = validated_data.pop("name", "").strip()

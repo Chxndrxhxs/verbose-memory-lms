@@ -20,8 +20,10 @@ export default function InstructorLanding() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-black/10" />
           <div className="absolute inset-0 bg-gradient-to-tr from-[#0f172a]/30 via-transparent to-yellow-200/20 mix-blend-overlay" />
 
-          {/* pill nav — same as InstructorHeader but absolute hero version */}
-          <header className="absolute left-1/2 top-4 flex w-[92%] max-w-[720px] -translate-x-1/2 items-center justify-between rounded-full bg-white px-2 py-2 shadow-lg sm:px-3">
+          {/* pill nav — same as InstructorHeader but absolute hero version.
+              z-20 keeps it above the inset-0 hero overlay below, which
+              otherwise swallows every click in this strip. */}
+          <header className="absolute left-1/2 top-4 z-20 flex w-[92%] max-w-[720px] -translate-x-1/2 items-center justify-between rounded-full bg-white px-2 py-2 shadow-lg sm:px-3">
             <div className="flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f172a] text-xs font-bold text-white">K</span>
               <span className="text-sm font-bold tracking-tight">QTNXT</span>

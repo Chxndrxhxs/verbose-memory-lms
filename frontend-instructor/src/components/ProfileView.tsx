@@ -36,6 +36,8 @@ type Props = {
   onEmail: (v: string) => void;
   onAge: (v: string) => void;
   onAvatarPicked: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  avatarError: string | null;
+  fieldErrors: Record<string, string>;
   onSave: () => void;
   onDelete: () => void;
   onInvalidateCourses: () => void;
@@ -115,9 +117,9 @@ export function ProfileView(p: Props) {
             <div className="mt-4 rounded-[28px] bg-white p-6 shadow-sm sm:p-8">
               <h2 className="text-sm font-bold">Edit profile</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div><label className="text-xs font-semibold">Name</label><input value={p.name} onChange={(e)=> p.onName(e.target.value)} className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" /></div>
-                <div><label className="text-xs font-semibold">Email</label><input value={p.email} onChange={(e)=> p.onEmail(e.target.value)} type="email" className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" /></div>
-                <div><label className="text-xs font-semibold">Age</label><input value={p.age} onChange={(e)=> p.onAge(e.target.value)} type="number" min="13" max="80" className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" /></div>
+                <div><label className="text-xs font-semibold">Name</label><input value={p.name} onChange={(e)=> p.onName(e.target.value)} className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" />{p.fieldErrors.name && <p className="mt-1 text-xs text-red-600">{p.fieldErrors.name}</p>}</div>
+                <div><label className="text-xs font-semibold">Email</label><input value={p.email} onChange={(e)=> p.onEmail(e.target.value)} type="email" className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" />{p.fieldErrors.email && <p className="mt-1 text-xs text-red-600">{p.fieldErrors.email}</p>}</div>
+                <div><label className="text-xs font-semibold">Age</label><input value={p.age} onChange={(e)=> p.onAge(e.target.value)} type="number" className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" />{p.fieldErrors.age && <p className="mt-1 text-xs text-red-600">{p.fieldErrors.age}</p>}</div>
                 <div>
                   <label className="text-xs font-semibold">Avatar</label>
                   <div className="mt-1 flex items-center gap-2">
@@ -126,6 +128,7 @@ export function ProfileView(p: Props) {
                     </div>
                     <label className="rounded-full border px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-zinc-50">{p.avatarUploading ? "Uploading…" : "Upload"}<input type="file" accept="image/*" className="hidden" onChange={p.onAvatarPicked} disabled={p.avatarUploading} /></label>
                   </div>
+                  {p.avatarError && <p className="mt-1 text-xs text-red-600">{p.avatarError}</p>}
                 </div>
               </div>
               <div className="mt-4 flex gap-3">

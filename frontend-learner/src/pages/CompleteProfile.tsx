@@ -3,15 +3,21 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
-import { User, ArrowRight } from "@masterlms/shared";
+import { User, ArrowRight, AVATAR_SIZE_MSG, isAvatarSizeAllowed, isValidName, NAME_MSG } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 import { api, absoluteMediaUrl, uploadFile } from "../lib/api";
 
 const schema = z.object({
-  name: z.string().min(2, "Required"),
+  name: z
+    .string()
+    .min(2, "Required")
+    .refine(isValidName, NAME_MSG),
   email: z.string().email("Valid email required"),
   age: z.coerce.number().min(13, "Min 13").max(80, "Max 80"),
-  city: z.string().min(2, "Required"),
+  city: z
+    .string()
+    .min(2, "Required")
+    .refine(isValidName, NAME_MSG),
 });
 
 type Form = z.infer<typeof schema>;
@@ -21,6 +27,7 @@ export default function CompleteProfile() {
   const { user, setUser } = useAuth();
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatar, setAvatar] = useState<string | null>(user?.avatar ?? null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Form>({
     resolver: zodResolver(schema) as never,
@@ -39,6 +46,13 @@ export default function CompleteProfile() {
   const onAvatarPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    if (!isAvatarSizeAllowed(f)) {
+      setAvatarError(AVATAR_SIZE_MSG);
+      setAvatarFile(null);
+      e.target.value = "";
+      return;
+    }
+    setAvatarError(null);
     setAvatarFile(f);
     const r = new FileReader();
     r.onload = () => setAvatar(r.result as string);
@@ -80,6 +94,7 @@ export default function CompleteProfile() {
                 <label className="rounded-full border border-zinc-200 px-4 py-1.5 text-xs font-semibold cursor-pointer hover:bg-zinc-50">Upload photo<input type="file" accept="image/*" className="hidden" onChange={onAvatarPicked} /></label>
                 <span className="text-xs text-zinc-400">PNG/JPG, max 2MB</span>
               </div>
+              {avatarError && <p className="-mt-3 text-xs text-red-500">{avatarError}</p>}
 
               <div>
                 <label className="text-xs font-semibold text-zinc-700">Full name</label>

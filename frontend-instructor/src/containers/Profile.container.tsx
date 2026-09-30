@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import {
+  AVATAR_SIZE_MSG,
+  isAvatarSizeAllowed,
+  isValidAge,
+  isValidEmail,
+  isValidName,
+  NAME_MSG,
+} from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 import { absoluteMediaUrl, api, uploadFile } from "../lib/api";
 import type { SharedInstructorCourse as InstructorCourse } from "@masterlms/shared";
@@ -18,6 +26,8 @@ export function ProfileContainer() {
   const [age, setAge] = useState<string>(user?.age?.toString() ?? "");
   const [avatar, setAvatar] = useState<string | null>(user?.avatar ?? null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<string | null>(null);
 
   const coursesQuery = useQuery({
@@ -34,6 +44,15 @@ export function ProfileContainer() {
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2200);
+  };
+
+  const validate = () => {
+    const errors: Record<string, string> = {};
+    if (!isValidName(name)) errors.name = NAME_MSG;
+    if (!isValidEmail(email)) errors.email = "Valid email required";
+    if (!isValidAge(age)) errors.age = "Enter a valid age";
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const saveMutation = useMutation({
@@ -87,10 +106,25 @@ export function ProfileContainer() {
   const onAvatarPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    if (!isAvatarSizeAllowed(f)) {
+      setAvatarError(AVATAR_SIZE_MSG);
+      setAvatarFile(null);
+      e.target.value = "";
+      return;
+    }
+    setAvatarError(null);
     setAvatarFile(f);
     const r = new FileReader();
     r.onload = () => setAvatar(r.result as string);
     r.readAsDataURL(f);
+  };
+
+  const onSave = () => {
+    if (!validate()) {
+      showToast("Please fix the highlighted fields");
+      return;
+    }
+    saveMutation.mutate();
   };
 
   if (!user) return null;
@@ -120,7 +154,9 @@ export function ProfileContainer() {
       onEmail={setEmail}
       onAge={setAge}
       onAvatarPicked={onAvatarPicked}
-      onSave={() => saveMutation.mutate()}
+      avatarError={avatarError}
+      fieldErrors={fieldErrors}
+      onSave={onSave}
       onDelete={() => deleteMutation.mutate()}
       onInvalidateCourses={() => queryClient.invalidateQueries({ queryKey: ["instructor-courses"] })}
     />

@@ -1,6 +1,22 @@
+import re
+from urllib.parse import unquote, urlparse
+
 from rest_framework import serializers
 
 from .models import Course, Lesson, Review, Section, WishlistItem
+
+IMAGE_EXTENSIONS = (
+    "png",
+    "jpg",
+    "jpeg",
+    "gif",
+    "webp",
+    "svg",
+    "avif",
+    "bmp",
+    "ico",
+)
+IMAGE_URL_RE = re.compile(r"\.(?:" + "|".join(IMAGE_EXTENSIONS) + r")$", re.IGNORECASE)
 
 
 class LessonSerializer(serializers.ModelSerializer):
@@ -26,6 +42,36 @@ class SectionSerializer(serializers.ModelSerializer):
         fields = ("id", "title", "order", "lessons")
 
 
+def validate_course_title(value: str) -> str:
+    """A title made only of punctuation is unreadable everywhere it renders.
+
+    Symbols alone are still allowed — ".NET" and "C++" are legitimate — the
+    rule is only that at least one letter or digit must appear.
+    """
+    title = (value or "").strip()
+    if not re.search(r"[^\W_]", title, re.UNICODE):
+        raise serializers.ValidationError("Title must contain at least one letter or number.")
+    return title
+
+
+def validate_cover_image_url(value: str) -> str:
+    """A cover has to be a real image link, otherwise both the instructor and
+    student course cards render a broken image.
+
+    Only the path is inspected so CDN links carrying a query string
+    ("…/cover.png?w=1600") still pass.
+    """
+    url = (value or "").strip()
+    if not url:
+        return url
+    if urlparse(url).scheme not in ("http", "https"):
+        raise serializers.ValidationError("Cover image must be a valid image URL.")
+    path = unquote(urlparse(url).path)
+    if not IMAGE_URL_RE.search(path):
+        raise serializers.ValidationError("Cover image must be a valid image URL.")
+    return url
+
+
 class CourseListSerializer(serializers.ModelSerializer):
     instructor_name = serializers.SerializerMethodField()
     instructor_avatar = serializers.SerializerMethodField()
@@ -34,6 +80,12 @@ class CourseListSerializer(serializers.ModelSerializer):
     meta = serializers.SerializerMethodField()
     section_count = serializers.SerializerMethodField()
     lesson_count = serializers.SerializerMethodField()
+
+    def validate_title(self, value: str) -> str:
+        return validate_course_title(value)
+
+    def validate_cover_image(self, value: str) -> str:
+        return validate_cover_image_url(value)
 
     class Meta:
         model = Course

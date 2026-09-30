@@ -7,11 +7,24 @@ type Props = {
   microphone?: boolean;
 };
 
+const INSECURE_CONTEXT_ERROR =
+  "Your browser blocked camera access because this page is not on a secure (HTTPS) connection. Open the app over HTTPS, or via localhost, to start a proctored exam.";
+
 export function CameraGate({ onApproved, microphone = false }: Props) {
   const [status, setStatus] = useState<"idle" | "requesting" | "denied">("idle");
   const [error, setError] = useState<string | null>(null);
 
+  // getUserMedia only exists in a secure context. Reaching the app over plain
+  // HTTP on a LAN IP (not localhost) leaves navigator.mediaDevices undefined and
+  // every exam blocked, so surface that instead of the generic camera error.
+  const secureContext = typeof window !== "undefined" && window.isSecureContext;
+
   const requestCamera = useCallback(async () => {
+    if (!secureContext) {
+      setStatus("denied");
+      setError(INSECURE_CONTEXT_ERROR);
+      return;
+    }
     setStatus("requesting");
     setError(null);
     // Request fullscreen synchronously within the user click — browsers reject
@@ -34,6 +47,10 @@ export function CameraGate({ onApproved, microphone = false }: Props) {
           );
         } else if (err.name === "NotFoundError") {
           setError("No camera device found. Please connect a camera and try again.");
+        } else if (err.name === "NotReadableError") {
+          setError(
+            "Your camera is already in use by another app. Close it and try again.",
+          );
         } else {
           setError(`Camera error: ${err.message}`);
         }
@@ -41,7 +58,7 @@ export function CameraGate({ onApproved, microphone = false }: Props) {
         setError("Unable to access camera. Please check your device settings.");
       }
     }
-  }, [microphone, onApproved]);
+  }, [microphone, onApproved, secureContext]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm">
@@ -58,6 +75,15 @@ export function CameraGate({ onApproved, microphone = false }: Props) {
           You cannot start the exam without your camera.
         </p>
 
+        {!secureContext && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-left text-sm text-amber-800">
+            <div className="flex items-start gap-2">
+              <AlertCircle size={16} className="mt-0.5 shrink-0" />
+              <span>{INSECURE_CONTEXT_ERROR}</span>
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-left text-sm text-red-700">
             <div className="flex items-start gap-2">
@@ -70,7 +96,7 @@ export function CameraGate({ onApproved, microphone = false }: Props) {
         <div className="mt-6">
           <button
             onClick={requestCamera}
-            disabled={status === "requesting"}
+            disabled={status === "requesting" || !secureContext}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60"
           >
             {status === "requesting" ? (

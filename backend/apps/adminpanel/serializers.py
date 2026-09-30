@@ -1,5 +1,3 @@
-import re
-
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
@@ -7,25 +5,9 @@ from apps.courses.models import Course, Lesson, Section
 from apps.courses.serializers import CourseDetailSerializer, CourseListSerializer
 from apps.enrollments.models import ActivityEvent, Certificate, Enrollment
 from apps.payments.serializers import PaymentSerializer
+from core.validators import validate_person_age, validate_person_name
 
 User = get_user_model()
-
-MIN_AGE = 5
-MAX_AGE = 120
-NAME_RE = re.compile(r"^[A-Za-z]+(?:[ '\-][A-Za-z]+)*$")
-
-
-def validate_person_name(value: str, label: str) -> str:
-    text = (value or "").strip()
-    if not text:
-        raise serializers.ValidationError(f"{label} is required.")
-    if len(text) > 60:
-        raise serializers.ValidationError(f"{label} must be 60 characters or fewer.")
-    if not NAME_RE.match(text):
-        raise serializers.ValidationError(
-            f"{label} may only contain letters, spaces, hyphens and apostrophes."
-        )
-    return text
 
 
 class AdminUserSerializer(serializers.ModelSerializer):
@@ -63,13 +45,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
         return validate_person_name(value, "City")
 
     def validate_age(self, value) -> int | None:
-        if value is None:
-            return None
-        if value < MIN_AGE or value > MAX_AGE:
-            raise serializers.ValidationError(
-                f"Please enter a valid age between {MIN_AGE} and {MAX_AGE}."
-            )
-        return value
+        return validate_person_age(value)
 
 
 class AdminCourseListSerializer(CourseListSerializer):

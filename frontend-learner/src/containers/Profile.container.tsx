@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { User, ArrowRight, Trash2, AlertTriangle, Download, Receipt, Award, Eye } from "@masterlms/shared";
+import { User, ArrowRight, Trash2, AlertTriangle, Download, Receipt, Award, Eye, AVATAR_SIZE_MSG, isAvatarSizeAllowed, isValidAge, isValidEmail, isValidName, NAME_MSG } from "@masterlms/shared";
 import { TopNav } from "../components/TopNav";
 import { CertificateView } from "../components/CertificateView";
 import { useAuth } from "../hooks/useAuth";
@@ -49,6 +49,8 @@ export function ProfileContainer() {
   const [avatar, setAvatar] = useState<string | null>(user?.avatar ?? null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [toast, setToast] = useState<string | null>(null);
 
@@ -140,6 +142,13 @@ export function ProfileContainer() {
   const onAvatarPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    if (!isAvatarSizeAllowed(f)) {
+      setAvatarError(AVATAR_SIZE_MSG);
+      setAvatarFile(null);
+      e.target.value = "";
+      return;
+    }
+    setAvatarError(null);
     setAvatarFile(f);
     const r = new FileReader();
     r.onload = () => setAvatar(r.result as string);
@@ -147,6 +156,17 @@ export function ProfileContainer() {
   };
 
   const save = async () => {
+    const errors: Record<string, string> = {};
+    if (!isValidName(name)) errors.name = NAME_MSG;
+    if (!isValidEmail(email)) errors.email = "Valid email required";
+    if (!isValidAge(age)) errors.age = "Enter a valid age";
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setToast("Please fix the highlighted fields");
+      setTimeout(() => setToast(null), 2200);
+      return;
+    }
+
     let avatarUrl = avatar || "";
     // if a new file was picked, upload first to get a real URL (avatar is URLField)
     if (avatarFile) {
@@ -237,9 +257,9 @@ export function ProfileContainer() {
             <div className="mt-4 rounded-[28px] bg-white p-6 shadow-sm sm:p-8">
               <h2 className="text-sm font-bold">Edit profile</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div><label className="text-xs font-semibold">Name</label><input value={name} onChange={(e)=> setName(e.target.value)} className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" /></div>
-                <div><label className="text-xs font-semibold">Email</label><input value={email} onChange={(e)=> setEmail(e.target.value)} type="email" className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" /></div>
-                <div><label className="text-xs font-semibold">Age</label><input value={age} onChange={(e)=> setAge(e.target.value)} type="number" min="13" max="80" className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" /></div>
+                <div><label className="text-xs font-semibold">Name</label><input value={name} onChange={(e)=> setName(e.target.value)} className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" />{fieldErrors.name && <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p>}</div>
+                <div><label className="text-xs font-semibold">Email</label><input value={email} onChange={(e)=> setEmail(e.target.value)} type="email" className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" />{fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}</div>
+                <div><label className="text-xs font-semibold">Age</label><input value={age} onChange={(e)=> setAge(e.target.value)} type="number" className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" />{fieldErrors.age && <p className="mt-1 text-xs text-red-600">{fieldErrors.age}</p>}</div>
                 <div>
                   <label className="text-xs font-semibold">Avatar</label>
                   <div className="mt-1 flex items-center gap-2">
@@ -248,6 +268,7 @@ export function ProfileContainer() {
                     </div>
                     <label className="rounded-full border px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-zinc-50">{avatarUploading ? "Uploading…" : "Upload"}<input type="file" accept="image/*" className="hidden" onChange={onAvatarPicked} disabled={avatarUploading} /></label>
                   </div>
+                  {avatarError && <p className="mt-1 text-xs text-red-600">{avatarError}</p>}
                 </div>
               </div>
               <div className="mt-4 flex gap-3">

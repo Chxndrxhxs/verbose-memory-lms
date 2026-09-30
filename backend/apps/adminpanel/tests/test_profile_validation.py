@@ -2,9 +2,9 @@ import pytest
 from rest_framework import serializers
 from rest_framework.test import APIClient
 
-from apps.adminpanel.serializers import MAX_AGE, MIN_AGE, validate_person_name
 from apps.adminpanel.services import update_user
 from apps.users.models import User
+from core.validators import MAX_AGE, MIN_AGE, validate_person_name
 
 ADMIN = "/api/v1/admin"
 

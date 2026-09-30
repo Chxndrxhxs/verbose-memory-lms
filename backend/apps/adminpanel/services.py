@@ -90,7 +90,7 @@ def delete_user(user) -> None:
 def update_user(user, data: dict):
     from rest_framework import serializers as drf_serializers
 
-    from .serializers import MAX_AGE, MIN_AGE, validate_person_name
+    from core.validators import MAX_AGE, MIN_AGE, validate_person_name
 
     name = data.pop("name", None)
     if name is not None:

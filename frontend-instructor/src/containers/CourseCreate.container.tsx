@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "react-router-dom";
 import { z } from "zod";
+import { hasReadableTitle } from "@masterlms/shared";
 import { CourseBuilderHeader } from "../components/CourseBuilderHeader";
 import { InstructorHeader } from "../components/InstructorHeader";
 import { CourseCreateStep1 } from "../components/CourseCreateStep1";
@@ -14,7 +15,11 @@ import type { Chapter, CourseStep1, Lesson, LessonKind } from "../types/courseCr
 
 const step1Schema = z
   .object({
-    title: z.string().trim().min(4, "At least 4 characters"),
+    title: z
+      .string()
+      .trim()
+      .min(4, "At least 4 characters")
+      .refine(hasReadableTitle, "Title must contain at least one letter or number"),
     subtitle: z.string().trim().max(255, "Subtitle can't exceed 255 characters"),
     description: z.string().trim().min(10, "Add a short description"),
     pricingType: z.enum(["free", "one_time"]),
