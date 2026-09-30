@@ -1,58 +1,359 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  LESSON_KIND_BADGE,
+  Minus,
+  Play,
+  Plus,
+  absoluteMediaUrl,
+  X,
+} from "@masterlms/shared";
+import type { SharedApiCourseDetail } from "@masterlms/shared";
 import { api } from "../lib/api";
-import { useEffect } from "react";
 
-type Section = { id: number; title: string; lessons: any[] };
-type Course = {
-  id: number;
-  title: string;
-  subtitle: string;
-  description: string;
-  sections: Section[];
-  category: string;
-  level: string;
-  price: string;
-};
+/** Read-only mirror of the learner course detail page. Enroll/wishlist/share
+ *  controls are shown exactly as a learner sees them but stay inert — this is
+ *  a preview, not a checkout. */
+export function StudentPreviewModal({
+  courseId,
+  onClose,
+}: {
+  courseId: string;
+  onClose: () => void;
+}) {
+  const [open, setOpen] = useState(0);
 
-export function StudentPreviewModal({ courseId, onClose }: { courseId: string; onClose: () => void }) {
-  const { data: course, isLoading } = useQuery({
+  const { data: course, isLoading, isError } = useQuery({
     queryKey: ["course", courseId],
-    queryFn: () => api<Course>(`/courses/${courseId}/`),
+    queryFn: () => api<SharedApiCourseDetail>(`/courses/${courseId}/`),
   });
 
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
     window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", handleEsc);
+      document.body.style.overflow = "";
+    };
   }, [onClose]);
 
-  if (isLoading) return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 text-white">Loading preview...</div>;
-  if (!course) return null;
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 text-sm text-white">
+        Loading preview…
+      </div>
+    );
+  }
+  if (isError || !course) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="rounded-3xl bg-white p-6 text-center shadow-2xl">
+          <p className="text-sm font-bold text-zinc-900">Preview unavailable</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            We couldn&apos;t load this course. Save your changes and try again.
+          </p>
+          <button
+            onClick={onClose}
+            className="mt-4 rounded-full bg-[#0f172a] px-5 py-2 text-xs font-bold text-white"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const sections = course.sections ?? [];
+  const learn = course.what_you_will_learn ?? [];
+  const lectureCount = sections.reduce((a, s) => a + (s.lessons?.length ?? 0), 0);
+  const priceNum = Number(course.price);
+  const price = priceNum === 0 ? "Free" : `₹${priceNum.toLocaleString("en-IN")}`;
+  const cover = course.cover_image
+    ? (absoluteMediaUrl(course.cover_image) ?? course.cover_image)
+    : "";
+  const rating = course.average_rating ? Number(course.average_rating).toFixed(1) : "";
+
+  const disabled =
+    "cursor-not-allowed disabled:opacity-45 disabled:hover:bg-white disabled:hover:border-current";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="relative h-[90vh] w-full max-w-4xl overflow-hidden rounded-[28px] bg-[#f6f5f1] shadow-2xl">
-        <button onClick={onClose} className="absolute right-4 top-4 z-10 rounded-full bg-white/50 p-2 text-zinc-900 hover:bg-white">✕</button>
-        <div className="h-full overflow-y-auto p-8">
-            <h1 className="text-3xl font-extrabold">{course.title}</h1>
-            <p className="mt-2 text-zinc-600">{course.subtitle}</p>
-            <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
-                <h2 className="font-bold">Description</h2>
-                <p className="mt-2 text-sm text-zinc-600 leading-relaxed">{course.description}</p>
-            </div>
-            <div className="mt-6">
-                <h2 className="font-bold">Curriculum</h2>
-                <div className="mt-4 space-y-2">
-                    {course.sections.map(s => (
-                        <div key={s.id} className="rounded-xl border bg-white p-4">
-                            <h3 className="font-semibold text-sm">{s.title}</h3>
-                            <ul className="mt-2 text-xs text-zinc-500 space-y-1">
-                                {s.lessons.map(l => <li key={l.id}>• {l.title}</li>)}
-                            </ul>
-                        </div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="relative flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] bg-[#f6f5f1] shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Preview of ${course.title}`}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white px-5 py-3">
+          <p className="min-w-0 truncate text-sm font-bold">
+            Student preview
+            <span className="ml-2 font-normal text-zinc-500">
+              what a learner sees on this page
+            </span>
+          </p>
+          <button
+            onClick={onClose}
+            aria-label="Close preview"
+            className="shrink-0 rounded-full border p-1.5 text-zinc-700 hover:bg-zinc-50"
+          >
+            <X size={16} strokeWidth={2.5} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 sm:p-7">
+          <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+            {/* LEFT */}
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
+                {course.level && (
+                  <span className="rounded-full border bg-white px-2.5 py-1 capitalize text-zinc-700">
+                    {course.level}
+                  </span>
+                )}
+                <span className="rounded-full border bg-white px-2.5 py-1 text-zinc-700">
+                  {lectureCount} lecture{lectureCount === 1 ? "" : "s"}
+                </span>
+              </div>
+
+              <h1 className="mt-4 text-[28px] font-extrabold leading-tight tracking-tight">
+                {course.title}
+              </h1>
+              {course.subtitle && (
+                <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+                  {course.subtitle}
+                </p>
+              )}
+
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                {rating && (
+                  <span className="font-semibold text-amber-400">★ {rating}</span>
+                )}
+                {course.student_count != null && (
+                  <span className="text-zinc-500">{course.student_count} students</span>
+                )}
+                {course.instructor_name && (
+                  <span className="flex items-center gap-1.5 text-zinc-500">
+                    {course.instructor_avatar && (
+                      <img
+                        src={absoluteMediaUrl(course.instructor_avatar) ?? course.instructor_avatar}
+                        alt=""
+                        className="h-6 w-6 rounded-full object-cover"
+                      />
+                    )}
+                    <span className="font-medium text-zinc-700">
+                      {course.instructor_name}
+                    </span>
+                  </span>
+                )}
+              </div>
+
+              {learn.length > 0 && (
+                <div className="mt-6 rounded-2xl border bg-[#fdfdfc] p-5">
+                  <h3 className="text-sm font-bold">What you&apos;ll learn</h3>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {learn.map((item) => (
+                      <div
+                        key={item}
+                        className="flex gap-2 text-xs leading-relaxed text-zinc-700"
+                      >
+                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[10px] text-white">
+                          ✓
+                        </span>
+                        {item}
+                      </div>
                     ))}
+                  </div>
                 </div>
+              )}
+
+              {sections.length > 0 && (
+                <div className="mt-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold">Course content</h3>
+                    <span className="text-xs text-zinc-500">
+                      {sections.length} section{sections.length === 1 ? "" : "s"} •{" "}
+                      {lectureCount} lecture{lectureCount === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <div className="mt-3 overflow-hidden rounded-2xl border bg-white">
+                    {sections.map((sec, i) => (
+                      <div key={sec.id} className="border-b last:border-0">
+                        <button
+                          onClick={() => setOpen(open === i ? -1 : i)}
+                          className="flex w-full items-center justify-between bg-zinc-50 px-4 py-3 text-left hover:bg-zinc-100"
+                        >
+                          <span className="text-sm font-semibold">{sec.title}</span>
+                          <span className="flex items-center gap-2 text-xs text-zinc-500">
+                            {(sec.lessons?.length ?? 0) === 1 ? "1 lecture" : `${sec.lessons?.length ?? 0} lectures`}
+                            <span
+                              className={`flex h-6 w-6 items-center justify-center rounded-full ${
+                                open === i ? "bg-[#3478ff] text-white" : "bg-white text-zinc-700"
+                              }`}
+                            >
+                              {open === i ? (
+                                <Minus size={12} strokeWidth={2.5} />
+                              ) : (
+                                <Plus size={12} strokeWidth={2.5} />
+                              )}
+                            </span>
+                          </span>
+                        </button>
+                        {open === i && (
+                          <ul className="px-4 py-2">
+                            {(sec.lessons ?? []).map((l) => {
+                              const badge = LESSON_KIND_BADGE[l.kind];
+                              const Icon = badge.Icon;
+                              return (
+                                <li
+                                  key={l.id}
+                                  className="flex items-center gap-2 py-2 text-xs text-zinc-700"
+                                >
+                                  <span
+                                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${badge.badge}`}
+                                  >
+                                    <Icon size={11} strokeWidth={2.5} />
+                                  </span>
+                                  <span className="min-w-0 flex-1 truncate">{l.title}</span>
+                                  {l.kind === "quiz" && (
+                                    <span className="rounded-full bg-yellow-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900">
+                                      Quiz
+                                    </span>
+                                  )}
+                                  <span className="text-zinc-400">{l.duration}</span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {course.description && (
+                <div className="mt-6 rounded-2xl bg-white p-5 shadow-sm">
+                  <h3 className="text-sm font-bold">Description</h3>
+                  <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-zinc-600">
+                    {course.description}
+                  </p>
+                  {course.instructor_name && (
+                    <div className="mt-5 flex gap-3 rounded-xl bg-zinc-50 p-4">
+                      {course.instructor_avatar && (
+                        <img
+                          src={absoluteMediaUrl(course.instructor_avatar) ?? course.instructor_avatar}
+                          alt=""
+                          className="h-12 w-12 rounded-full object-cover"
+                        />
+                      )}
+                      <div>
+                        <p className="text-sm font-bold">{course.instructor_name}</p>
+                        {course.instructor_role && (
+                          <p className="text-xs text-zinc-500">{course.instructor_role}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+
+            {/* RIGHT — mirrors the learner's enroll card */}
+            <div>
+              <div className="sticky top-0 overflow-hidden rounded-[20px] border bg-white shadow-sm">
+                {cover && (
+                  <div className="relative">
+                    <img src={cover} alt="" className="h-40 w-full object-cover" />
+                    <span className="absolute inset-0 m-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-zinc-900 shadow-lg">
+                      <Play size={20} strokeWidth={2.5} className="ml-0.5" />
+                    </span>
+                    <span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-semibold text-white">
+                      Preview this course
+                    </span>
+                  </div>
+                )}
+                <div className="p-5">
+                  <span className="text-[28px] font-black tracking-tight">{price}</span>
+
+                  <button
+                    type="button"
+                    disabled
+                    className={`mt-4 w-full rounded-full bg-[#0f172a] py-3 text-sm font-bold text-white ${disabled}`}
+                  >
+                    Enroll now
+                  </button>
+                  <button
+                    type="button"
+                    disabled
+                    className={`mt-2 w-full rounded-full border py-2.5 text-sm font-semibold ${disabled}`}
+                  >
+                    Add to wishlist ♡
+                  </button>
+                  <p className="mt-2 text-center text-[11px] text-zinc-500">
+                    30-day money-back guarantee • Full lifetime access
+                  </p>
+
+                  <div className="mt-5 rounded-xl bg-zinc-50 p-4">
+                    <p className="text-xs font-bold">This course includes:</p>
+                    <ul className="mt-2 space-y-1.5 text-xs text-zinc-600">
+                      <li className="flex gap-2">
+                        <span>●</span> On-demand videos
+                      </li>
+                      <li className="flex gap-2">
+                        <span>●</span> {sections.length} section
+                        {sections.length === 1 ? "" : "s"} • {lectureCount} lecture
+                        {lectureCount === 1 ? "" : "s"}
+                      </li>
+                      <li className="flex gap-2">
+                        <span>●</span> Interactive quizzes
+                      </li>
+                      <li className="flex gap-2">
+                        <span>●</span> Certificate of completion
+                      </li>
+                      <li className="flex gap-2">
+                        <span>●</span> Full lifetime access
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      type="button"
+                      disabled
+                      className={`flex-1 rounded-full border py-2 text-xs font-medium ${disabled}`}
+                    >
+                      Share
+                    </button>
+                    <button
+                      type="button"
+                      disabled
+                      className={`flex-1 rounded-full border py-2 text-xs font-medium ${disabled}`}
+                    >
+                      Gift
+                    </button>
+                    <button
+                      type="button"
+                      disabled
+                      className={`flex-1 rounded-full border py-2 text-xs font-medium ${disabled}`}
+                    >
+                      Coupon
+                    </button>
+                  </div>
+                  <p className="mt-3 text-center text-[11px] text-zinc-400">
+                    Preview only — actions are disabled.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
