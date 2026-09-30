@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight, Cloud, Eye } from "@masterlms/shared";
 
@@ -12,10 +13,36 @@ type Props = {
   onSave: () => void;
 };
 
+/** The site nav is sticky at the top, so this bar must sit flush beneath it.
+ *  Measuring keeps the offset correct when the nav's padding changes across
+ *  breakpoints instead of hardcoding a magic number that silently overlaps. */
+function useNavOffset(): number {
+  const [offset, setOffset] = useState(0);
+
+  useEffect(() => {
+    const nav = document.querySelector<HTMLElement>("[data-site-header]");
+    if (!nav) return;
+
+    const measure = () => setOffset(nav.getBoundingClientRect().height);
+    measure();
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, []);
+
+  return offset;
+}
+
 export function CourseBuilderHeader({ title, saving, saveStatus, disabled = false, disabledHint = "Save course details first", onPreview, onPublish, onSave }: Props) {
   const nav = useNavigate();
+  const navOffset = useNavOffset();
+
   return (
-    <div className="sticky top-3 z-30 rounded-full bg-white px-3 py-2 shadow-lg">
+    <div
+      className="sticky z-30 rounded-full bg-white px-3 py-2 shadow-lg"
+      style={{ top: navOffset + 8 }}
+    >
       <div className="flex items-center justify-between gap-2">
         <button
           onClick={() => nav("/courses")}

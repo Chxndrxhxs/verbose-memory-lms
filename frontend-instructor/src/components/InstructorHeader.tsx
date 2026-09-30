@@ -20,7 +20,7 @@ export function InstructorHeader() {
   const showNav = !user || canTeach(user);
   return (
     <>
-    <div className="sticky top-0 z-30 w-full bg-white px-4 py-3 shadow-sm sm:px-6">
+    <div data-site-header className="sticky top-0 z-40 w-full bg-white px-4 py-3 shadow-sm sm:px-6">
       <div className="flex w-full items-center justify-between">
         <Link to={showNav && user ? "/dashboard" : "/"} className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f172a] text-xs font-bold text-white">Q</span>
@@ -34,7 +34,6 @@ export function InstructorHeader() {
         </nav>
         <div className="flex items-center gap-2">
           {user ? <ProfileMenu /> : <Link to="/login" className="rounded-full bg-[#0f172a] px-4 py-1.5 text-sm font-semibold text-white">Login</Link>}
-          <Link to="/courses/create" className="rounded-full bg-[#0f172a] px-4 py-1.5 text-sm font-semibold text-white hidden sm:inline-flex">+ Create course</Link>
         </div>
       </div>
     </div>
