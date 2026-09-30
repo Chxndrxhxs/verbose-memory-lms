@@ -62,3 +62,6 @@ backend/media/
 # local commandcode plans (not committed)
 .commandcode/
 .impeccable/
+
+# local agent session transcripts (not committed)
+session-*.md

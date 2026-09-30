@@ -67,9 +67,9 @@ export function UserDetailContainer() {
       loading={isLoading}
       error={isError || !data ? String(error ?? new Error("Failed to load user")) : null}
       initial={data ? toForm(data.user) : undefined}
-      onSave={update.mutate}
+      onSave={update.mutateAsync}
       saving={update.isPending}
-      saveError={update.isError ? "Could not save changes." : null}
+      saveError={update.isError ? String(update.error ?? "Could not save changes.") : null}
       onDelete={del.mutate}
       deleting={del.isPending}
     />

@@ -11,13 +11,39 @@ import { Card, CardHeader } from "./Card";
 import { ConfirmDialog } from "./ConfirmDialog";
 import type { UserEditValues } from "../containers/UserDetail.container";
 
+const NAME_MSG = "Only letters, spaces, hyphens and apostrophes allowed";
+const AGE_MIN = 5;
+const AGE_MAX = 120;
+
+const nameField = (label: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, `${label} is required`)
+    .max(60, `${label} must be 60 characters or fewer`)
+    .regex(/^[A-Za-z]+(?:[- '][A-Za-z]+)*$/, NAME_MSG);
+
 const schema = z.object({
-  first_name: z.string().max(60),
-  last_name: z.string().max(60),
-  email: z.string().email().or(z.literal("")),
+  first_name: nameField("First name"),
+  last_name: nameField("Last name"),
+  email: z.string().email("Enter a valid email address").or(z.literal("")),
   role: z.enum(["learner", "instructor", "admin"]),
-  city: z.string().max(60),
-  age: z.string().regex(/^\d{0,3}$/, "Invalid age"),
+  city: nameField("City"),
+  age: z
+    .string()
+    .trim()
+    .refine(
+      (v) => v === "" || /^\d{1,3}$/.test(v),
+      "Please enter a valid age",
+    )
+    .refine(
+      (v) => {
+        if (v === "") return true;
+        const n = Number(v);
+        return Number.isInteger(n) && n >= AGE_MIN && n <= AGE_MAX;
+      },
+      `Please enter a valid age between ${AGE_MIN} and ${AGE_MAX}`,
+    ),
   is_active: z.boolean(),
   is_staff: z.boolean(),
   is_superuser: z.boolean(),
@@ -57,7 +83,7 @@ export function UserDetailView({
   loading: boolean;
   error: string | null;
   initial?: UserEditValues;
-  onSave: (v: UserEditValues) => void;
+  onSave: (v: UserEditValues) => void | Promise<unknown>;
   saving: boolean;
   saveError: string | null;
   onDelete: () => void;
@@ -65,6 +91,7 @@ export function UserDetailView({
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [noChanges, setNoChanges] = useState(false);
 
   const form = useForm<UserEditValues>({ resolver: zodResolver(schema), defaultValues: initial ?? {} });
   useEffect(() => {
@@ -75,10 +102,32 @@ export function UserDetailView({
   if (error || !data) return <div className="text-sm text-red-600">{error}</div>;
   const u = data.user;
 
-  const submit = form.handleSubmit((v) => {
-    onSave(v);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const submit = form.handleSubmit(async (v) => {
+    setNoChanges(false);
+    if (initial) {
+      const same =
+        (v.first_name ?? "").trim() === (initial.first_name ?? "").trim() &&
+        (v.last_name ?? "").trim() === (initial.last_name ?? "").trim() &&
+        (v.email ?? "").trim() === (initial.email ?? "").trim() &&
+        v.role === initial.role &&
+        (v.city ?? "").trim() === (initial.city ?? "").trim() &&
+        (v.age ?? "").trim() === (initial.age ?? "").trim() &&
+        v.is_active === initial.is_active &&
+        v.is_staff === initial.is_staff &&
+        v.is_superuser === initial.is_superuser &&
+        v.is_mobile_verified === initial.is_mobile_verified;
+      if (same) {
+        setNoChanges(true);
+        return;
+      }
+    }
+    try {
+      await onSave(v);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      // saveError prop surfaces the failure; don't show "Saved"
+    }
   });
 
   return (
@@ -121,8 +170,14 @@ export function UserDetailView({
             }
           />
           <form onSubmit={submit} className="grid grid-cols-2 gap-4">
-            <Field label="First name"><input className={inputCls} {...form.register("first_name")} /></Field>
-            <Field label="Last name"><input className={inputCls} {...form.register("last_name")} /></Field>
+            <div>
+              <Field label="First name"><input className={inputCls} {...form.register("first_name")} /></Field>
+              {form.formState.errors.first_name && <p className="mt-1 text-xs text-red-600">{form.formState.errors.first_name.message}</p>}
+            </div>
+            <div>
+              <Field label="Last name"><input className={inputCls} {...form.register("last_name")} /></Field>
+              {form.formState.errors.last_name && <p className="mt-1 text-xs text-red-600">{form.formState.errors.last_name.message}</p>}
+            </div>
             <div className="col-span-2">
               <Field label="Email"><input className={inputCls} placeholder="user@example.com" {...form.register("email")} /></Field>
               {form.formState.errors.email && <p className="mt-1 text-xs text-red-600">{form.formState.errors.email.message}</p>}
@@ -134,9 +189,14 @@ export function UserDetailView({
                 <option value="admin">Admin</option>
               </select>
             </Field>
-            <Field label="City"><input className={inputCls} {...form.register("city")} /></Field>
+            <div>
+              <Field label="City"><input className={inputCls} {...form.register("city")} /></Field>
+              {form.formState.errors.city && <p className="mt-1 text-xs text-red-600">{form.formState.errors.city.message}</p>}
+            </div>
             <div className="col-span-2">
-              <Field label="Age"><input className={inputCls} inputMode="numeric" {...form.register("age")} /></Field>
+              <Field label="Age"><input className={inputCls} inputMode="numeric" placeholder={`e.g. 25 (${AGE_MIN}–${AGE_MAX})`} {...form.register("age")} /></Field>
+              <p className="mt-1 text-xs text-zinc-500">Allowed range: {AGE_MIN}–{AGE_MAX} years. Leave blank to clear.</p>
+              {form.formState.errors.age && <p className="mt-1 text-xs text-red-600">{form.formState.errors.age.message}</p>}
             </div>
 
             {([
@@ -159,6 +219,9 @@ export function UserDetailView({
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
                   <Check size={14} strokeWidth={3} /> Saved
                 </span>
+              )}
+              {noChanges && (
+                <span className="text-xs font-semibold text-amber-600">No changes made.</span>
               )}
               {saveError && <span className="text-xs font-semibold text-red-600">{saveError}</span>}
             </div>
