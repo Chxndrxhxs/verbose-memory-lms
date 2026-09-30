@@ -80,7 +80,16 @@ function TakeRunner({ take }: { take: TakeData }) {
     goToSection,
     saveStatus,
     buildSubmitAnswers,
-  } = useAssignmentQuestionState(take.structure, take.answers ?? {}, attemptId);
+    submitSection,
+    isSectionUnlocked,
+    isCurrentSectionLast,
+    isLastSection,
+  } = useAssignmentQuestionState(
+    take.structure,
+    take.answers ?? {},
+    attemptId,
+    take.attempt.execution_mode === "sequential",
+  );
 
   const [violations, setViolations] = useState(0);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -170,6 +179,15 @@ function TakeRunner({ take }: { take: TakeData }) {
     submitMutation.mutate();
   }, [submitMutation]);
 
+  // Sequential mode: finishing a section unlocks the next one. On the final
+  // section there is nothing left to unlock, so it submits the whole exam.
+  const onSubmitSection = useCallback(() => {
+    submitSection(currentSectionIndex);
+    if (isLastSection) {
+      submitMutation.mutate();
+    }
+  }, [submitSection, currentSectionIndex, isLastSection, submitMutation]);
+
   useEffect(() => {
     const threshold = effectiveSecurity?.violations_before_auto_submit ?? 0;
     if (threshold > 0 && violations >= threshold) {
@@ -205,6 +223,10 @@ function TakeRunner({ take }: { take: TakeData }) {
         onGoToSection={goToSection}
         onNext={next}
         onPrevious={previous}
+        onSubmitSection={onSubmitSection}
+        isSectionUnlocked={isSectionUnlocked}
+        isCurrentSectionLast={isCurrentSectionLast}
+        isLastSection={isLastSection}
         onEnterFullscreen={enter}
         onSubmit={() => submitMutation.mutate()}
         onAutoSubmit={onAutoSubmit}

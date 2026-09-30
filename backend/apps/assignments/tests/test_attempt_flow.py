@@ -59,6 +59,22 @@ def test_practice_structure_shows_explanations_but_not_answers(learner_client, a
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("mode", ["sequential", "parallel"])
+def test_start_reports_execution_mode_for_section_gating(learner_client, assignment_factory, mode):
+    """The learner client gates sections on this flag, so it must be present."""
+    assignment = assignment_factory(title="Gated Exam")
+    publish(assignment)
+    model = assignment.models.get(code="mock")
+    model.execution_mode = mode
+    model.save(update_fields=["execution_mode"])
+    r = learner_client.post(
+        f"/api/v1/assignments/{assignment.id}/start", {"model_id": model.id}, format="json"
+    )
+    assert r.status_code == 200
+    assert r.json()["data"]["attempt"]["execution_mode"] == mode
+
+
+@pytest.mark.django_db
 def test_start_rejects_draft(learner_client, assignment_factory):
     assignment = assignment_factory(title="Hidden")
     model = assignment.models.get(code="practice")

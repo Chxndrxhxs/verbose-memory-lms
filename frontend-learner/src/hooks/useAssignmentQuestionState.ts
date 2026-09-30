@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AssignmentOption, AssignmentTakeStep } from "@masterlms/shared";
 import { saveAssignmentAttemptAnswers } from "@masterlms/shared";
 
@@ -102,6 +102,7 @@ export function useAssignmentQuestionState(
   steps: AssignmentTakeStep[],
   initialAnswers: Record<string, Record<string, number>>,
   attemptId: number,
+  sequential = false,
 ) {
   const flatRef = useRef<{ rows: QuestionRow[]; sections: QuestionSection[] } | null>(
     null,
@@ -170,9 +171,91 @@ export function useAssignmentQuestionState(
     });
   }, [questions, currentIndex]);
 
+  const sections = sectionsRef.current;
+  const currentSectionIndex = sections.findIndex(
+    (s) => currentIndex >= s.startIndex && currentIndex <= s.endIndex,
+  );
+
+  // Sequential mode: a section must be submitted before the next one unlocks.
+  // Submitted state is client-side, so it lives in sessionStorage to survive a
+  // reload mid-exam (backend still owns the final result).
+  const [submittedSections, setSubmittedSections] = useState<Set<number>>(() => {
+    if (!sequential || typeof window === "undefined") return new Set<number>();
+    try {
+      const raw = window.sessionStorage.getItem(`exam_sections_${attemptId}`);
+      const parsed = raw ? (JSON.parse(raw) as number[]) : [];
+      return new Set(parsed);
+    } catch {
+      return new Set<number>();
+    }
+  });
+
+  const persistSubmitted = useCallback(
+    (next: Set<number>) => {
+      setSubmittedSections(next);
+      if (typeof window === "undefined") return;
+      try {
+        window.sessionStorage.setItem(
+          `exam_sections_${attemptId}`,
+          JSON.stringify([...next]),
+        );
+      } catch {
+        // storage unavailable — gating still works for this page load
+      }
+    },
+    [attemptId],
+  );
+
+  const submitSection = useCallback(
+    (sectionIdx: number) => {
+      if (!sequential) return;
+      persistSubmitted(new Set([...submittedSections, sectionIdx]));
+    },
+    [sequential, submittedSections, persistSubmitted],
+  );
+
+  // A section is reachable when it is the first, or every earlier one is done.
+  const unlockedUpTo = useMemo(() => {
+    if (!sequential) return Number.MAX_SAFE_INTEGER;
+    let last = 0;
+    for (let i = 0; i < sections.length; i += 1) {
+      if (!submittedSections.has(i)) break;
+      last = i;
+    }
+    return last;
+  }, [sequential, sections.length, submittedSections]);
+
+  const isSectionUnlocked = useCallback(
+    (sectionIdx: number) => !sequential || sectionIdx <= unlockedUpTo,
+    [sequential, unlockedUpTo],
+  );
+
+  const isIndexUnlocked = useCallback(
+    (index: number) => {
+      if (!sequential) return true;
+      const idx = sections.findIndex(
+        (s) => index >= s.startIndex && index <= s.endIndex,
+      );
+      return idx === -1 || idx <= unlockedUpTo;
+    },
+    [sequential, sections, unlockedUpTo],
+  );
+
+  const isCurrentSectionLast = useMemo(() => {
+    if (!sequential || currentSectionIndex < 0) return false;
+    const sec = sections[currentSectionIndex];
+    return sec ? currentIndex === sec.endIndex : false;
+  }, [sequential, currentSectionIndex, sections, currentIndex]);
+
+  const isLastSection = useMemo(() => {
+    if (!sequential || sections.length === 0) return false;
+    return currentSectionIndex === sections.length - 1;
+  }, [sequential, sections.length, currentSectionIndex]);
+
   const goTo = useCallback(
     (index: number) => {
       if (index < 0 || index >= questions.length) return;
+      if (!isIndexUnlocked(index)) return;
       setCurrentIndex(index);
       setVisited((prev) => {
         if (prev.has(index)) return prev;
@@ -181,22 +264,18 @@ export function useAssignmentQuestionState(
         return next;
       });
     },
-    [questions.length],
+    [questions.length, isIndexUnlocked],
   );
 
   const next = useCallback(() => goTo(currentIndex + 1), [goTo, currentIndex]);
   const previous = useCallback(() => goTo(currentIndex - 1), [goTo, currentIndex]);
 
-  const sections = sectionsRef.current;
-  const currentSectionIndex = sections.findIndex(
-    (s) => currentIndex >= s.startIndex && currentIndex <= s.endIndex,
-  );
   const goToSection = useCallback(
     (sectionIdx: number) => {
       const section = sections[sectionIdx];
-      if (section) goTo(section.startIndex);
+      if (section && isSectionUnlocked(sectionIdx)) goTo(section.startIndex);
     },
-    [sections, goTo],
+    [sections, isSectionUnlocked, goTo],
   );
   const nextSection = useCallback(() => {
     const nextIdx = currentSectionIndex + 1;
@@ -267,5 +346,12 @@ export function useAssignmentQuestionState(
     saveStatus,
     buildSubmitAnswers,
     counts,
+    sequential,
+    submittedSections,
+    submitSection,
+    isSectionUnlocked,
+    isIndexUnlocked,
+    isCurrentSectionLast,
+    isLastSection,
   };
 }

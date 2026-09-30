@@ -148,6 +148,8 @@ export interface AssignmentAttemptBrief {
   expires_at: string;
   seconds_remaining: number;
   total_questions: number;
+  /** Sections unlock in order when true; free navigation when false. */
+  execution_mode?: "sequential" | "parallel";
 }
 
 export type AssignmentOption =

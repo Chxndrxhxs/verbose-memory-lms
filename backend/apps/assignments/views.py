@@ -333,6 +333,7 @@ def _attempt_brief(attempt: AssignmentAttempt) -> dict:
         "expires_at": attempt.expires_at.isoformat(),
         "seconds_remaining": max(0, int((attempt.expires_at - timezone.now()).total_seconds())),
         "total_questions": attempt.total_questions,
+        "execution_mode": attempt.model.execution_mode,
     }
 
 
