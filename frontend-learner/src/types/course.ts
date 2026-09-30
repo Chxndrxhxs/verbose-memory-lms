@@ -35,6 +35,7 @@ export type CourseDetail = {
   instructorRole: string;
   avatar: string;
   price: string;
+  pricePaise: number;
   level: string;
   rating: string;
   students: string;

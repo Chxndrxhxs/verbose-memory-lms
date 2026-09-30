@@ -31,6 +31,17 @@ class Payment(models.Model):
     amount = models.PositiveIntegerField(help_text="Amount in paise")
     currency = models.CharField(max_length=10, default="INR")
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.CREATED)
+    # Coupon applied at order time; amount is stored post-discount and
+    # discount_paise snapshots the saving so verification never depends on
+    # the coupon still existing or being unchanged.
+    coupon = models.ForeignKey(
+        "promotions.Coupon",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payments",
+    )
+    discount_paise = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

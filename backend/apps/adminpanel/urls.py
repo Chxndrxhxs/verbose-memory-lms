@@ -1,12 +1,15 @@
 from django.urls import path
 
 from .views import (
+    coupon_detail,
+    coupons_list,
     course_detail,
     course_status,
     courses_list,
     dashboard,
     enrollment_delete,
     enrollments_list,
+    gifts_list,
     payments_list,
     user_detail,
     users_list,
@@ -22,4 +25,7 @@ urlpatterns = [
     path("admin/enrollments", enrollments_list),
     path("admin/enrollments/<int:enrollment_id>", enrollment_delete),
     path("admin/payments", payments_list),
+    path("admin/coupons", coupons_list),
+    path("admin/coupons/<int:coupon_id>", coupon_detail),
+    path("admin/gifts", gifts_list),
 ]

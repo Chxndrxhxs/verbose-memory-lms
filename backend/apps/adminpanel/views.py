@@ -6,6 +6,8 @@ from rest_framework.response import Response
 from apps.courses.models import Course
 from apps.enrollments.models import Enrollment
 from apps.payments.models import Payment
+from apps.promotions.models import Coupon, Gift
+from apps.promotions.serializers import CouponSerializer, GiftSerializer
 from core.pagination import EnvelopePagination
 
 from .permissions import IsAdmin
@@ -210,3 +212,69 @@ def payments_list(request):
         qs = qs.filter(status=pg_status)
     qs = qs.order_by("-created_at")
     return admin_response(qs, True, AdminPaymentSerializer, request)
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAdmin])
+def coupons_list(request):
+    if request.method == "POST":
+        serializer = CouponSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(created_by=request.user)
+        return Response(
+            {"data": serializer.data, "error": None},
+            status=status.HTTP_201_CREATED,
+        )
+    qs = Coupon.objects.all()
+    q = request.query_params.get("q", "").strip()
+    if q:
+        qs = qs.filter(code__icontains=q.upper())
+    is_active = request.query_params.get("is_active")
+    if is_active in ("true", "false"):
+        qs = qs.filter(is_active=is_active == "true")
+    scope = request.query_params.get("applies_to")
+    if scope in dict(Coupon.Scope.choices):
+        qs = qs.filter(applies_to=scope)
+    qs = qs.order_by("-created_at")
+    return admin_response(qs, True, CouponSerializer, request)
+
+
+@api_view(["GET", "PATCH", "DELETE"])
+@permission_classes([IsAdmin])
+def coupon_detail(request, coupon_id: int):
+    try:
+        coupon = Coupon.objects.get(id=coupon_id)
+    except Coupon.DoesNotExist:
+        return Response(
+            {"data": None, "error": "Coupon not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    if request.method == "DELETE":
+        coupon.delete()
+        return Response({"data": {"message": "Coupon deleted"}, "error": None})
+    if request.method == "PATCH":
+        serializer = CouponSerializer(coupon, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"data": serializer.data, "error": None})
+    return Response({"data": CouponSerializer(coupon).data, "error": None})
+
+
+@api_view(["GET"])
+@permission_classes([IsAdmin])
+def gifts_list(request):
+    from django.db.models import Q
+
+    qs = Gift.objects.select_related("giver", "course", "pack").all()
+    q = request.query_params.get("q", "").strip()
+    if q:
+        qs = qs.filter(
+            Q(code__icontains=q.upper())
+            | Q(recipient_email__icontains=q)
+            | Q(giver__mobile__icontains=q)
+        )
+    gift_status = request.query_params.get("status")
+    if gift_status in dict(Gift.Status.choices):
+        qs = qs.filter(status=gift_status)
+    qs = qs.order_by("-created_at")
+    return admin_response(qs, True, GiftSerializer, request)
