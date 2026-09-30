@@ -17,6 +17,7 @@ import PackDetail from "./pages/PackDetail";
 import AssignmentDetail from "./pages/AssignmentDetail";
 import AssignmentResult from "./pages/AssignmentResult";
 import AssignmentTake from "./pages/AssignmentTake";
+import Wishlist from "./pages/Wishlist";
 import { Protected } from "./components/Protected";
 import { useAuth } from "./hooks/useAuth";
 
@@ -28,6 +29,7 @@ const router = createBrowserRouter([
   { path: "/complete-profile", element: <CompleteProfile /> },
   { path: "/courses", element: <Protected><Courses /></Protected> },
   { path: "/courses/:id", element: <Protected><CourseDetail /></Protected> },
+  { path: "/wishlist", element: <Protected><Wishlist /></Protected> },
   { path: "/learn/:id", element: <Protected><Learn /></Protected> },
   { path: "/activity", element: <Protected><Activity /></Protected> },
   { path: "/leaderboard", element: <Protected><Leaderboard /></Protected> },

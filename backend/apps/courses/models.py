@@ -82,6 +82,20 @@ class Lesson(models.Model):
         ordering = ["order"]
 
 
+class WishlistItem(models.Model):
+    """A course a learner saved for later. One row per (learner, course)."""
+
+    learner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="wishlist_items"
+    )
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="wishlisted_by")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("learner", "course")
+        ordering = ["-created_at"]
+
+
 class Review(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="reviews")
     user = models.ForeignKey(

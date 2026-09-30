@@ -6,13 +6,19 @@ from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
-from .models import Course
-from .serializers import CourseDetailSerializer, CourseListSerializer
+from .models import Course, WishlistItem
+from .serializers import (
+    CourseDetailSerializer,
+    CourseListSerializer,
+    WishlistItemSerializer,
+)
 from .services import (
+    add_to_wishlist,
     create_course,
     get_user_rating,
     publish_course,
     rate_course,
+    remove_from_wishlist,
     replace_curriculum,
     save_uploaded_file,
 )
@@ -145,6 +151,35 @@ class CourseViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
         return Response({"data": rate_course(course, request.user, rating_int), "error": None})
+
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
+    def wishlist(self, request):
+        qs = (
+            WishlistItem.objects.filter(learner=request.user)
+            .select_related("course", "course__instructor")
+            .prefetch_related("course__enrollments", "course__sections__lessons")
+            .order_by("-created_at")
+        )
+        return Response({"data": WishlistItemSerializer(qs, many=True).data, "error": None})
+
+    @action(detail=True, methods=["post", "delete"], permission_classes=[IsAuthenticated])
+    def wishlist_item(self, request, id=None):
+        course = self.get_object()
+        if course.status == Course.Status.DRAFT:
+            raise NotFound("Course not found")
+        if request.method == "DELETE":
+            removed = remove_from_wishlist(request.user, course)
+            return Response({"data": {"wishlisted": False, "removed": removed}, "error": None})
+        item = add_to_wishlist(request.user, course)
+        return Response(
+            {
+                "data": {
+                    "wishlisted": True,
+                    "item": WishlistItemSerializer(item).data,
+                },
+                "error": None,
+            }
+        )
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def mine(self, request):

@@ -1,9 +1,10 @@
 import { NavLink } from "react-router-dom";
-import { Activity, BookOpen, FileText, Home, Trophy } from "@masterlms/shared";
+import { Activity, BookOpen, FileText, Heart, Home, Trophy } from "@masterlms/shared";
 
 const TABS = [
   { to: "/", label: "Home", Icon: Home },
   { to: "/courses", label: "Courses", Icon: BookOpen },
+  { to: "/wishlist", label: "Wishlist", Icon: Heart },
   { to: "/activity", label: "Activity", Icon: Activity },
   { to: "/leaderboard", label: "Ranks", Icon: Trophy },
   { to: "/assignments", label: "Tests", Icon: FileText },
@@ -15,7 +16,7 @@ export function MobileTabBar() {
       aria-label="Primary"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
     >
-      <div className="grid grid-cols-5">
+      <div className="grid grid-cols-6">
         {TABS.map(({ to, label, Icon }) => (
           <NavLink
             key={to}

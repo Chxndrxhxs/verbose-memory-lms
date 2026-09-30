@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Course, Lesson, Review, Section
+from .models import Course, Lesson, Review, Section, WishlistItem
 
 
 class LessonSerializer(serializers.ModelSerializer):
@@ -118,6 +118,14 @@ class CourseDetailSerializer(CourseListSerializer):
 
     def get_rating_count(self, obj: Course) -> int:
         return obj.reviews.count()
+
+
+class WishlistItemSerializer(serializers.ModelSerializer):
+    course = CourseListSerializer(read_only=True)
+
+    class Meta:
+        model = WishlistItem
+        fields = ("id", "course", "created_at")
 
 
 class ReviewSerializer(serializers.ModelSerializer):

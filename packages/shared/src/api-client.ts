@@ -12,6 +12,7 @@ import type {
   PackAdminDetail,
   PackDetail,
   PackListItem,
+  SharedWishlistItem,
 } from './types';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1';
@@ -337,6 +338,18 @@ export function getPackDetail(id: number): Promise<PackDetail> {
 
 export function getMyPacks(): Promise<PackListItem[]> {
   return api('/packs/mine/');
+}
+
+export function getWishlist(): Promise<SharedWishlistItem[]> {
+  return api('/courses/wishlist/');
+}
+
+export function addWishlistItem(courseId: number): Promise<{ wishlisted: boolean; item: SharedWishlistItem }> {
+  return api(`/courses/${courseId}/wishlist_item/`, { method: 'POST' });
+}
+
+export function removeWishlistItem(courseId: number): Promise<{ wishlisted: boolean; removed: boolean }> {
+  return api(`/courses/${courseId}/wishlist_item/`, { method: 'DELETE' });
 }
 
 export function claimFreePack(id: number): Promise<{ owned: boolean; pack_id: number }> {

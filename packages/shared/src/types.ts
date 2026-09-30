@@ -40,10 +40,16 @@ export interface SharedApiCourseDetail {
   price: string; cover_image?: string; level?: string; average_rating?: string;
   what_you_will_learn?: string[]; instructor_name?: string; instructor_avatar?: string;
   instructor_role?: string; student_count?: number; sections?: SharedSection[];
+  section_count?: number; lesson_count?: number;
 }
 export interface SharedInstructorCourse {
   id: number; title: string; status: string; student_count: number; price: string;
   cover_image: string; updated_at: string; average_rating: string;
+}
+export interface SharedWishlistItem {
+  id: number;
+  course: SharedApiCourseDetail;
+  created_at: string;
 }
 
 export type AssignmentStatus = "draft" | "published" | "archived";

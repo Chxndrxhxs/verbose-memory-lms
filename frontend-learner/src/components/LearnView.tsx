@@ -252,7 +252,6 @@ export function LearnView(p: Props) {
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="rounded-full bg-zinc-900 px-3 py-1 text-xs font-semibold text-white">Calm pace</span>
                 <span className="rounded-full bg-yellow-400 px-3 py-1 text-xs font-semibold text-zinc-900">Hands-on</span>
-                <span className="rounded-full border bg-white px-3 py-1 text-xs font-medium inline-flex items-center gap-1">Resources <ChevronDown size={12} strokeWidth={2.5} /></span>
               </div>
               <button onClick={p.onMarkComplete} className="mt-4 sm:hidden w-full rounded-full bg-[#0f172a] py-2.5 text-sm font-semibold text-white">{active != null && completed.has(active) ? "✓ Completed" : "Mark complete"}</button>
             </div>

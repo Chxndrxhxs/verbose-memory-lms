@@ -5,7 +5,7 @@ from pathlib import Path
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 
-from .models import Course, Lesson, Review, Section
+from .models import Course, Lesson, Review, Section, WishlistItem
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +75,20 @@ def replace_curriculum(course: Course, sections: list) -> Course:
                 order=li,
             )
     return course
+
+
+def add_to_wishlist(learner, course: Course) -> WishlistItem:
+    item, created = WishlistItem.objects.get_or_create(learner=learner, course=course)
+    if created:
+        logger.info("User %s wishlisted course %s", learner.mobile, course.id)
+    return item
+
+
+def remove_from_wishlist(learner, course: Course) -> bool:
+    deleted, _ = WishlistItem.objects.filter(learner=learner, course=course).delete()
+    if deleted:
+        logger.info("User %s removed course %s from wishlist", learner.mobile, course.id)
+    return bool(deleted)
 
 
 def rate_course(course: Course, user, rating: int) -> dict:
