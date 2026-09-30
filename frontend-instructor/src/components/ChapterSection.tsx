@@ -468,11 +468,11 @@ function LessonEditor({ lesson, onUpdate, uploading, onUpload, onUploadMedia }: 
             {isEmbedCode ? "Paste a YouTube/Vimeo/Loom <iframe> embed code." : "Paste a YouTube, Vimeo or Loom share URL, or upload an mp4."}
           </p>
           {lesson.resource_url && embedUrl ? (
-            <div className="mt-2 overflow-hidden rounded-xl border">
+            <div className="mt-2 flex aspect-[16/9] max-h-[440px] flex-col overflow-hidden rounded-xl border">
               {/\.(mp4|webm|mov)(\?|$)/.test(embedUrl) ? (
-                <video src={embedUrl} controls className="h-32 w-full bg-black object-contain" />
+                <video src={embedUrl} controls className="h-full w-full bg-black object-contain" />
               ) : (
-                <iframe src={embedUrl} title={lesson.title} className="h-32 w-full" allowFullScreen />
+                <iframe src={embedUrl} title={lesson.title} className="h-full w-full" allowFullScreen />
               )}
             </div>
           ) : null}
@@ -504,8 +504,12 @@ function LessonEditor({ lesson, onUpdate, uploading, onUpload, onUploadMedia }: 
               className="rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:bg-white"
             />
           </div>
-          {(lesson.kind === "pdf" || lesson.kind === "audio") && lesson.resource_url && (
-            <div className="mt-2 truncate rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs">{lesson.resource_url}</div>
+          {lesson.kind === "audio" && lesson.resource_url && (
+            <audio
+              src={lesson.resource_url}
+              controls
+              className="mt-2 w-full"
+            />
           )}
         </>
       );

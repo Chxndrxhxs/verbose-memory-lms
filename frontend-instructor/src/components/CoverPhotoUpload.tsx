@@ -29,7 +29,7 @@ export function CoverPhotoUpload({ value, onChange }: Props) {
   if (src) {
     return (
       <div className="overflow-hidden rounded-xl border border-zinc-200">
-        <div className="group relative h-36 w-full">
+        <div className="group relative aspect-[16/9] max-h-[440px] w-full">
           <img src={src} alt="Course cover" className="h-full w-full object-cover" />
           <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
             <button
@@ -58,7 +58,7 @@ export function CoverPhotoUpload({ value, onChange }: Props) {
       type="button"
       onClick={() => inputRef.current?.click()}
       disabled={uploading}
-      className="flex h-36 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 text-zinc-500 transition-colors hover:bg-zinc-100"
+      className="flex aspect-[16/9] max-h-[440px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 text-zinc-500 transition-colors hover:bg-zinc-100"
     >
       {uploading ? (
         <span className="text-xs font-semibold">Uploading…</span>
