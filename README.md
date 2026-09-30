@@ -222,7 +222,7 @@ pnpm dev:instructor
 pnpm dev:admin
 pnpm build              # pnpm -r build
 pnpm lint               # pnpm -r lint
-pnpm tsc                # pnpm -r exec tsc --noEmit
+pnpm tsc                # typecheck all three frontends (per-filter; shared has no tsc)
 
 # Backend (inside backend/)
 uv sync                 # install deps
@@ -241,7 +241,7 @@ uv run ruff check . && uv run ruff format .
 ### Auth
 | Method | Path | Body | Notes |
 | --- | --- | --- | --- |
-| `POST` | `/auth/send-otp` | `{mobile}` | mock `1234` in dev, returns `mock_code` |
+| `POST` | `/auth/send-otp` | `{mobile}` | random 4-digit code; in `DEBUG` returned as `mock_code` in the response (no fixed code) |
 | `POST` | `/auth/verify-otp` | `{mobile, code}` | `{user, tokens, is_new}` + cookies |
 | `POST` | `/auth/refresh` | — | Rotate cookies |
 | `POST` | `/auth/logout` | — | Clear cookies |
@@ -372,7 +372,7 @@ Roles checked in `IsInstructorOrReadOnly` (courses), `IsAdmin` (`role=admin` or 
 
 ## Testing
 - **Backend:** `uv run pytest` (OTP + per-app cookies + course CRUD/publish + enrollments progress + mock-gated payments + packs + reviews + certificates + admin panel).
-- **Frontend:** `pnpm -r build` + `pnpm -r exec tsc --noEmit` + `pnpm -r lint` (`oxlint`) must pass; Vitest + RTL + msw + Playwright not installed yet (planned).
+- **Frontend:** `pnpm -r build` + `pnpm tsc` + `pnpm -r lint` (`oxlint`) must pass; Vitest + RTL + msw + Playwright not installed yet (planned).
 
 ## Roadmap
 - [x] httpOnly per-app JWT cookies (`X-App`, one session per app) · [x] `/upload/` · [x] `toEmbed` yt/embed+iframe+shorts · [x] 2-step instructor builder (subtitle/description/learn/price ₹) · [x] lean learner cards (₹, subtitle 2 lines, instructor + counts, enrolled→Go to course) · [x] search + grid/list (both apps) · [x] persisted progress (`LessonCompletion` + `completed_lessons`) · [x] QTNXT rebrand + full-width centered nav + gradient hero (bigger/wider, banners removed) + sticky navbar · [x] `Mark course as complete` at 100% → star rating → `average_rating` + `rating_count` on cards/detail · [x] `Review` + `Certificate` (QTNXT-XXXX, enrolled/completed dates, professional print template) in profile + `Payment activity` invoices (Razorpay live or `ALLOW_MOCK_PAYMENTS` mock, ₹) + `Activity` GitHub heatmap with QTNXT ink scale + profile navbar + full-width instructor routes + profile header redesign · [x] question packs (learner store + instructor 4-step builder + pack payments) · [x] `create_admin` CLI, `become-admin` self-promotion removed
@@ -390,11 +390,11 @@ Roles checked in `IsInstructorOrReadOnly` (courses), `IsAdmin` (`role=admin` or 
 - macOS/Linux: `lsof -i :8000` → `kill <pid>`
 
 ### Backend won’t start
-- **`uv` not found**: install `uv` (see Prerequisites) or run with `pip`:
+- **`uv` not found**: install `uv` (see Prerequisites), or fall back to pip. There is
+  no `requirements.txt` — deps are declared in `pyproject.toml`, so install from that:
   ```bash
-  pip install -r requirements.txt  # if you generate one via uv pip compile
-  # or
-  pip install django djangorestframework django-environ django-filter djangorestframework-simplejwt django-cors-headers razorpay mysqlclient
+  pip install django djangorestframework django-environ django-filter djangorestframework-simplejwt django-cors-headers razorpay
+  # add mysqlclient only if you're using MySQL — omit it for the sqlite fallback
   python manage.py migrate && python manage.py runserver
   ```
 - **`No module named 'django'`**: you ran `python` not `uv run python` — use `uv run python manage.py ...` so it picks the project `.venv`.
@@ -419,7 +419,14 @@ Roles checked in `IsInstructorOrReadOnly` (courses), `IsAdmin` (`role=admin` or 
 - **`oxlint` / `tsc` fails on fresh pull**: `pnpm --filter frontend-learner exec tsc --noEmit` shows the file; fix type errors, then `pnpm --filter frontend-learner exec oxlint --fix`.
 
 ### Payments (Razorpay) in local dev
-- Without `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` in `backend/.env`, the app uses **mock mode** — you’ll see `order_mock_*` and `pay_mock_*` IDs and enroll will succeed. Add real test keys to test live Razorpay Checkout.
+- Mock mode is **opt-in**, not implied by missing keys. Set `ALLOW_MOCK_PAYMENTS=True`
+  in `backend/.env` to mint `order_mock_*` / `pay_mock_*` IDs that verify without a
+  signature — enroll then succeeds offline.
+- Without that flag, real Razorpay **test** keys are required. Add
+  `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` to try live Checkout. With neither the flag
+  nor keys, order creation fails.
+- Never set `ALLOW_MOCK_PAYMENTS=True` in staging or production — mock orders mint
+  real entitlements.
 
 ### Still stuck?
 - Capture the exact error (full traceback or browser console + Network tab), Node/Python/MySQL versions, and the command you ran, then open a GitHub issue: **Issues → New issue → Bug report** with label `setup`. Paste `pnpm --version`, `uv --version`, `python --version`, and `backend/.env` (without secrets).
