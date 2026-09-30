@@ -15,7 +15,6 @@ export function TopNav() {
       <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-5 text-sm font-medium text-zinc-600 sm:flex">
         <NavLink to="/" className={({ isActive }) => (isActive ? "text-zinc-900" : "hover:text-zinc-900")}>Home</NavLink>
         <NavLink to="/courses" className={({ isActive }) => (isActive ? "text-zinc-900" : "hover:text-zinc-900")}>Courses</NavLink>
-        <NavLink to="/wishlist" className={({ isActive }) => (isActive ? "text-zinc-900" : "hover:text-zinc-900")}>Wishlist</NavLink>
         <NavLink to="/activity" className={({ isActive }) => (isActive ? "text-zinc-900" : "hover:text-zinc-900")}>Activity</NavLink>
         <NavLink to="/leaderboard" className={({ isActive }) => (isActive ? "text-zinc-900" : "hover:text-zinc-900")}>Leaderboard</NavLink>
         <NavLink to="/assignments" className={({ isActive }) => (isActive ? "text-zinc-900" : "hover:text-zinc-900")}>Assignments</NavLink>

@@ -10,10 +10,10 @@ export default function Wishlist() {
       <div className="w-full px-3 py-6 sm:px-4">
         <div className="rounded-[28px] bg-white p-8 shadow-sm sm:p-10">
           <Link
-            to="/courses"
+            to="/profile"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-900"
           >
-            <ArrowLeft size={14} strokeWidth={2.5} /> Back to courses
+            <ArrowLeft size={14} strokeWidth={2.5} /> Back to profile
           </Link>
           <h1 className="mt-3 text-2xl font-bold tracking-tight">Your wishlist</h1>
           <p className="mt-1 text-sm text-zinc-500">Courses you've saved for later.</p>

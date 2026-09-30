@@ -1,7 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, LogOut, User } from "@masterlms/shared";
+import { ChevronDown, Heart, LogOut, User } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
+import { useWishlistIds } from "../hooks/useWishlist";
 import { cn } from "../lib/utils";
 
 export function ProfileMenu() {
@@ -10,6 +11,8 @@ export function ProfileMenu() {
   const nav = useNavigate();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const { data: wishlistIds } = useWishlistIds();
+  const wishlistCount = wishlistIds?.length ?? 0;
 
   useEffect(() => {
     if (!open) return;
@@ -78,6 +81,19 @@ export function ProfileMenu() {
               className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
             >
               <User size={15} strokeWidth={2.25} className="text-zinc-500" /> Profile
+            </Link>
+            <Link
+              to="/wishlist"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+            >
+              <Heart size={15} strokeWidth={2.25} className="text-zinc-500" /> Wishlist
+              {wishlistCount > 0 && (
+                <span className="ml-auto rounded-full bg-zinc-900 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {wishlistCount}
+                </span>
+              )}
             </Link>
             <button
               role="menuitem"

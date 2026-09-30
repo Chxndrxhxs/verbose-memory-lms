@@ -1,0 +1,22 @@
+test: cover admin profile name/age/city validation
+
+Adds 46 tests for the admin profile-update guards introduced in
+18ccdbf, covering three layers:
+
+- validate_person_name: 7 valid names (letters, spaces, hyphens,
+  apostrophes, 60-char boundary, whitespace trimming) and 10 invalid
+  ones (empty/blank, digits, underscores, double spaces, periods,
+  punctuation, <script>, 61-char overflow).
+- update_user service: first/last name splitting, single-token names,
+  whitespace collapsing, invalid last name rejection, age bounds
+  (4/121/0/-1/999 rejected; 5/30/120 accepted), string->int coercion,
+  non-numeric rejection, and no partial DB writes on failure.
+- PATCH /api/v1/admin/users/{id}: happy path, per-field 400 rejection
+  (first_name/last_name/city/age), inclusive age boundaries, full-name
+  rejection, and 403 for non-admins.
+
+The suite was mutation-tested: loosening MIN_AGE/MAX_AGE to 0/999
+and bypassing validate_first_name each failed the expected tests,
+confirming the assertions are meaningful.
+
+Co-authored-by: CommandCodeBot <noreply@commandcode.ai>
