@@ -5,7 +5,11 @@ from apps.courses.models import Course, Lesson, Section
 from apps.courses.serializers import CourseDetailSerializer, CourseListSerializer
 from apps.enrollments.models import ActivityEvent, Certificate, Enrollment
 from apps.payments.serializers import PaymentSerializer
-from core.validators import validate_person_age, validate_person_name
+from core.validators import (
+    validate_person_age,
+    validate_person_email,
+    validate_person_name,
+)
 
 User = get_user_model()
 
@@ -41,11 +45,16 @@ class AdminUserSerializer(serializers.ModelSerializer):
     def validate_last_name(self, value: str) -> str:
         return validate_person_name(value, "Last name")
 
+    def validate_email(self, value: str) -> str:
+        return validate_person_email(value)
+
     def validate_city(self, value: str) -> str:
         return validate_person_name(value, "City")
 
     def validate_age(self, value) -> int | None:
-        return validate_person_age(value)
+        # RAM-42: an admin clearing an instructor's age used to persist a blank
+        # value that then showed up as missing in the instructor module.
+        return validate_person_age(value, required=True)
 
 
 class AdminCourseListSerializer(CourseListSerializer):

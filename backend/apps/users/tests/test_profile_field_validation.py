@@ -99,7 +99,7 @@ def test_cleared_email_is_not_persisted():
 # --- profile: age (matches the admin rule) ----------------------------------
 
 
-@pytest.mark.parametrize("raw", [0, 1, 4, 121, 999])
+@pytest.mark.parametrize("raw", [101, 121, 999])
 def test_profile_age_outside_range_is_rejected(raw):
     with pytest.raises(serializers.ValidationError) as exc:
         CompleteProfileSerializer(data={"name": "Maya Chen", "age": raw}).is_valid(
@@ -108,7 +108,7 @@ def test_profile_age_outside_range_is_rejected(raw):
     assert "valid age between" in str(exc.value.detail)
 
 
-@pytest.mark.parametrize("raw", [5, 30, 120])
+@pytest.mark.parametrize("raw", [0, 5, 30, 100])
 def test_profile_age_inside_range_is_accepted(raw):
     assert CompleteProfileSerializer(data={"name": "Maya Chen", "age": raw}).is_valid()
 
@@ -123,6 +123,53 @@ def test_valid_profile_name_is_split_into_first_and_last():
     serializer.save()
     assert (user.first_name, user.last_name) == ("Maya", "Chen")
     assert user.saved
+
+
+# --- profile: blank fields are not persisted (RAM-8, RAM-31) ----------------
+
+
+@pytest.mark.parametrize("field", ["name", "email", "age"])
+def test_blank_profile_field_is_rejected_on_update(field):
+    """Clearing a field and saving used to persist an empty value."""
+    user = FakeUser()
+    serializer = CompleteProfileSerializer(user, data={field: ""}, partial=True)
+    assert not serializer.is_valid()
+    assert field in serializer.errors
+
+
+@pytest.mark.parametrize("blank", ["", None])
+def test_blank_age_is_rejected(blank):
+    """Clearing age used to persist an empty value (RAM-8)."""
+    user = FakeUser()
+    serializer = CompleteProfileSerializer(user, data={"age": blank}, partial=True)
+    assert not serializer.is_valid()
+    assert "age" in serializer.errors
+    assert user.saved is False
+
+
+# --- profile: age must be believable (RAM-37) ------------------------------
+
+
+@pytest.mark.parametrize("raw", [29788, 32767, 101, 999])
+def test_absurd_age_is_rejected_and_not_persisted(raw):
+    user = FakeUser()
+    serializer = CompleteProfileSerializer(
+        user, data={"name": "Maya Chen", "age": raw}, partial=True
+    )
+    assert not serializer.is_valid(), serializer.errors
+    assert user.saved is False
+
+
+# --- profile: name rules hold on update too (RAM-30) ------------------------
+
+
+@pytest.mark.parametrize("raw", ["Maya3", "<script>", "Maya_Chen"])
+def test_profile_name_rules_apply_on_update(raw):
+    user = FakeUser()
+    serializer = CompleteProfileSerializer(user, data={"name": raw}, partial=True)
+    assert not serializer.is_valid()
+    assert "name" in serializer.errors
+    assert user.saved is False
 
 
 # --- course title (RAM-24) --------------------------------------------------

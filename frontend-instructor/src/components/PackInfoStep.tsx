@@ -1,8 +1,6 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getAssignmentCategories } from "@masterlms/shared";
 import { builderCardClass, builderFieldClass, builderLabelClass } from "../lib/builder";
 import type { PackInfoDraft } from "../types/pack";
+import { ExamBoardPicker } from "./ExamBoardPicker";
 
 type Props = {
   info: PackInfoDraft;
@@ -13,34 +11,6 @@ const inputClass = builderFieldClass;
 
 export function PackInfoStep({ info, onChange }: Props) {
   const set = (patch: Partial<PackInfoDraft>) => onChange({ ...info, ...patch });
-  const categoriesQuery = useQuery({
-    queryKey: ["assignment-categories"],
-    queryFn: getAssignmentCategories,
-  });
-  const categories = categoriesQuery.data ?? [];
-
-  // Find the chain containing the saved inter_category so editing an existing
-  // pack (or data arriving after first render) shows the right values. The
-  // list is tiny, so this just runs during render. Local picks override the
-  // saved chain while the user is interacting.
-  let savedCategory: number | null = null;
-  let savedSub: number | null = null;
-  for (const c of categories) {
-    for (const s of c.subcategories) {
-      if (s.intercategories.some((i) => i.id === info.inter_category)) {
-        savedCategory = c.id;
-        savedSub = s.id;
-      }
-    }
-  }
-
-  const [pickedCategory, setPickedCategory] = useState<number | null | undefined>();
-  const [pickedSub, setPickedSub] = useState<number | null | undefined>();
-  const categoryId = pickedCategory !== undefined ? pickedCategory : savedCategory;
-  const subId = pickedSub !== undefined ? pickedSub : savedSub;
-
-  const activeCategory = categories.find((c) => c.id === categoryId);
-  const activeSub = activeCategory?.subcategories.find((s) => s.id === subId);
 
   return (
     <div className={builderCardClass}>
@@ -103,63 +73,12 @@ export function PackInfoStep({ info, onChange }: Props) {
         )}
       </div>
 
-      <div className="mt-6 grid gap-5 sm:grid-cols-3">
-        <label className={builderLabelClass}>
-          Category
-          <select
-            value={categoryId ?? ""}
-            onChange={(e) => {
-              setPickedCategory(e.target.value ? Number(e.target.value) : null);
-              setPickedSub(null);
-              set({ inter_category: null });
-            }}
-            className={`${inputClass} bg-white`}
-          >
-            <option value="">Select…</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={builderLabelClass}>
-          Sub-category
-          <select
-            value={subId ?? ""}
-            onChange={(e) => {
-              setPickedSub(e.target.value ? Number(e.target.value) : null);
-              set({ inter_category: null });
-            }}
-            disabled={categoryId == null}
-            className={`${inputClass} bg-white disabled:opacity-50`}
-          >
-            <option value="">Select…</option>
-            {activeCategory?.subcategories.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={builderLabelClass}>
-          Topic
-          <select
-            value={info.inter_category ?? ""}
-            onChange={(e) =>
-              set({ inter_category: e.target.value ? Number(e.target.value) : null })
-            }
-            disabled={subId == null}
-            className={`${inputClass} bg-white disabled:opacity-50`}
-          >
-            <option value="">Select…</option>
-            {activeSub?.intercategories.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="mt-6">
+        <ExamBoardPicker
+          value={info.board ?? null}
+          onChange={(v) => set({ board: v })}
+          label="Exam board"
+        />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { assignmentService } from "../services/assignment.service";
-import type { Assignment, AssignmentStatus } from "../types/assignment";
+import type { AssignmentStatus, AssignmentWritePayload } from "../types/assignment";
 
 export function useAssignmentList(
   page = 1,
@@ -24,7 +24,7 @@ export function useAssignment(id: string) {
 export function useCreateAssignment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<Assignment>) => assignmentService.create(data),
+    mutationFn: (data: AssignmentWritePayload) => assignmentService.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["assignments"] });
     },
@@ -34,7 +34,7 @@ export function useCreateAssignment() {
 export function useUpdateAssignment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Assignment> }) =>
+    mutationFn: ({ id, data }: { id: string; data: AssignmentWritePayload }) =>
       assignmentService.update(id, data),
     onSuccess: (_result, variables) => {
       qc.invalidateQueries({ queryKey: ["assignments"] });

@@ -1,6 +1,10 @@
 import {
+  hasReadableTitle,
+  isValidTotalMarks,
   optionImage,
   optionText,
+  TITLE_MSG,
+  TOTAL_MARKS_MSG,
   type AssignmentOption,
   type ExamModule,
 } from "@masterlms/shared";
@@ -74,7 +78,10 @@ export interface Assignment {
   instructions: string;
   sourceDocument: string;
   sourceDocumentName: string;
-  course: string;
+  /** Exam board: the Category id this assignment is filed under. */
+  board: number | null;
+  /** Read-only "Exam · Subject" label for list cards; not editable here. */
+  subjectLabel?: string;
   difficulty: QuestionDifficulty;
   totalMarks: number;
   passingPercentage: number;
@@ -227,7 +234,7 @@ export function createEmptyAssignment(): Assignment {
     instructions: "",
     sourceDocument: "",
     sourceDocumentName: "",
-    course: "",
+    board: null,
     difficulty: "medium",
     totalMarks: 0,
     passingPercentage: 50,
@@ -476,6 +483,21 @@ export function validateAssignment(assignment: Assignment): AssignmentValidation
 
   if (!assignment.title.trim()) {
     errors.push({ field: "title", message: "Title is required" });
+  } else if (!hasReadableTitle(assignment.title)) {
+    // A title of only punctuation ("!@#$%^&*()") reads as broken in the
+    // student and admin modules (RAM-35).
+    errors.push({ field: "title", message: TITLE_MSG });
+  }
+
+  if (assignment.board == null) {
+    // A published assignment with no board cannot be found by learners in the
+    // catalog (RAM-34).
+    errors.push({ field: "board", message: "Select an exam board" });
+  }
+
+  if (!isValidTotalMarks(assignment.totalMarks)) {
+    // A wildly large total is a typo and breaks scoring downstream (RAM-44).
+    errors.push({ field: "totalMarks", message: TOTAL_MARKS_MSG });
   }
 
   if (assignment.questions.length === 0) {
@@ -503,18 +525,27 @@ export function validateAssignment(assignment: Assignment): AssignmentValidation
   return errors;
 }
 
-export function getCourseOptions(): string[] {
-  return [
-    "Engineering",
-    "Computer Science",
-    "Mathematics",
-    "Physics",
-    "Chemistry",
-    "Business",
-    "Design",
-    "Other",
-  ];
-}
+/** The snake_case body the assignment endpoints accept. `board` is the exam
+ *  board a published assignment is filed under in the learner catalog.
+ *  `inter_category` is kept only so existing drafts round-trip unchanged.
+ */
+export type AssignmentWritePayload = {
+  title: string;
+  description: string;
+  instructions: string;
+  difficulty: QuestionDifficulty;
+  inter_category: number | null;
+  board: number | null;
+  status: AssignmentStatus;
+  source_document: string;
+  source_document_name: string;
+  passing_percentage: number;
+  randomize_questions: boolean;
+  randomize_options: boolean;
+  negative_marking: boolean;
+  negative_marks_per_wrong: number;
+  draft_data: Assignment;
+};
 
 export function formatMinutes(mins: number): string {
   const total = Math.max(0, Math.round(mins));

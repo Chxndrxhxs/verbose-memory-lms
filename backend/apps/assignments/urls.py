@@ -4,6 +4,7 @@ from . import views
 
 learner_patterns = [
     path("assignments/categories/", views.catalog_tree, name="assignment-categories"),
+    path("assignments/boards/", views.boards, name="assignment-boards"),
     path("assignments/models/<int:assignment_id>/", views.model_choices, name="assignment-models"),
     path("assignments/attempts/", views.my_attempts, name="assignment-my-attempts"),
     path(

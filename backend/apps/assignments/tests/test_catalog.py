@@ -55,13 +55,14 @@ def test_detail_exposes_models_preview(learner_client, assignment_factory):
 
 
 @pytest.mark.django_db
-def test_catalog_tree_counts(learner_client, assignment_factory, inter_category):
+def test_board_counts_only_published_assignments(
+    learner_client, assignment_factory, board
+):
     assignment = assignment_factory(title="Counted")
     assignment.status = "published"
     assignment.save(update_fields=["status"])
     assignment_factory(title="Not Published")
 
-    r = learner_client.get("/api/v1/assignments/categories/")
-    tree = r.json()["data"]
-    inter = tree[0]["subcategories"][0]["intercategories"][0]
-    assert inter["assignments_count"] == 1
+    r = learner_client.get("/api/v1/assignments/boards/")
+    boards = {b["id"]: b for b in r.json()["data"]}
+    assert boards[board.id]["assignments_count"] == 1

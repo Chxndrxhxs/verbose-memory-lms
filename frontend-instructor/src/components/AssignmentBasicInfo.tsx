@@ -8,12 +8,17 @@ import {
   builderLabelClass,
   builderSectionTitleClass,
 } from "../lib/builder";
-import type { Assignment } from "../types/assignment";
-import { getCourseOptions } from "../types/assignment";
+import { MAX_TOTAL_MARKS, MIN_TOTAL_MARKS } from "@masterlms/shared";
+import type {
+  Assignment,
+  AssignmentValidationError,
+} from "../types/assignment";
+import { ExamBoardPicker } from "./ExamBoardPicker";
 
 type Props = {
   assignment: Assignment;
   onChange: (patch: Partial<Assignment>) => void;
+  errors: AssignmentValidationError[];
 };
 
 const checkRow = cn(
@@ -30,7 +35,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-export function AssignmentBasicInfoStep({ assignment, onChange }: Props) {
+export function AssignmentBasicInfoStep({ assignment, onChange, errors }: Props) {
   return (
     <div className={builderCardClass}>
       <h2 className="text-xl font-bold tracking-tight text-zinc-900">About this assignment</h2>
@@ -82,21 +87,15 @@ export function AssignmentBasicInfoStep({ assignment, onChange }: Props) {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div>
-              <label className={builderLabelClass}>Subject / Course</label>
-              <select
-                value={assignment.course}
-                onChange={(e) => onChange({ course: e.target.value })}
-                className={builderFieldClass}
-              >
-                <option value="">Select a course</option>
-                {getCourseOptions().map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <ExamBoardPicker
+              value={assignment.board}
+              onChange={(v) => onChange({ board: v })}
+              error={errors.find((e) => e.field === "board")?.message}
+            />
+          </div>
 
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
               <label className={builderLabelClass}>Difficulty level</label>
               <select
@@ -157,7 +156,8 @@ export function AssignmentBasicInfoStep({ assignment, onChange }: Props) {
               <label className={builderLabelClass}>Total marks</label>
               <input
                 type="number"
-                min={1}
+                min={MIN_TOTAL_MARKS}
+                max={MAX_TOTAL_MARKS}
                 value={assignment.totalMarks || ""}
                 onChange={(e) =>
                   onChange({ totalMarks: Number(e.target.value) || 0 })
@@ -165,6 +165,15 @@ export function AssignmentBasicInfoStep({ assignment, onChange }: Props) {
                 placeholder="Auto-sums from questions when published"
                 className={builderFieldClass}
               />
+              <p className="mt-1 text-xs text-zinc-500">
+                {MIN_TOTAL_MARKS}–{MAX_TOTAL_MARKS}. Leave blank to auto-sum from
+                questions.
+              </p>
+              {errors.find((e) => e.field === "totalMarks") && (
+                <p className="mt-1 text-xs text-red-600">
+                  {errors.find((e) => e.field === "totalMarks")?.message}
+                </p>
+              )}
             </div>
 
             <div>

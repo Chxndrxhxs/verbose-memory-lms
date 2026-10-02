@@ -1,4 +1,4 @@
-import { CheckCircle, AlertCircle, Save } from "@masterlms/shared";
+import { CheckCircle, AlertCircle, isValidTotalMarks, Save } from "@masterlms/shared";
 import { cn } from "../lib/utils";
 import { builderCardClass } from "../lib/builder";
 import type {
@@ -32,6 +32,14 @@ export function AssignmentPublishStep({ assignment, errors }: Props) {
     {
       label: "Title provided",
       ok: Boolean(assignment.title.trim()),
+    },
+    {
+      label: "Exam board selected",
+      ok: assignment.board != null,
+    },
+    {
+      label: "Total marks is realistic",
+      ok: isValidTotalMarks(assignment.totalMarks),
     },
     {
       label: "At least one question",

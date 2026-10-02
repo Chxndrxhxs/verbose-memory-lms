@@ -239,7 +239,7 @@ export function AssignmentListView({
                     </span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-3 text-xs text-zinc-500">
-                    <span>{a.course || "Uncategorized"}</span>
+                    <span>{a.subjectLabel || "No exam subject"}</span>
                     <span className="flex items-center gap-1">
                       <HelpCircle size={11} />
                       {getTotalQuestions(a)} Q

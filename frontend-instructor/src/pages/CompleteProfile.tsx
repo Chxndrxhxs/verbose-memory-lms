@@ -3,21 +3,26 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
-import { User, ArrowRight, AVATAR_SIZE_MSG, isAvatarSizeAllowed, isValidName, NAME_MSG } from "@masterlms/shared";
+import {
+  ageField,
+  ArrowRight,
+  AVATAR_SIZE_MSG,
+  cityField,
+  emailField,
+  isAvatarSizeAllowed,
+  MAX_AGE,
+  MIN_AGE,
+  nameField,
+  User,
+} from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 import { api, absoluteMediaUrl, uploadFile } from "../lib/api";
 
 const schema = z.object({
-  name: z
-    .string()
-    .min(2, "Required")
-    .refine(isValidName, NAME_MSG),
-  email: z.string().email("Valid email required"),
-  age: z.coerce.number().min(13, "Min 13").max(80, "Max 80"),
-  city: z
-    .string()
-    .min(2, "Required")
-    .refine(isValidName, NAME_MSG),
+  name: nameField("Full name", { min: 2 }),
+  email: emailField("Email"),
+  age: ageField(),
+  city: cityField("City"),
 });
 
 type Form = z.infer<typeof schema>;
@@ -31,7 +36,12 @@ export default function CompleteProfile() {
   const [toast, setToast] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Form>({
     resolver: zodResolver(schema) as never,
-    defaultValues: { name: user?.name ?? "", email: user?.email ?? "", age: (user?.age as unknown as number) ?? 22, city: "" } as unknown as Form,
+    defaultValues: {
+      name: user?.name ?? "",
+      email: user?.email ?? "",
+      age: user?.age === null || user?.age === undefined ? "" : String(user.age),
+      city: "",
+    } as Form,
   });
 
   useEffect(() => {
@@ -58,10 +68,10 @@ export default function CompleteProfile() {
     try {
       let avatarUrl = avatar || "";
       if (avatarFile) {
-        const uploaded = await uploadFile(avatarFile);
+        const uploaded = await uploadFile(avatarFile, "avatar");
         avatarUrl = absoluteMediaUrl(uploaded.url) ?? "";
       }
-      const updated = await api<{ name: string; email: string; mobile: string; age: number; city: string; avatar: string }>("/auth/complete-profile", { method: "PATCH", body: JSON.stringify({ name: data.name, email: data.email, age: data.age, city: data.city, avatar: avatarUrl }) });
+      const updated = await api<{ name: string; email: string; mobile: string; age: number; city: string; avatar: string }>("/auth/complete-profile", { method: "PATCH", body: JSON.stringify({ name: data.name, email: data.email, age: Number(data.age), city: data.city, avatar: avatarUrl }) });
       setUser({ name: updated.name || data.name, email: updated.email, mobile: updated.mobile, age: updated.age, avatar: avatarUrl || undefined });
       setToast("Profile saved! Welcome to QTNXT");
       setTimeout(() => nav("/dashboard"), 800);
@@ -106,7 +116,7 @@ export default function CompleteProfile() {
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-zinc-700">Age</label>
-                  <input type="number" {...register("age")} className="mt-1.5 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white" />
+                  <input type="number" min={MIN_AGE} max={MAX_AGE} inputMode="numeric" placeholder={`${MIN_AGE}–${MAX_AGE}`} {...register("age")} className="mt-1.5 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white" />
                   {errors.age && <p className="mt-1 text-xs text-red-500">{errors.age.message}</p>}
                 </div>
               </div>

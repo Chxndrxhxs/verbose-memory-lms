@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
+  AGE_MSG,
   AVATAR_SIZE_MSG,
   isAvatarSizeAllowed,
   isValidAge,
@@ -50,7 +51,7 @@ export function ProfileContainer() {
     const errors: Record<string, string> = {};
     if (!isValidName(name)) errors.name = NAME_MSG;
     if (!isValidEmail(email)) errors.email = "Valid email required";
-    if (!isValidAge(age)) errors.age = "Enter a valid age";
+    if (!isValidAge(age)) errors.age = AGE_MSG;
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -59,7 +60,7 @@ export function ProfileContainer() {
     mutationFn: async () => {
       let avatarUrl = avatar || "";
       if (avatarFile) {
-        const uploaded = await uploadFile(avatarFile);
+        const uploaded = await uploadFile(avatarFile, "avatar");
         avatarUrl = absoluteMediaUrl(uploaded.url) ?? uploaded.url;
         setAvatar(avatarUrl);
       } else if (avatar && avatar.startsWith("data:")) {

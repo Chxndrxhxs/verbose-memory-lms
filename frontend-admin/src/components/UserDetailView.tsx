@@ -1,7 +1,18 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Check, Trash2, User } from "@masterlms/shared";
+import {
+  ageField,
+  ArrowLeft,
+  Check,
+  cityField,
+  emailField,
+  MAX_AGE,
+  MIN_AGE,
+  nameField,
+  Trash2,
+  User,
+} from "@masterlms/shared";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -11,39 +22,15 @@ import { Card, CardHeader } from "./Card";
 import { ConfirmDialog } from "./ConfirmDialog";
 import type { UserEditValues } from "../containers/UserDetail.container";
 
-const NAME_MSG = "Only letters, spaces, hyphens and apostrophes allowed";
-const AGE_MIN = 5;
-const AGE_MAX = 120;
-
-const nameField = (label: string) =>
-  z
-    .string()
-    .trim()
-    .min(1, `${label} is required`)
-    .max(60, `${label} must be 60 characters or fewer`)
-    .regex(/^[A-Za-z]+(?:[- '][A-Za-z]+)*$/, NAME_MSG);
-
 const schema = z.object({
   first_name: nameField("First name"),
   last_name: nameField("Last name"),
-  email: z.string().email("Enter a valid email address").or(z.literal("")),
+  email: emailField("Email"),
   role: z.enum(["learner", "instructor", "admin"]),
-  city: nameField("City"),
-  age: z
-    .string()
-    .trim()
-    .refine(
-      (v) => v === "" || /^\d{1,3}$/.test(v),
-      "Please enter a valid age",
-    )
-    .refine(
-      (v) => {
-        if (v === "") return true;
-        const n = Number(v);
-        return Number.isInteger(n) && n >= AGE_MIN && n <= AGE_MAX;
-      },
-      `Please enter a valid age between ${AGE_MIN} and ${AGE_MAX}`,
-    ),
+  city: cityField("City"),
+  // Age is required: clearing it persisted a blank that then showed up as
+  // missing in the instructor module (RAM-42).
+  age: ageField(),
   is_active: z.boolean(),
   is_staff: z.boolean(),
   is_superuser: z.boolean(),
@@ -194,8 +181,8 @@ export function UserDetailView({
               {form.formState.errors.city && <p className="mt-1 text-xs text-red-600">{form.formState.errors.city.message}</p>}
             </div>
             <div className="col-span-2">
-              <Field label="Age"><input className={inputCls} inputMode="numeric" placeholder={`e.g. 25 (${AGE_MIN}–${AGE_MAX})`} {...form.register("age")} /></Field>
-              <p className="mt-1 text-xs text-zinc-500">Allowed range: {AGE_MIN}–{AGE_MAX} years. Leave blank to clear.</p>
+              <Field label="Age"><input className={inputCls} inputMode="numeric" placeholder={`e.g. 25 (${MIN_AGE}–${MAX_AGE})`} {...form.register("age")} /></Field>
+              <p className="mt-1 text-xs text-zinc-500">Required. Allowed range: {MIN_AGE}–{MAX_AGE} years.</p>
               {form.formState.errors.age && <p className="mt-1 text-xs text-red-600">{form.formState.errors.age.message}</p>}
             </div>
 

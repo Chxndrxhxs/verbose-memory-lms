@@ -16,6 +16,7 @@ class PackWriteSerializer(serializers.ModelSerializer):
             "description",
             "cover",
             "inter_category",
+            "board",
             "price",
             "original_price",
             "status",

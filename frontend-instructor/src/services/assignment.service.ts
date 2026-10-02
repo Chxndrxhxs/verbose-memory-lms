@@ -1,5 +1,5 @@
 import { api } from "../lib/api";
-import { createEmptyAssignment, type Assignment, type AssignmentStatus } from "../types/assignment";
+import { createEmptyAssignment, type Assignment, type AssignmentStatus, type AssignmentWritePayload } from "../types/assignment";
 
 interface AssignmentListResponse {
   data: Assignment[];
@@ -19,6 +19,11 @@ interface AdminAssignmentRow {
   created_at?: string;
   updated_at?: string;
   draft_data?: Partial<Assignment> | null;
+  board?: { id: number; name: string } | null;
+  inter_category?: {
+    name: string;
+    sub_category?: { name: string };
+  } | null;
 }
 
 function toAssignmentCard(row: AdminAssignmentRow): Assignment {
@@ -31,6 +36,8 @@ function toAssignmentCard(row: AdminAssignmentRow): Assignment {
     status: row.status ?? dd.status ?? "draft",
     createdAt: row.created_at ?? dd.createdAt ?? "",
     updatedAt: row.updated_at ?? dd.updatedAt ?? "",
+    // The row carries the board; the card shows it as a single label.
+    subjectLabel: row.board?.name ?? "",
   };
 }
 
@@ -99,14 +106,14 @@ export const assignmentService = {
     return result.draft_data ?? result;
   },
 
-  async create(data: Partial<Assignment>): Promise<Assignment> {
+  async create(data: AssignmentWritePayload): Promise<Assignment> {
     return api<Assignment>("/admin/assignments/", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async update(id: string, data: Partial<Assignment>): Promise<Assignment> {
+  async update(id: string, data: AssignmentWritePayload): Promise<Assignment> {
     return api<Assignment>(`/admin/assignments/${id}/`, {
       method: "PATCH",
       body: JSON.stringify(data),

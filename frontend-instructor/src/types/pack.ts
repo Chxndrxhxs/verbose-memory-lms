@@ -23,7 +23,7 @@ export interface PackInfoDraft {
   title: string;
   description: string;
   cover: string;
-  inter_category: number | null;
+  board: number | null;
   price: string;
   original_price: string;
   allowed_modules: ExamModule[];
@@ -42,7 +42,7 @@ export function emptyPackInfo(): PackInfoDraft {
     title: "",
     description: "",
     cover: "",
-    inter_category: null,
+    board: null,
     price: "0",
     original_price: "0",
     allowed_modules: ["mock"],
@@ -62,7 +62,7 @@ export function packDetailToInfo(pack: PackAdminDetail): PackInfoDraft {
     title: pack.title,
     description: pack.description,
     cover: pack.cover ?? "",
-    inter_category: pack.inter_category?.id ?? null,
+    board: pack.board?.id ?? null,
     price: pack.price,
     original_price: pack.original_price,
     allowed_modules: pack.allowed_modules,

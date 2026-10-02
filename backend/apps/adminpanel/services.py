@@ -90,7 +90,7 @@ def delete_user(user) -> None:
 def update_user(user, data: dict):
     from rest_framework import serializers as drf_serializers
 
-    from core.validators import MAX_AGE, MIN_AGE, validate_person_name
+    from core.validators import validate_person_age, validate_person_name
 
     name = data.pop("name", None)
     if name is not None:
@@ -101,18 +101,10 @@ def update_user(user, data: dict):
         user.last_name = validate_person_name(last, "Last name") if last else ""
         if len(parts) > 1 and not last:
             raise drf_serializers.ValidationError({"name": "Last name is required."})
-    if "age" in data and data["age"] is not None:
-        try:
-            age_val = int(data["age"])
-        except (TypeError, ValueError):
-            raise drf_serializers.ValidationError(
-                {"age": f"Please enter a valid age between {MIN_AGE} and {MAX_AGE}."}
-            ) from None
-        if age_val < MIN_AGE or age_val > MAX_AGE:
-            raise drf_serializers.ValidationError(
-                {"age": f"Please enter a valid age between {MIN_AGE} and {MAX_AGE}."}
-            )
-        data["age"] = age_val
+    if "age" in data:
+        # required: a cleared age used to be persisted and then surfaced as
+        # missing in the instructor module (RAM-42).
+        data["age"] = validate_person_age(data["age"], required=True)
     for key, value in data.items():
         setattr(user, key, value)
     user.save()

@@ -23,7 +23,39 @@ ALLOWED_EXTENSIONS = {
     ".mp3",
     ".wav",
 }
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 MAX_BYTES = 25 * 1024 * 1024
+# Profile photos are advertised as a 2 MB limit in every frontend, but they
+# used to share the 25 MB lesson-upload cap server-side (RAM-32). Keep the two
+# purposes apart so tightening a photo does not break lesson attachments.
+MAX_AVATAR_BYTES = 2 * 1024 * 1024
+UPLOAD_PURPOSES = {
+    "avatar": {"max_bytes": MAX_AVATAR_BYTES, "extensions": IMAGE_EXTENSIONS, "dir": "avatars"},
+    "lesson": {"max_bytes": MAX_BYTES, "extensions": ALLOWED_EXTENSIONS, "dir": "lessons"},
+}
+DEFAULT_UPLOAD_PURPOSE = "lesson"
+
+
+def save_uploaded_file(
+    file: UploadedFile, purpose: str = DEFAULT_UPLOAD_PURPOSE
+) -> tuple[str, int]:
+    config = UPLOAD_PURPOSES.get(purpose, UPLOAD_PURPOSES[DEFAULT_UPLOAD_PURPOSE])
+    ext = Path(file.name or "").suffix.lower()
+    if ext not in config["extensions"]:
+        raise ValueError(f"Unsupported file type: {ext}")
+    if file.size > config["max_bytes"]:
+        limit_mb = config["max_bytes"] // (1024 * 1024)
+        raise ValueError(f"File too large (max {limit_mb}MB)")
+    media_root = Path(settings.MEDIA_ROOT) / config["dir"]
+    media_root.mkdir(parents=True, exist_ok=True)
+    name = f"{uuid.uuid4().hex}{ext}"
+    full_path = media_root / name
+    with open(full_path, "wb") as out:
+        for chunk in file.chunks():
+            out.write(chunk)
+    url = f"{settings.MEDIA_URL}{config['dir']}/{name}"
+    logger.info("Saved %s upload %s (%s bytes)", purpose, url, full_path.stat().st_size)
+    return url, full_path.stat().st_size
 
 
 def create_course(*, instructor, data) -> Course:
@@ -36,24 +68,6 @@ def publish_course(course: Course) -> Course:
     course.status = Course.Status.PUBLISHED
     course.save(update_fields=["status"])
     return course
-
-
-def save_uploaded_file(file: UploadedFile) -> tuple[str, int]:
-    ext = Path(file.name or "").suffix.lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        raise ValueError(f"Unsupported file type: {ext}")
-    if file.size > MAX_BYTES:
-        raise ValueError("File too large (max 25MB)")
-    media_root = Path(settings.MEDIA_ROOT) / "lessons"
-    media_root.mkdir(parents=True, exist_ok=True)
-    name = f"{uuid.uuid4().hex}{ext}"
-    full_path = media_root / name
-    with open(full_path, "wb") as out:
-        for chunk in file.chunks():
-            out.write(chunk)
-    url = f"{settings.MEDIA_URL}lessons/{name}"
-    logger.info("Saved upload %s (%s bytes)", url, full_path.stat().st_size)
-    return url, full_path.stat().st_size
 
 
 def replace_curriculum(course: Course, sections: list) -> Course:

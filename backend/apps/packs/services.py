@@ -60,6 +60,7 @@ def pack_list_item(pack: QuestionPack, learner=None) -> dict:
         "max_attempts": pack.max_attempts,
         "owner_name": getattr(pack.owner, "name", "") or "",
         "inter_category": _category_chain(pack),
+        "board": ({"id": pack.board.id, "name": pack.board.name} if pack.board_id else None),
         "created_at": pack.created_at.isoformat(),
     }
     data.update(_ownership(pack, learner))
@@ -191,6 +192,7 @@ def build_exam_instances(pack: QuestionPack) -> list[Assignment]:
         assignment.title = f"{pack.title} · {defaults['label']}"
         assignment.description = pack.description
         assignment.inter_category = pack.inter_category
+        assignment.board = pack.board
         assignment.status = Assignment.Status.PUBLISHED
         assignment.negative_marking = defaults["negative_marking"]
         assignment.security = dict(defaults["security"])

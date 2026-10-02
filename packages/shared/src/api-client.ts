@@ -8,6 +8,7 @@ import type {
   AssignmentResultPayload,
   AssignmentTakeStep,
   BankQuestion,
+  ExamBoard,
   ExamModule,
   PackAdminDetail,
   PackDetail,
@@ -109,9 +110,16 @@ export function absoluteMediaUrl(path: string | undefined | null): string | null
   return absolute;
 }
 
-export async function uploadFile(file: File): Promise<{ url: string; size: number }> {
+/** `purpose` picks the server-side cap: "avatar" enforces the 2 MB photo limit
+ *  that the profile forms advertise, anything else keeps the lesson cap.
+ */
+export async function uploadFile(
+  file: File,
+  purpose?: 'avatar' | 'lesson',
+): Promise<{ url: string; size: number }> {
   const form = new FormData();
   form.append('file', file);
+  if (purpose) form.append('purpose', purpose);
   const res = await fetch(`${API}/upload/`, {
     method: 'POST',
     body: form,
@@ -129,6 +137,10 @@ export function getAssignmentCatalog(): Promise<AssignmentCatalogItem[]> {
 
 export function getAssignmentCategories(): Promise<AssignmentCatalogCategory[]> {
   return api('/assignments/categories/');
+}
+
+export function getAssignmentBoards(): Promise<ExamBoard[]> {
+  return api('/assignments/boards/');
 }
 
 export function getAssignmentModels(assignmentId: number): Promise<AssignmentModelPreview[]> {

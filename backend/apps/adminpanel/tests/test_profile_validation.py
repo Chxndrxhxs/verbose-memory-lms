@@ -45,7 +45,7 @@ def test_person_name_rejects_everything_else(raw, fragment):
 
 
 def test_age_bounds_are_inclusive():
-    assert (MIN_AGE, MAX_AGE) == (5, 120)
+    assert (MIN_AGE, MAX_AGE) == (0, 100)
 
 
 @pytest.mark.django_db
@@ -91,7 +91,7 @@ def test_blank_name_is_rejected():
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("raw", [4, 121, 0, -1, 999])
+@pytest.mark.parametrize("raw", [101, 121, -1, 999])
 def test_out_of_range_age_is_rejected(raw):
     user = User.objects.create_user(username="7000000015", mobile="7000000015")
     with pytest.raises(serializers.ValidationError) as exc:
@@ -100,7 +100,7 @@ def test_out_of_range_age_is_rejected(raw):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("raw", [MIN_AGE, 30, MAX_AGE, "24", "120"])
+@pytest.mark.parametrize("raw", [MIN_AGE, 30, MAX_AGE, "24", "100"])
 def test_in_range_age_is_accepted_and_coerced_to_int(raw):
     user = User.objects.create_user(username="7000000016", mobile="7000000016")
     update_user(user, {"age": raw})
@@ -173,8 +173,8 @@ def test_api_accepts_valid_profile(admin, target):
         ("last_name", "Ch3n", "may only contain"),
         ("city", "Chennai1", "may only contain"),
         ("city", "", "required"),
-        ("age", 4, "between 5 and 120"),
-        ("age", 121, "between 5 and 120"),
+        ("age", 101, "between 0 and 100"),
+        ("age", 121, "between 0 and 100"),
     ],
 )
 def test_api_rejects_invalid_fields(admin, target, field, value, fragment):
@@ -211,3 +211,55 @@ def test_non_admin_cannot_bypass_validation(target):
     c = client_for(target)
     r = c.patch(f"{ADMIN}/users/{target.id}", {"age": 4}, format="json")
     assert r.status_code == 403
+
+
+# --- admin cannot clear a user's age (RAM-42) -------------------------------
+
+
+@pytest.mark.django_db
+def test_api_rejects_blank_age(admin, target):
+    target.age = 30
+    target.save(update_fields=["age"])
+    c = client_for(admin)
+    r = c.patch(f"{ADMIN}/users/{target.id}", {"age": ""}, format="json")
+    assert r.status_code == 400
+    assert "required" in str(r.json()).lower()
+    target.refresh_from_db()
+    assert target.age == 30
+
+
+@pytest.mark.django_db
+def test_api_rejects_null_age(admin, target):
+    target.age = 30
+    target.save(update_fields=["age"])
+    c = client_for(admin)
+    r = c.patch(f"{ADMIN}/users/{target.id}", {"age": None}, format="json")
+    assert r.status_code == 400
+    target.refresh_from_db()
+    assert target.age == 30
+
+
+@pytest.mark.django_db
+def test_update_user_rejects_blank_age(target):
+    target.age = 30
+    target.save(update_fields=["age"])
+    with pytest.raises(serializers.ValidationError) as exc:
+        update_user(target, {"age": ""})
+    assert "required" in str(exc.value.detail).lower()
+    target.refresh_from_db()
+    assert target.age == 30
+
+
+# --- admin cannot blank out an email (RAM-31, admin path) ------------------
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("value", ["", "   ", "not-an-email"])
+def test_api_rejects_invalid_email(admin, target, value):
+    target.email = "real@example.com"
+    target.save(update_fields=["email"])
+    c = client_for(admin)
+    r = c.patch(f"{ADMIN}/users/{target.id}", {"email": value}, format="json")
+    assert r.status_code == 400
+    target.refresh_from_db()
+    assert target.email == "real@example.com"

@@ -47,6 +47,11 @@ def inter_category(db, instructor):
     return InterCategory.objects.create(name="JEE", sub_category=sub, created_by=instructor)
 
 
+@pytest.fixture
+def board(db, instructor):
+    return Category.objects.create(name="SSC", created_by=instructor)
+
+
 def make_question(text, idx, topic="Dynamics"):
     return {
         "question": text,
@@ -59,13 +64,14 @@ def make_question(text, idx, topic="Dynamics"):
 
 
 @pytest.fixture
-def assignment_factory(db, inter_category, instructor):
-    def _factory(title="Physics Assignment", count=3):
+def assignment_factory(db, inter_category, instructor, board):
+    def _factory(title="Physics Assignment", count=3, assign_board=True):
         assignment = Assignment.objects.create(
             title=title,
             inter_category=inter_category,
             created_by=instructor,
             status="draft",
+            board=board if assign_board else None,
         )
         models_payload = [
             {

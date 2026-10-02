@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, Save, Check } from "@masterlms/shared";
+import { ArrowLeft, ArrowRight, isValidTotalMarks, Save, Check } from "@masterlms/shared";
 import { cn } from "../lib/utils";
 import { builderCardClass } from "../lib/builder";
-import type { Assignment, AssignmentValidationError } from "../types/assignment";
+import type {
+  Assignment,
+  AssignmentValidationError,
+} from "../types/assignment";
 import { MODEL_LABELS, getTotalQuestions } from "../types/assignment";
 import { AssignmentBasicInfoStep } from "./AssignmentBasicInfo";
 import { AssignmentPdfUploadStep } from "./AssignmentPdfUpload";
@@ -61,6 +64,10 @@ export function AssignmentWizard({
 
   const blockers: (string | null)[] = [
     assignment.title.trim() ? null : "Add a title to continue.",
+    assignment.board == null ? null : "Pick an exam board to continue.",
+    isValidTotalMarks(assignment.totalMarks)
+      ? null
+      : "Total marks looks unrealistic — check the value.",
     null,
     null,
     null,
@@ -95,6 +102,7 @@ export function AssignmentWizard({
           <AssignmentBasicInfoStep
             assignment={assignment}
             onChange={handleStepChange}
+            errors={errors}
           />
         );
       case 1:

@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.validators import validate_person_age, validate_person_name
+from core.validators import validate_person_age, validate_person_email, validate_person_name
 
 from .models import OTP
 
@@ -99,19 +99,15 @@ class CompleteProfileSerializer(serializers.ModelSerializer):
         )
 
     def validate_email(self, value: str) -> str:
-        email = (value or "").strip()
-        if not email:
-            # blank=True on the model means an empty string slips through by
-            # default, which is how a cleared email used to get persisted.
-            raise serializers.ValidationError("Valid email required")
-        return email
+        return validate_person_email(value)
 
     def validate_city(self, value: str) -> str:
         text = (value or "").strip()
         return validate_person_name(text, "City") if text else ""
 
     def validate_age(self, value) -> int | None:
-        return validate_person_age(value)
+        # required: clearing age from a filled profile is what RAM-8 reported.
+        return validate_person_age(value, required=True)
 
     def update(self, instance, validated_data):
         name = validated_data.pop("name", "").strip()

@@ -29,6 +29,7 @@ from .services import (
     AttemptDenied,
     assignment_payload,
     begin_attempt,
+    boards_payload,
     category_tree_payload,
     collect_leaf_steps,
     extract_document_questions,
@@ -75,16 +76,24 @@ def catalog_tree(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+def boards(request):
+    return ok(boards_payload())
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def published_list(request):
     qs = Assignment.objects.filter(
         status=Assignment.Status.PUBLISHED, pack__isnull=True
     ).select_related(
-        "inter_category", "inter_category__sub_category", "inter_category__sub_category__category"
+        "board", "inter_category", "inter_category__sub_category",
+        "inter_category__sub_category__category",
     )
     q = request.query_params.get("q", "").strip()
     if q:
         qs = qs.filter(Q(title__icontains=q) | Q(description__icontains=q))
     for param, field in (
+        ("board", "board_id"),
         ("category", "inter_category__sub_category__category_id"),
         ("sub_category", "inter_category__sub_category_id"),
         ("inter_category", "inter_category_id"),
@@ -485,6 +494,13 @@ def admin_publish(request, assignment_id: int):
     except Assignment.DoesNotExist:
         return Response(
             {"data": None, "error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND
+        )
+    if not assignment.board_id:
+        # The publish endpoint sets status directly, so the serializer's rule
+        # never runs here (RAM-34).
+        return Response(
+            {"data": None, "error": "Select an exam board before publishing"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
     published = assignment.models.filter(is_published=True)
     if not published.exists():

@@ -31,6 +31,15 @@ class QuestionPack(models.Model):
         blank=True,
         related_name="packs",
     )
+    # Mirrors Assignment.board so the learner catalog can filter packs and
+    # assignments by the same single "Board" dropdown.
+    board = models.ForeignKey(
+        "assignments.Category",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="packs",
+    )
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

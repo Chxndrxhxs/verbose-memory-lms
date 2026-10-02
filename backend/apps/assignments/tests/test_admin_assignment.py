@@ -119,3 +119,174 @@ def test_learner_forbidden_on_admin(learner_client):
         ).status_code
         == 403
     )
+
+
+# --- exam board is required to publish (RAM-34) -----------------------------
+
+
+@pytest.mark.django_db
+def test_publish_blocked_when_no_board_selected(assignment_factory, instructor_client):
+    assignment = assignment_factory(title="No Board", assign_board=False)
+    r = instructor_client.post(f"/api/v1/admin/assignments/{assignment.id}/publish")
+    assert r.status_code == 400
+    assert "exam board" in str(r.json()).lower()
+    assignment.refresh_from_db()
+    assert assignment.status == "draft"
+
+
+@pytest.mark.django_db
+def test_publish_succeeds_with_board_and_questions(assignment_factory, instructor_client):
+    assignment = assignment_factory(title="With Board")
+    r = instructor_client.post(f"/api/v1/admin/assignments/{assignment.id}/publish")
+    assert r.status_code == 200
+    assignment.refresh_from_db()
+    assert assignment.status == "published"
+
+
+@pytest.mark.django_db
+def test_serializer_rejects_publishing_without_a_board(instructor_client, board):
+    """The write serializer guards direct API calls, not just the publish view."""
+    r = instructor_client.post(
+        "/api/v1/admin/assignments/",
+        {
+            "title": "Direct publish",
+            "board": None,
+            "status": "published",
+        },
+        format="json",
+    )
+    assert r.status_code == 400
+    assert "board" in str(r.json())
+
+
+@pytest.mark.django_db
+def test_draft_without_a_board_is_still_saved(instructor_client, board):
+    r = instructor_client.post(
+        "/api/v1/admin/assignments/",
+        {
+            "title": "Work in progress",
+            "board": None,
+            "status": "draft",
+        },
+        format="json",
+    )
+    assert r.status_code == 201
+
+
+@pytest.mark.django_db
+def test_assignment_can_be_saved_with_a_board(instructor_client, board):
+    r = instructor_client.post(
+        "/api/v1/admin/assignments/",
+        {
+            "title": "SSC CGL Quant",
+            "board": board.id,
+            "status": "draft",
+        },
+        format="json",
+    )
+    assert r.status_code == 201
+    assert r.json()["data"]["board"]["id"] == board.id
+
+
+@pytest.mark.django_db
+def test_boards_endpoint_lists_seeded_boards(instructor_client):
+    r = instructor_client.get("/api/v1/assignments/boards/")
+    assert r.status_code == 200
+    names = {b["name"] for b in r.json()["data"]}
+    assert {"SSC", "IBPS", "UPSC", "Railways"} <= names
+
+
+# --- total marks must be believable (RAM-44) --------------------------------
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("total", [999999, 1_000_001, 99999999, -5])
+def test_out_of_range_total_marks_is_rejected(total, instructor_client, board):
+    r = instructor_client.post(
+        "/api/v1/admin/assignments/",
+        {
+            "title": "Marks test",
+            "board": board.id,
+            "status": "draft",
+            "draft_data": {"totalMarks": total},
+        },
+        format="json",
+    )
+    assert r.status_code == 400
+    assert "between 1 and 1000" in str(r.json())
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("total", [0, "not-a-number", True])
+def test_non_numeric_total_marks_is_rejected(total, instructor_client, board):
+    r = instructor_client.post(
+        "/api/v1/admin/assignments/",
+        {
+            "title": "Marks test",
+            "board": board.id,
+            "status": "draft",
+            "draft_data": {"totalMarks": total},
+        },
+        format="json",
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("total", [1, 100, 500, 1000])
+def test_realistic_total_marks_is_accepted(total, instructor_client, board):
+    r = instructor_client.post(
+        "/api/v1/admin/assignments/",
+        {
+            "title": "Marks test",
+            "board": board.id,
+            "status": "draft",
+            "draft_data": {"totalMarks": total},
+        },
+        format="json",
+    )
+    assert r.status_code == 201
+
+
+@pytest.mark.django_db
+def test_draft_without_total_marks_is_still_saved(instructor_client, board):
+    """totalMarks is optional — the wizard auto-sums it from questions."""
+    r = instructor_client.post(
+        "/api/v1/admin/assignments/",
+        {
+            "title": "Auto sum",
+            "board": board.id,
+            "status": "draft",
+            "draft_data": {"title": "Auto sum"},
+        },
+        format="json",
+    )
+    assert r.status_code == 201
+
+
+# --- title needs a readable character (RAM-35) ------------------------------
+
+
+@pytest.mark.parametrize("title", ["!@#$%^&*()", "-----", "***"])
+def test_assignment_title_without_letter_or_digit_is_rejected(
+    title, instructor_client, inter_category
+):
+    r = instructor_client.post(
+        "/api/v1/admin/assignments/",
+        {"title": title, "inter_category": inter_category.id, "status": "draft"},
+        format="json",
+    )
+    assert r.status_code == 400
+    assert "at least one letter or number" in str(r.json())
+
+
+@pytest.mark.parametrize("title", ["C++ Basics", "Physics 2026", "日本語 Test"])
+def test_assignment_title_with_readable_text_is_accepted(
+    title, instructor_client, inter_category
+):
+    r = instructor_client.post(
+        "/api/v1/admin/assignments/",
+        {"title": title, "inter_category": inter_category.id, "status": "draft"},
+        format="json",
+    )
+    assert r.status_code == 201

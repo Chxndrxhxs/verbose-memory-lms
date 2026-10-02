@@ -53,13 +53,14 @@ def _owns(user, pack: QuestionPack) -> bool:
 def pack_list(request):
     qs = (
         QuestionPack.objects.filter(status=QuestionPack.Status.PUBLISHED)
-        .select_related("inter_category", "owner", "inter_category__sub_category")
+        .select_related("board", "inter_category", "owner", "inter_category__sub_category")
         .prefetch_related("purchases")
     )
     q = request.query_params.get("q", "").strip()
     if q:
         qs = qs.filter(Q(title__icontains=q) | Q(description__icontains=q))
     for param, field in (
+        ("board", "board_id"),
         ("category", "inter_category__sub_category__category_id"),
         ("sub_category", "inter_category__sub_category_id"),
         ("inter_category", "inter_category_id"),

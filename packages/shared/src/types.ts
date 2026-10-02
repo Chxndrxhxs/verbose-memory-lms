@@ -105,6 +105,7 @@ export interface AssignmentCatalogItem {
   start_date: string | null;
   end_date: string | null;
   models_preview: AssignmentModelPreview[];
+  board?: BoardRef | null;
   inter_category?: {
     id: number;
     name: string;
@@ -135,6 +136,19 @@ export interface AssignmentCatalogCategory {
   name: string;
   position: number;
   subcategories: AssignmentCatalogSubCategory[];
+}
+
+/** A flat exam board offered in the single-select picker. */
+export interface ExamBoard {
+  id: number;
+  name: string;
+  position: number;
+  assignments_count?: number;
+}
+
+export interface BoardRef {
+  id: number;
+  name: string;
 }
 
 export interface AssignmentAttemptBrief {
@@ -253,6 +267,7 @@ export interface AssignmentDetail extends AssignmentCatalogItem {
   randomize_questions: boolean;
   randomize_options: boolean;
   inter_category: AssignmentInterCategoryRef | null;
+  board?: BoardRef | null;
   course: { id: number; title: string } | null;
   security: AssignmentSecuritySettings;
   results: AssignmentResultsSettings;
@@ -363,6 +378,7 @@ export interface PackListItem {
   max_attempts: number;
   owner_name: string;
   inter_category: PackCategoryRef | null;
+  board?: BoardRef | null;
   created_at: string;
   owned: boolean;
   attempts_used: number;

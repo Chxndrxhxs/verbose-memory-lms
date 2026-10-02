@@ -101,6 +101,16 @@ class Assignment(models.Model):
         blank=True,
         related_name="assignments",
     )
+    # The exam board an assignment belongs to (SSC, IBPS, UPSC, ...). This is
+    # what instructors pick and what learners filter on; inter_category is
+    # retained only for the older 3-level tree and existing rows.
+    board = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assignments",
+    )
     course = models.ForeignKey(
         "courses.Course",
         on_delete=models.SET_NULL,

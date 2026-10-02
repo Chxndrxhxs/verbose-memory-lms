@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LESSON_KIND_BADGE, Minus, Play, Plus } from "@masterlms/shared";
+import { LESSON_KIND_BADGE, Minus, Plus } from "@masterlms/shared";
 import type { CourseDetail } from "../types/course";
 import type {
   CouponQuote,
@@ -219,7 +219,7 @@ export function CourseDetailView({
         {/* Mobile preview card */}
         {data.img && (
         <div className="mt-6 overflow-hidden rounded-2xl border bg-white shadow-sm lg:hidden">
-          <div className="relative"><img src={data.img} alt="" className="h-48 w-full object-cover" /><button className="absolute inset-0 m-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-zinc-900 shadow"><Play size={20} strokeWidth={2.5} className="ml-0.5" /></button></div>
+          <div className="relative"><img src={data.img} alt="" className="h-48 w-full object-cover" /></div>
           <div className="p-4">
             <div className="flex items-baseline gap-2">
               {coupon && <span className="text-sm text-zinc-400 line-through">{data.price}</span>}
@@ -316,7 +316,7 @@ export function CourseDetailView({
       <div className="hidden lg:block">
         <div className="sticky top-[88px] overflow-hidden rounded-[20px] border bg-white shadow-sm">
           {data.img && (
-          <div className="relative"><img src={data.img} alt="" className="h-44 w-full object-cover" /><button className="absolute inset-0 m-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-zinc-900 shadow-lg"><Play size={20} strokeWidth={2.5} className="ml-0.5" /></button><span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-semibold text-white">Preview this course</span></div>
+          <div className="relative"><img src={data.img} alt="" className="h-44 w-full object-cover" /></div>
           )}
           <div className="p-5">
             <div className="flex items-baseline gap-2">

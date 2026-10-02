@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { User, ArrowRight, Trash2, AlertTriangle, Download, Receipt, Award, Eye, AVATAR_SIZE_MSG, isAvatarSizeAllowed, isValidAge, isValidEmail, isValidName, NAME_MSG } from "@masterlms/shared";
+import { AGE_MSG, User, ArrowRight, Trash2, AlertTriangle, Download, Receipt, Award, Eye, AVATAR_SIZE_MSG, isAvatarSizeAllowed, isValidAge, isValidEmail, isValidName, NAME_MSG } from "@masterlms/shared";
 import { TopNav } from "../components/TopNav";
 import { CertificateView } from "../components/CertificateView";
 import { useAuth } from "../hooks/useAuth";
@@ -159,7 +159,7 @@ export function ProfileContainer() {
     const errors: Record<string, string> = {};
     if (!isValidName(name)) errors.name = NAME_MSG;
     if (!isValidEmail(email)) errors.email = "Valid email required";
-    if (!isValidAge(age)) errors.age = "Enter a valid age";
+    if (!isValidAge(age)) errors.age = AGE_MSG;
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
       setToast("Please fix the highlighted fields");
@@ -172,7 +172,7 @@ export function ProfileContainer() {
     if (avatarFile) {
       setAvatarUploading(true);
       try {
-        const uploaded = await uploadFile(avatarFile);
+        const uploaded = await uploadFile(avatarFile, "avatar");
         avatarUrl = absoluteMediaUrl(uploaded.url) ?? uploaded.url;
         setAvatar(avatarUrl);
       } catch (err) {

@@ -13,6 +13,8 @@ from .serializers import (
     WishlistItemSerializer,
 )
 from .services import (
+    DEFAULT_UPLOAD_PURPOSE,
+    UPLOAD_PURPOSES,
     add_to_wishlist,
     create_course,
     get_user_rating,
@@ -279,8 +281,16 @@ def upload(request):
             {"data": None, "error": "Missing 'file' field"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    # "avatar" applies the 2 MB photo cap; anything else keeps the larger
+    # lesson-attachment cap (RAM-32).
+    purpose = request.data.get("purpose") or DEFAULT_UPLOAD_PURPOSE
+    if purpose not in UPLOAD_PURPOSES:
+        return Response(
+            {"data": None, "error": f"Unknown upload purpose: {purpose}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     try:
-        url, size = save_uploaded_file(file)
+        url, size = save_uploaded_file(file, purpose=purpose)
     except ValueError as e:
         return Response({"data": None, "error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"data": {"url": url, "size": size}, "error": None})

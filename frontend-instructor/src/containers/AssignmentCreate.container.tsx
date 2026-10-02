@@ -12,6 +12,7 @@ import {
   normalizeModelType,
   type Assignment,
   type AssignmentValidationError,
+  type AssignmentWritePayload,
 } from "../types/assignment";
 import { assignmentService } from "../services/assignment.service";
 
@@ -84,14 +85,16 @@ export function AssignmentCreateContainer({ existingId }: { existingId?: string 
         totalMarks: assignment.totalMarks || getTotalMarks(assignment),
         status: "draft" as const,
       };
-      // Only send API fields Django understands. The full UI draft belongs in
-      // `draft_data`, so labels such as the course name never get treated as a
-      // course primary key by the server.
-      const payload = {
+      // Only send API fields Django understands. The rest of the UI draft
+      // belongs in `draft_data`. `board` is the exam board the assignment is
+      // filed under in the learner catalog.
+      const payload: AssignmentWritePayload = {
         title: draftData.title,
         description: draftData.description,
         instructions: draftData.instructions,
         difficulty: draftData.difficulty,
+        inter_category: null,
+        board: draftData.board,
         status: "draft" as const,
         source_document: draftData.sourceDocument,
         source_document_name: draftData.sourceDocumentName,

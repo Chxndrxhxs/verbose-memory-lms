@@ -1,26 +1,22 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Clock, HelpCircle } from "@masterlms/shared";
 import {
-  type AssignmentCatalogCategory,
   type AssignmentCatalogItem,
+  type ExamBoard,
   type PackListItem,
 } from "@masterlms/shared";
 import { cn } from "../lib/utils";
 import { TopNav } from "./TopNav";
 
 type Props = {
-  categories: AssignmentCatalogCategory[];
+  boards: ExamBoard[];
   assignments: AssignmentCatalogItem[];
   ownedPacks: PackListItem[];
   packsForSale: PackListItem[];
   isLoading: boolean;
   error: Error | null;
-  categoryId: number | null;
-  subCategoryId: number | null;
-  interCategoryId: number | null;
-  onSelectCategory: (id: number) => void;
-  onSelectSubCategory: (id: number) => void;
-  onSelectInterCategory: (id: number) => void;
+  boardId: number | null;
+  onSelectBoard: (id: number) => void;
   onReset: () => void;
 };
 
@@ -52,24 +48,17 @@ function SkeletonCard() {
 }
 
 export function AssignmentCatalog({
-  categories,
+  boards,
   assignments,
   ownedPacks,
   packsForSale,
   isLoading,
   error,
-  categoryId,
-  subCategoryId,
-  interCategoryId,
-  onSelectCategory,
-  onSelectSubCategory,
-  onSelectInterCategory,
+  boardId,
+  onSelectBoard,
   onReset,
 }: Props) {
-  const category = categories.find((c) => c.id === categoryId) ?? null;
-  const subCategory =
-    category?.subcategories.find((s) => s.id === subCategoryId) ?? null;
-  const filtered = categoryId !== null || subCategoryId !== null || interCategoryId !== null;
+  const filtered = boardId !== null;
   const myTests = assignments.length + ownedPacks.length;
 
   return (
@@ -103,59 +92,19 @@ export function AssignmentCatalog({
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
-            <label className="min-w-36 flex-1 text-xs font-semibold text-zinc-500">
-              Subject
+            <label className="min-w-52 flex-1 text-xs font-semibold text-zinc-500">
+              Exam board
               <select
-                value={categoryId ?? ""}
+                value={boardId ?? ""}
                 onChange={(e) =>
-                  e.target.value ? onSelectCategory(Number(e.target.value)) : onReset()
+                  e.target.value ? onSelectBoard(Number(e.target.value)) : onReset()
                 }
                 className={cn(selectClass, "mt-1 w-full")}
               >
-                <option value="">All subjects</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="min-w-36 flex-1 text-xs font-semibold text-zinc-500">
-              Area
-              <select
-                value={subCategoryId ?? ""}
-                onChange={(e) =>
-                  e.target.value
-                    ? onSelectSubCategory(Number(e.target.value))
-                    : categoryId != null && onSelectCategory(categoryId)
-                }
-                disabled={category == null}
-                className={cn(selectClass, "mt-1 w-full")}
-              >
-                <option value="">All areas</option>
-                {category?.subcategories.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="min-w-36 flex-1 text-xs font-semibold text-zinc-500">
-              Topic
-              <select
-                value={interCategoryId ?? ""}
-                onChange={(e) =>
-                  e.target.value
-                    ? onSelectInterCategory(Number(e.target.value))
-                    : subCategoryId != null && onSelectSubCategory(subCategoryId)
-                }
-                disabled={subCategory == null}
-                className={cn(selectClass, "mt-1 w-full")}
-              >
-                <option value="">All topics</option>
-                {subCategory?.intercategories.map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.name} ({i.assignments_count})
+                <option value="">All boards</option>
+                {boards.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
                   </option>
                 ))}
               </select>

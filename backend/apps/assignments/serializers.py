@@ -1,4 +1,8 @@
+import re
+
 from rest_framework import serializers
+
+from core.validators import MAX_TOTAL_MARKS, MIN_TOTAL_MARKS
 
 from .models import Assignment, AssignmentAttempt
 from .services import DEFAULT_RESULTS, DEFAULT_SECURITY
@@ -15,6 +19,7 @@ class AssignmentWriteSerializer(serializers.ModelSerializer):
             "instructions",
             "difficulty",
             "inter_category",
+            "board",
             "course",
             "status",
             "access_type",
@@ -37,6 +42,14 @@ class AssignmentWriteSerializer(serializers.ModelSerializer):
             "draft_data",
         ]
 
+    def validate_title(self, value: str) -> str:
+        title = (value or "").strip()
+        # Letters or digits in any script, matching hasReadableTitle() in
+        # packages/shared/src/validation.ts.
+        if not re.search(r"[^\W_]", title, re.UNICODE):
+            raise serializers.ValidationError("Title must contain at least one letter or number.")
+        return title
+
     def validate(self, attrs):
         if "access" not in attrs or attrs["access"] is None:
             attrs["access"] = {}
@@ -44,6 +57,29 @@ class AssignmentWriteSerializer(serializers.ModelSerializer):
             attrs["security"] = dict(DEFAULT_SECURITY)
         if not attrs.get("results"):
             attrs["results"] = dict(DEFAULT_RESULTS)
+        if attrs.get("status") == Assignment.Status.PUBLISHED and not attrs.get("board"):
+            # A published assignment with no board is invisible in the learner
+            # catalog (RAM-34). Drafts may still be saved without one.
+            raise serializers.ValidationError(
+                {"board": "Select an exam board to publish."}
+            )
+        draft = attrs.get("draft_data")
+        if isinstance(draft, dict) and "totalMarks" in draft:
+            total = draft["totalMarks"]
+            if not isinstance(total, (int, float)) or isinstance(total, bool):
+                raise serializers.ValidationError(
+                    {"draft_data": "Total marks must be a number."}
+                )
+            if total < MIN_TOTAL_MARKS or total > MAX_TOTAL_MARKS:
+                # RAM-44: an unbounded total breaks scoring and result maths.
+                raise serializers.ValidationError(
+                    {
+                        "draft_data": (
+                            f"Total marks must be between {MIN_TOTAL_MARKS} "
+                            f"and {MAX_TOTAL_MARKS}."
+                        )
+                    }
+                )
         return attrs
 
 

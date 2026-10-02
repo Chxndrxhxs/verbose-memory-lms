@@ -338,6 +338,11 @@ def assignment_payload(assignment: Assignment, include_models: bool = True) -> d
         "source_document_name": assignment.source_document_name,
         "source_document_file_id": assignment.source_document_file_id,
         "draft_data": assignment.draft_data,
+        "board": (
+            {"id": assignment.board.id, "name": assignment.board.name}
+            if assignment.board_id
+            else None
+        ),
         "inter_category": {
             "id": assignment.inter_category.id,
             "name": assignment.inter_category.name,
@@ -370,6 +375,23 @@ def assignment_payload(assignment: Assignment, include_models: bool = True) -> d
     data["duration_seconds"] = max(published_durations) if published_durations else 0
     data["duration_label"] = format_duration_hms(data["duration_seconds"])
     return data
+
+
+def boards_payload() -> list[dict]:
+    """Flat list of exam boards for the single-select picker."""
+    from .models import Category
+
+    return [
+        {
+            "id": cat.id,
+            "name": cat.name,
+            "position": cat.position,
+            "assignments_count": Assignment.objects.filter(
+                board=cat, status=Assignment.Status.PUBLISHED, pack__isnull=True
+            ).count(),
+        }
+        for cat in Category.objects.filter(is_active=True).order_by("position", "name")
+    ]
 
 
 def category_tree_payload(include_assignments: bool = False) -> list[dict]:
