@@ -43,11 +43,11 @@ export function PackModulesStep({ info, onChange, questionCount }: Props) {
   return (
     <div className="space-y-6">
       <div className={builderCardClass}>
-        <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
           Step 3 of 4 · Delivery
         </p>
-        <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">How learners take it</h2>
-        <p className="mt-1.5 text-[15px] text-zinc-500">
+        <h2 className="mt-1 text-xl font-semibold text-ink">How learners take it</h2>
+        <p className="mt-1.5 text-[15px] text-ink-muted">
           One pack, two formats. Attempts are shared across both.
         </p>
         <div className="mt-6 grid gap-5 sm:grid-cols-2">
@@ -57,33 +57,34 @@ export function PackModulesStep({ info, onChange, questionCount }: Props) {
             return (
               <button
                 key={module}
+                type="button"
                 onClick={() => toggleModule(module)}
                 aria-pressed={active}
                 className={cn(
-                  "rounded-2xl border-2 p-6 text-left transition-all",
+                  "rounded-sm border-2 p-6 text-left transition-colors",
                   active
-                    ? "border-zinc-900 bg-zinc-900 text-white"
-                    : "border-zinc-200 bg-white hover:border-zinc-400",
+                    ? "border-ink bg-ink text-ink-inverse"
+                    : "border-rule bg-slate-panel hover:border-ink",
                 )}
               >
-                <p className="flex items-center justify-between text-[15px] font-bold">
+                <p className="flex items-center justify-between text-[15px] font-semibold">
                   {meta.label}
                   <span
                     className={cn(
                       "flex h-5 w-5 items-center justify-center rounded-full text-[11px]",
-                      active ? "bg-white text-zinc-900" : "bg-zinc-100 text-transparent",
+                      active ? "bg-ink-inverse text-ink" : "bg-slate-sunk text-transparent",
                     )}
                   >
                     ✓
                   </span>
                 </p>
-                <p className={cn("mt-1.5 text-sm", active ? "text-white/70" : "text-zinc-500")}>
+                <p className={cn("mt-1.5 text-sm", active ? "text-ink-inverse/70" : "text-ink-muted")}>
                   {meta.tagline}
                 </p>
                 <p
                   className={cn(
                     "mt-3 text-xs font-semibold",
-                    active ? "text-white/80" : "text-zinc-400",
+                    active ? "text-ink-inverse/80" : "text-ink-faint",
                   )}
                 >
                   {meta.proctored ? "Proctored" : "No proctoring"} ·{" "}
@@ -94,20 +95,20 @@ export function PackModulesStep({ info, onChange, questionCount }: Props) {
           })}
         </div>
         {info.allowed_modules.length === 0 && (
-          <p className="mt-3 text-sm font-semibold text-red-600">
+          <p className="mt-3 text-sm font-semibold text-halt">
             Enable at least one format to continue.
           </p>
         )}
 
         {plans.length > 0 && (
-          <div className="mt-6 rounded-2xl border border-zinc-200/70 bg-zinc-50/70 p-5">
-            <p className="text-xs font-bold tracking-wide text-zinc-500 uppercase">
+          <div className="mt-6 border border-rule bg-slate-sunk p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
               Learner preview · {questionCount} question{questionCount === 1 ? "" : "s"}
             </p>
-            <ul className="mt-2.5 space-y-2">
+            <ul className="mt-2 space-y-2">
               {plans.map((plan) => (
-                <li key={plan.module} className="text-[15px] text-zinc-700">
-                  <span className="font-semibold text-zinc-900">
+                <li key={plan.module} className="text-[15px] text-ink-muted">
+                  <span className="font-semibold text-ink">
                     {EXAM_MODULE_META[plan.module].label}:
                   </span>{" "}
                   {plan.summary}
@@ -121,13 +122,15 @@ export function PackModulesStep({ info, onChange, questionCount }: Props) {
       <div className={builderCardClass}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-zinc-900">Pricing & attempts</h2>
-            <p className="mt-1.5 text-[15px] text-zinc-500">{priceLabel}</p>
+            <h2 className="text-xl font-semibold text-ink">Pricing & attempts</h2>
+            <p className="mt-1.5 text-[15px] text-ink-muted tnum">{priceLabel}</p>
           </div>
           <span
             className={cn(
-              "rounded-full px-3.5 py-1.5 text-sm font-bold",
-              price === 0 ? "bg-emerald-100 text-emerald-700" : "bg-zinc-900 text-white",
+              "rounded-sm border px-3 py-1.5 text-sm font-semibold tnum",
+              price === 0
+                ? "border-live/25 bg-live-soft text-live"
+                : "border-ink bg-ink text-ink-inverse",
             )}
           >
             {price === 0 ? "Free" : `₹${price.toLocaleString("en-IN")}`}
@@ -141,7 +144,7 @@ export function PackModulesStep({ info, onChange, questionCount }: Props) {
               min={0}
               value={info.price}
               onChange={(e) => set({ price: e.target.value })}
-              className={numberClass}
+              className={cn(numberClass, "tnum")}
             />
           </label>
           <label className={builderLabelClass}>
@@ -151,7 +154,7 @@ export function PackModulesStep({ info, onChange, questionCount }: Props) {
               min={0}
               value={info.original_price}
               onChange={(e) => set({ original_price: e.target.value })}
-              className={numberClass}
+              className={cn(numberClass, "tnum")}
             />
           </label>
           <label className={builderLabelClass}>
@@ -161,15 +164,15 @@ export function PackModulesStep({ info, onChange, questionCount }: Props) {
               min={0}
               value={info.max_attempts}
               onChange={(e) => set({ max_attempts: Math.max(0, Number(e.target.value) || 0) })}
-              className={numberClass}
+              className={cn(numberClass, "tnum")}
             />
           </label>
         </div>
       </div>
 
       <div className={builderCardClass}>
-        <h2 className="text-xl font-bold tracking-tight text-zinc-900">Test structure</h2>
-        <p className="mt-1.5 text-[15px] text-zinc-500">
+        <h2 className="text-xl font-semibold text-ink">Test structure</h2>
+        <p className="mt-1.5 text-[15px] text-ink-muted">
           Questions are split into tests of this size when the pack builds.
         </p>
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -180,7 +183,7 @@ export function PackModulesStep({ info, onChange, questionCount }: Props) {
               min={1}
               value={info.test_size}
               onChange={(e) => set({ test_size: Math.max(1, Number(e.target.value) || 1) })}
-              className={numberClass}
+              className={cn(numberClass, "tnum")}
             />
           </label>
           <label className={builderLabelClass}>
@@ -192,7 +195,7 @@ export function PackModulesStep({ info, onChange, questionCount }: Props) {
               onChange={(e) =>
                 set({ test_duration_seconds: minutesToSeconds(Number(e.target.value) || 1) })
               }
-              className={numberClass}
+              className={cn(numberClass, "tnum")}
             />
           </label>
           <label className={builderLabelClass}>
@@ -202,7 +205,7 @@ export function PackModulesStep({ info, onChange, questionCount }: Props) {
               min={1}
               value={info.set_size}
               onChange={(e) => set({ set_size: Math.max(1, Number(e.target.value) || 1) })}
-              className={numberClass}
+              className={cn(numberClass, "tnum")}
             />
           </label>
           <label className={builderLabelClass}>
@@ -214,11 +217,11 @@ export function PackModulesStep({ info, onChange, questionCount }: Props) {
               onChange={(e) =>
                 set({ set_duration_seconds: minutesToSeconds(Number(e.target.value) || 1) })
               }
-              className={numberClass}
+              className={cn(numberClass, "tnum")}
             />
           </label>
         </div>
-        <p className="mt-3 text-xs text-zinc-500">
+        <p className="mt-3 text-xs text-ink-muted tnum">
           Current: {formatDuration(info.test_duration_seconds)} per test ·{" "}
           {formatDuration(info.set_duration_seconds)} per set
         </p>
@@ -232,7 +235,7 @@ export function PackModulesStep({ info, onChange, questionCount }: Props) {
               max={100}
               value={info.passing_percentage}
               onChange={(e) => set({ passing_percentage: e.target.value })}
-              className={numberClass}
+              className={cn(numberClass, "tnum")}
             />
           </label>
           <label className={builderLabelClass}>
@@ -240,18 +243,18 @@ export function PackModulesStep({ info, onChange, questionCount }: Props) {
             <select
               value={info.execution_mode}
               onChange={(e) => set({ execution_mode: e.target.value })}
-              className={`${numberClass} bg-white`}
+              className={numberClass}
             >
               <option value="sequential">Sequential (one section at a time)</option>
               <option value="parallel">Parallel (all sections open)</option>
             </select>
           </label>
-          <label className="flex items-end gap-2.5 pb-3 text-sm font-semibold text-zinc-600">
+          <label className="flex items-end gap-2 pb-3 text-sm font-semibold text-ink-muted">
             <input
               type="checkbox"
               checked={info.negative_marking}
               onChange={(e) => set({ negative_marking: e.target.checked })}
-              className="h-4 w-4"
+              className="h-4 w-4 accent-ink"
             />
             Negative marking (mock)
           </label>

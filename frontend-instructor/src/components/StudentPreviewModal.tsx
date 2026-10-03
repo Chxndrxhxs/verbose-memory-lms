@@ -42,22 +42,23 @@ export function StudentPreviewModal({
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 text-sm text-white">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 text-sm text-ink-inverse">
         Loading preview…
       </div>
     );
   }
   if (isError || !course) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div className="rounded-3xl bg-white p-6 text-center shadow-2xl">
-          <p className="text-sm font-bold text-zinc-900">Preview unavailable</p>
-          <p className="mt-1 text-xs text-zinc-500">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-4">
+        <div className="border border-rule bg-slate-panel p-6 text-center">
+          <p className="text-sm font-semibold text-ink">Preview unavailable</p>
+          <p className="mt-1 text-xs text-ink-muted">
             We couldn&apos;t load this course. Save your changes and try again.
           </p>
           <button
+            type="button"
             onClick={onClose}
-            className="mt-4 rounded-full bg-[#0f172a] px-5 py-2 text-xs font-bold text-white"
+            className="mt-4 rounded-sm bg-ink px-5 py-2 text-xs font-semibold text-ink-inverse"
           >
             Close
           </button>
@@ -77,70 +78,71 @@ export function StudentPreviewModal({
   const rating = course.average_rating ? Number(course.average_rating).toFixed(1) : "";
 
   const disabled =
-    "cursor-not-allowed disabled:opacity-45 disabled:hover:bg-white disabled:hover:border-current";
+    "cursor-not-allowed disabled:opacity-45 disabled:hover:bg-slate-panel disabled:hover:border-current";
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-4"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="relative flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] bg-[#f6f5f1] shadow-2xl"
+        className="relative flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden border border-rule-strong bg-slate-ground"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={`Preview of ${course.title}`}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white px-5 py-3">
-          <p className="min-w-0 truncate text-sm font-bold">
+        <div className="flex items-center justify-between gap-3 border-b border-rule bg-slate-panel px-5 py-3">
+          <p className="min-w-0 truncate text-sm font-semibold text-ink">
             Student preview
-            <span className="ml-2 font-normal text-zinc-500">
+            <span className="ml-2 font-normal text-ink-muted">
               what a learner sees on this page
             </span>
           </p>
           <button
+            type="button"
             onClick={onClose}
             aria-label="Close preview"
-            className="shrink-0 rounded-full border p-1.5 text-zinc-700 hover:bg-zinc-50"
+            className="shrink-0 rounded-sm border border-rule p-2 text-ink-muted hover:bg-slate-sunk"
           >
             <X size={16} strokeWidth={2.5} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 sm:p-7">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6">
           <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
             {/* LEFT */}
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold tnum">
                 {course.level && (
-                  <span className="rounded-full border bg-white px-2.5 py-1 capitalize text-zinc-700">
+                  <span className="border border-rule bg-slate-panel px-2 py-1 capitalize text-ink-muted">
                     {course.level}
                   </span>
                 )}
-                <span className="rounded-full border bg-white px-2.5 py-1 text-zinc-700">
+                <span className="border border-rule bg-slate-panel px-2 py-1 text-ink-muted">
                   {lectureCount} lecture{lectureCount === 1 ? "" : "s"}
                 </span>
               </div>
 
-              <h1 className="mt-4 text-[28px] font-extrabold leading-tight tracking-tight">
+              <h1 className="mt-4 text-2xl font-semibold">
                 {course.title}
               </h1>
               {course.subtitle && (
-                <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+                <p className="mt-2 text-sm leading-relaxed text-ink-muted">
                   {course.subtitle}
                 </p>
               )}
 
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
                 {rating && (
-                  <span className="font-semibold text-amber-400">★ {rating}</span>
+                  <span className="font-semibold text-hold tnum">★ {rating}</span>
                 )}
                 {course.student_count != null && (
-                  <span className="text-zinc-500">{course.student_count} students</span>
+                  <span className="text-ink-muted tnum">{course.student_count} students</span>
                 )}
                 {course.instructor_name && (
-                  <span className="flex items-center gap-1.5 text-zinc-500">
+                  <span className="flex items-center gap-2 text-ink-muted">
                     {course.instructor_avatar && (
                       <img
                         src={absoluteMediaUrl(course.instructor_avatar) ?? course.instructor_avatar}
@@ -148,7 +150,7 @@ export function StudentPreviewModal({
                         className="h-6 w-6 rounded-full object-cover"
                       />
                     )}
-                    <span className="font-medium text-zinc-700">
+                    <span className="font-medium text-ink">
                       {course.instructor_name}
                     </span>
                   </span>
@@ -156,15 +158,15 @@ export function StudentPreviewModal({
               </div>
 
               {learn.length > 0 && (
-                <div className="mt-6 rounded-2xl border bg-[#fdfdfc] p-5">
-                  <h3 className="text-sm font-bold">What you&apos;ll learn</h3>
+                <div className="mt-6 border border-rule bg-slate-panel p-5">
+                  <h3 className="text-sm font-semibold text-ink">What you&apos;ll learn</h3>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     {learn.map((item) => (
                       <div
                         key={item}
-                        className="flex gap-2 text-xs leading-relaxed text-zinc-700"
+                        className="flex gap-2 text-xs leading-relaxed text-ink-muted"
                       >
-                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[10px] text-white">
+                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-live text-[10px] text-ink-inverse">
                           ✓
                         </span>
                         {item}
@@ -177,25 +179,26 @@ export function StudentPreviewModal({
               {sections.length > 0 && (
                 <div className="mt-6">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold">Course content</h3>
-                    <span className="text-xs text-zinc-500">
+                    <h3 className="text-sm font-semibold text-ink">Course content</h3>
+                    <span className="text-xs text-ink-muted tnum">
                       {sections.length} section{sections.length === 1 ? "" : "s"} •{" "}
                       {lectureCount} lecture{lectureCount === 1 ? "" : "s"}
                     </span>
                   </div>
-                  <div className="mt-3 overflow-hidden rounded-2xl border bg-white">
+                  <div className="mt-3 overflow-hidden border border-rule bg-slate-panel">
                     {sections.map((sec, i) => (
-                      <div key={sec.id} className="border-b last:border-0">
+                      <div key={sec.id} className="border-b border-rule last:border-0">
                         <button
+                          type="button"
                           onClick={() => setOpen(open === i ? -1 : i)}
-                          className="flex w-full items-center justify-between bg-zinc-50 px-4 py-3 text-left hover:bg-zinc-100"
+                          className="flex w-full items-center justify-between bg-slate-sunk px-4 py-3 text-left hover:bg-slate-panel"
                         >
-                          <span className="text-sm font-semibold">{sec.title}</span>
-                          <span className="flex items-center gap-2 text-xs text-zinc-500">
+                          <span className="text-sm font-semibold text-ink">{sec.title}</span>
+                          <span className="flex items-center gap-2 text-xs text-ink-muted tnum">
                             {(sec.lessons?.length ?? 0) === 1 ? "1 lecture" : `${sec.lessons?.length ?? 0} lectures`}
                             <span
                               className={`flex h-6 w-6 items-center justify-center rounded-full ${
-                                open === i ? "bg-[#3478ff] text-white" : "bg-white text-zinc-700"
+                                open === i ? "bg-ink text-ink-inverse" : "bg-slate-panel text-ink-muted border border-rule"
                               }`}
                             >
                               {open === i ? (
@@ -214,7 +217,7 @@ export function StudentPreviewModal({
                               return (
                                 <li
                                   key={l.id}
-                                  className="flex items-center gap-2 py-2 text-xs text-zinc-700"
+                                  className="flex items-center gap-2 py-2 text-xs text-ink-muted"
                                 >
                                   <span
                                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${badge.badge}`}
@@ -223,11 +226,11 @@ export function StudentPreviewModal({
                                   </span>
                                   <span className="min-w-0 flex-1 truncate">{l.title}</span>
                                   {l.kind === "quiz" && (
-                                    <span className="rounded-full bg-yellow-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900">
+                                    <span className="border border-hold/30 bg-hold-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-hold">
                                       Quiz
                                     </span>
                                   )}
-                                  <span className="text-zinc-400">{l.duration}</span>
+                                  <span className="text-ink-faint tnum">{l.duration}</span>
                                 </li>
                               );
                             })}
@@ -240,13 +243,13 @@ export function StudentPreviewModal({
               )}
 
               {course.description && (
-                <div className="mt-6 rounded-2xl bg-white p-5 shadow-sm">
-                  <h3 className="text-sm font-bold">Description</h3>
-                  <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-zinc-600">
+                <div className="mt-6 border border-rule bg-slate-panel p-5">
+                  <h3 className="text-sm font-semibold text-ink">Description</h3>
+                  <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-muted">
                     {course.description}
                   </p>
                   {course.instructor_name && (
-                    <div className="mt-5 flex gap-3 rounded-xl bg-zinc-50 p-4">
+                    <div className="mt-5 flex gap-3 border border-rule bg-slate-sunk p-4">
                       {course.instructor_avatar && (
                         <img
                           src={absoluteMediaUrl(course.instructor_avatar) ?? course.instructor_avatar}
@@ -255,9 +258,9 @@ export function StudentPreviewModal({
                         />
                       )}
                       <div>
-                        <p className="text-sm font-bold">{course.instructor_name}</p>
+                        <p className="text-sm font-semibold text-ink">{course.instructor_name}</p>
                         {course.instructor_role && (
-                          <p className="text-xs text-zinc-500">{course.instructor_role}</p>
+                          <p className="text-xs text-ink-muted">{course.instructor_role}</p>
                         )}
                       </div>
                     </div>
@@ -268,46 +271,46 @@ export function StudentPreviewModal({
 
             {/* RIGHT — mirrors the learner's enroll card */}
             <div>
-              <div className="sticky top-0 overflow-hidden rounded-[20px] border bg-white shadow-sm">
+              <div className="sticky top-0 overflow-hidden border border-rule bg-slate-panel">
                 {cover && (
                   <div className="relative">
                     <img src={cover} alt="" className="h-40 w-full object-cover" />
-                    <span className="absolute inset-0 m-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-zinc-900 shadow-lg">
-                      <Play size={20} strokeWidth={2.5} className="ml-0.5" />
+                    <span className="absolute inset-0 m-auto flex h-12 w-12 items-center justify-center rounded-full border border-rule bg-slate-panel text-ink">
+                      <Play size={20} strokeWidth={2.5} className="ml-1" />
                     </span>
-                    <span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-semibold text-white">
+                    <span className="absolute bottom-2 right-2 rounded-sm bg-ink/80 px-2 py-1 text-[10px] font-semibold text-ink-inverse">
                       Preview this course
                     </span>
                   </div>
                 )}
                 <div className="p-5">
-                  <span className="text-[28px] font-black tracking-tight">{price}</span>
+                  <span className="text-2xl font-semibold tnum">{price}</span>
 
                   <button
                     type="button"
                     disabled
-                    className={`mt-4 w-full rounded-full bg-[#0f172a] py-3 text-sm font-bold text-white ${disabled}`}
+                    className={`mt-4 w-full rounded-sm bg-ink py-3 text-sm font-semibold text-ink-inverse ${disabled}`}
                   >
                     Enroll now
                   </button>
                   <button
                     type="button"
                     disabled
-                    className={`mt-2 w-full rounded-full border py-2.5 text-sm font-semibold ${disabled}`}
+                    className={`mt-2 w-full rounded-sm border border-rule-strong py-2 text-sm font-semibold text-ink-muted ${disabled}`}
                   >
                     Add to wishlist ♡
                   </button>
-                  <p className="mt-2 text-center text-[11px] text-zinc-500">
+                  <p className="mt-2 text-center text-[11px] text-ink-muted">
                     30-day money-back guarantee • Full lifetime access
                   </p>
 
-                  <div className="mt-5 rounded-xl bg-zinc-50 p-4">
-                    <p className="text-xs font-bold">This course includes:</p>
-                    <ul className="mt-2 space-y-1.5 text-xs text-zinc-600">
+                  <div className="mt-5 border border-rule bg-slate-sunk p-4">
+                    <p className="text-xs font-semibold text-ink">This course includes:</p>
+                    <ul className="mt-2 space-y-2 text-xs text-ink-muted">
                       <li className="flex gap-2">
                         <span>●</span> On-demand videos
                       </li>
-                      <li className="flex gap-2">
+                      <li className="flex gap-2 tnum">
                         <span>●</span> {sections.length} section
                         {sections.length === 1 ? "" : "s"} • {lectureCount} lecture
                         {lectureCount === 1 ? "" : "s"}
@@ -328,26 +331,26 @@ export function StudentPreviewModal({
                     <button
                       type="button"
                       disabled
-                      className={`flex-1 rounded-full border py-2 text-xs font-medium ${disabled}`}
+                      className={`flex-1 rounded-sm border border-rule-strong py-2 text-xs font-medium text-ink-muted ${disabled}`}
                     >
                       Share
                     </button>
                     <button
                       type="button"
                       disabled
-                      className={`flex-1 rounded-full border py-2 text-xs font-medium ${disabled}`}
+                      className={`flex-1 rounded-sm border border-rule-strong py-2 text-xs font-medium text-ink-muted ${disabled}`}
                     >
                       Gift
                     </button>
                     <button
                       type="button"
                       disabled
-                      className={`flex-1 rounded-full border py-2 text-xs font-medium ${disabled}`}
+                      className={`flex-1 rounded-sm border border-rule-strong py-2 text-xs font-medium text-ink-muted ${disabled}`}
                     >
                       Coupon
                     </button>
                   </div>
-                  <p className="mt-3 text-center text-[11px] text-zinc-400">
+                  <p className="mt-3 text-center text-[11px] text-ink-faint">
                     Preview only — actions are disabled.
                   </p>
                 </div>

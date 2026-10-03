@@ -1,14 +1,14 @@
 import { InstructorHeader } from "../components/InstructorHeader";
 import { AssignmentCreateContainer } from "../containers/AssignmentCreate.container";
-import { builderPageClass } from "../lib/builder";
+import { PageShell } from "../components/Panel";
 
 export default function AssignmentCreate() {
   return (
-    <div className="min-h-screen bg-[#f6f5f1]">
+    <div className="min-h-screen bg-slate-ground">
       <InstructorHeader />
-      <div className={builderPageClass}>
+      <PageShell>
         <AssignmentCreateContainer />
-      </div>
+      </PageShell>
     </div>
   );
 }

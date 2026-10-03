@@ -103,35 +103,36 @@ export function AssignmentPdfUploadStep({ assignment, onChange }: Props) {
 
   return (
     <div className={builderCardClass}>
-      <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
         Optional source
       </p>
-      <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">
+      <h2 className="mt-1 text-xl font-semibold text-ink">
         Upload source document
       </h2>
-      <p className="mt-1.5 text-[15px] text-zinc-500">
+      <p className="mt-1.5 text-[15px] text-ink-muted">
         Upload the PDF, DOCX, or TXT file that AI will use to generate questions. You can skip this and write from topics instead.
       </p>
 
       <div className="mt-6">
         {hasFile ? (
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+          <div className="rounded-sm border border-rule bg-slate-sunk p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
-                <FileText size={18} className="text-red-600" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-halt-soft">
+                <FileText size={18} className="text-halt" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-zinc-900">
+                <p className="truncate text-sm font-semibold text-ink">
                   {assignment.sourceDocumentName || "Uploaded PDF"}
                 </p>
                 {uploadSuccess && (
-                  <p className="text-xs text-emerald-600">Uploaded successfully</p>
+                  <p className="text-xs text-live">Uploaded successfully</p>
                 )}
               </div>
               <button
+                type="button"
                 onClick={removeFile}
                 disabled={uploading}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-200 hover:text-zinc-700"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-ink-faint transition-colors hover:bg-slate-panel hover:text-ink"
               >
                 <X size={16} />
               </button>
@@ -139,13 +140,13 @@ export function AssignmentPdfUploadStep({ assignment, onChange }: Props) {
 
             {uploading && (
               <div className="mt-3">
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-rule">
                   <div
-                    className="h-full rounded-full bg-zinc-900 transition-all duration-300"
+                    className="h-full rounded-full bg-ink transition-all duration-300"
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-xs text-ink-muted tnum">
                   Uploading… {uploadProgress}%
                 </p>
               </div>
@@ -158,19 +159,19 @@ export function AssignmentPdfUploadStep({ assignment, onChange }: Props) {
             onDragLeave={handleDragLeave}
             onClick={() => inputRef.current?.click()}
             className={cn(
-              "flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 text-center transition-colors",
+              "flex cursor-pointer flex-col items-center justify-center rounded-sm border-2 border-dashed p-10 text-center transition-colors",
               dragOver
-                ? "border-zinc-900 bg-zinc-50"
-                : "border-zinc-300 bg-zinc-50 hover:border-zinc-400 hover:bg-zinc-100"
+                ? "border-ink bg-slate-sunk"
+                : "border-rule-strong bg-slate-sunk hover:border-ink hover:bg-slate-panel"
             )}
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
-              <Upload size={20} className="text-zinc-500" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-rule bg-slate-panel">
+              <Upload size={20} className="text-ink-muted" />
             </div>
-            <p className="mt-3 text-sm font-semibold text-zinc-700">
+            <p className="mt-3 text-sm font-semibold text-ink">
               Drop your PDF, DOCX, or TXT here, or click to browse
             </p>
-            <p className="mt-1 text-xs text-zinc-400">
+            <p className="mt-1 text-xs text-ink-faint tnum">
               PDF, DOCX, or TXT files up to {MAX_SIZE_MB}MB
             </p>
           </div>
@@ -185,7 +186,7 @@ export function AssignmentPdfUploadStep({ assignment, onChange }: Props) {
         />
 
         {error && (
-          <div className="mt-3 flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-700">
+          <div className="mt-3 flex items-center gap-2 border border-halt/25 bg-halt-soft px-3 py-2 text-sm text-halt">
             <AlertCircle size={16} />
             {error}
           </div>

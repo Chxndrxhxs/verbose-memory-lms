@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Plus } from "@masterlms/shared";
 import type { PackListItem } from "@masterlms/shared";
 import { cn } from "../lib/utils";
+import { Modal } from "./Modal";
 import { formatPackPrice } from "../types/pack";
 
 type Props = {
@@ -21,20 +22,20 @@ type Props = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  draft: "bg-amber-100 text-amber-800",
-  published: "bg-emerald-100 text-emerald-800",
-  archived: "bg-zinc-200 text-zinc-600",
+  draft: "border-hold/30 bg-hold-soft text-hold",
+  published: "border-live/25 bg-live-soft text-live",
+  archived: "border-rule bg-slate-sunk text-ink-muted",
 };
 
 const darkButton =
-  "inline-flex items-center gap-1.5 rounded-full bg-[#0f172a] " +
-  "text-white hover:bg-black";
+  "inline-flex items-center gap-2 rounded-sm bg-ink " +
+  "text-ink-inverse hover:opacity-90";
 const cardButton =
-  "rounded-full border border-zinc-200 px-3.5 py-1.5 hover:bg-zinc-50 " +
+  "rounded-sm border border-rule px-3 py-1.5 text-ink-muted hover:bg-slate-sunk " +
   "disabled:opacity-50";
 const toastClass =
-  "fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-zinc-900 " +
-  "px-5 py-2.5 text-sm text-white shadow-xl";
+  "fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-sm border border-rule-strong " +
+  "bg-ink px-5 py-2 text-sm text-ink-inverse shadow-lg";
 
 function categoryLabel(pack: PackListItem): string | null {
   const chain = pack.inter_category;
@@ -76,15 +77,16 @@ export function PackListView({
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">Question packs</h1>
-          <p className="text-sm text-zinc-500">
+          <h1 className="text-2xl font-semibold text-ink">Question packs</h1>
+          <p className="text-sm text-ink-muted tnum">
             Bundle saved questions into packs learners can buy.{" "}
-            <span className="font-semibold text-zinc-700">
+            <span className="font-semibold text-ink">
               {packs.filter((p) => p.status === "published").length} live
             </span>
           </p>
         </div>
         <button
+          type="button"
           onClick={onNew}
           className={`${darkButton} px-4 py-2 text-sm font-semibold`}
         >
@@ -99,16 +101,16 @@ export function PackListView({
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search packs…"
             className={cn(
-              "min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white",
-              "px-3.5 py-2 text-sm outline-none focus:border-zinc-900",
+              "min-w-0 flex-1 rounded-sm border border-rule bg-slate-panel",
+              "px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-ink",
             )}
           />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className={cn(
-              "rounded-xl border border-zinc-200 bg-white px-3 py-2",
-              "text-sm outline-none focus:border-zinc-900",
+              "rounded-sm border border-rule bg-slate-panel px-3 py-2",
+              "text-sm text-ink focus:border-ink",
             )}
             title="Filter by status"
           >
@@ -120,23 +122,24 @@ export function PackListView({
         </div>
       )}
 
-      {isLoading && <p className="mt-6 text-sm text-zinc-500">Loading packs…</p>}
+      {isLoading && <p className="mt-6 text-sm text-ink-muted">Loading packs…</p>}
       {error && (
-        <p className="mt-6 text-sm text-red-600">Couldn&apos;t load packs: {error.message}</p>
+        <p className="mt-6 text-sm text-halt">Couldn&apos;t load packs: {error.message}</p>
       )}
       {!isLoading && !error && packs.length === 0 && (
         <div
           className={cn(
-            "mt-6 rounded-2xl border border-dashed border-zinc-300 bg-white",
+            "mt-6 border border-dashed border-rule-strong bg-slate-panel",
             "p-10 text-center",
           )}
         >
-          <p className="text-sm font-semibold">No packs yet</p>
-          <p className="mx-auto mt-1 max-w-sm text-xs text-zinc-500">
+          <p className="text-sm font-semibold text-ink">No packs yet</p>
+          <p className="mx-auto mt-1 max-w-sm text-xs text-ink-muted">
             Packs are built from questions you already saved in assignments. Create an
             assignment first, then bundle its questions here.
           </p>
           <button
+            type="button"
             onClick={onNew}
             className={`${darkButton} mt-4 px-4 py-2 text-xs font-semibold`}
           >
@@ -148,8 +151,8 @@ export function PackListView({
       {!isLoading && !error && packs.length > 0 && visible.length === 0 && (
         <p
           className={cn(
-            "mt-6 rounded-2xl border border-dashed border-zinc-300 p-8",
-            "text-center text-xs text-zinc-500",
+            "mt-6 border border-dashed border-rule-strong p-8",
+            "text-center text-xs text-ink-muted",
           )}
         >
           No packs match your filters.
@@ -161,29 +164,30 @@ export function PackListView({
           <div
             key={pack.id}
             className={cn(
-              "flex flex-wrap items-center gap-4 rounded-2xl border",
-              "border-zinc-200 bg-white p-4",
+              "flex flex-wrap items-center gap-4",
+              "border border-rule bg-slate-panel p-4",
             )}
           >
             {pack.cover ? (
               <img
                 src={pack.cover}
                 alt=""
-                className="h-16 w-12 shrink-0 rounded-lg border border-zinc-200 object-cover"
+                className="h-16 w-12 shrink-0 border border-rule object-cover"
               />
             ) : (
               <div
                 className={cn(
-                  "flex h-16 w-12 shrink-0 items-center justify-center rounded-lg",
-                  "bg-zinc-100 text-[10px] font-bold text-zinc-400",
+                  "flex h-16 w-12 shrink-0 items-center justify-center border border-rule",
+                  "bg-slate-sunk text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint",
                 )}
               >
                 No cover
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="flex flex-wrap items-center gap-2 text-sm font-bold">
+              <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink">
                 <button
+                  type="button"
                   onClick={() => onEdit(pack.id)}
                   className="truncate hover:underline"
                 >
@@ -191,31 +195,32 @@ export function PackListView({
                 </button>
                 <span
                   className={cn(
-                    "rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                    STATUS_STYLES[pack.status] ?? "bg-zinc-100 text-zinc-600",
+                    "rounded-sm border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em]",
+                    STATUS_STYLES[pack.status] ?? "border-rule bg-slate-sunk text-ink-muted",
                   )}
                 >
                   {pack.status}
                 </span>
               </p>
-              <p className="mt-0.5 truncate text-xs text-zinc-500">
+              <p className="mt-0.5 truncate text-xs text-ink-muted tnum">
                 {pack.question_count} question{pack.question_count === 1 ? "" : "s"} ·{" "}
                 {formatPackPrice(pack.price)}
                 {pack.max_attempts > 0 && ` · ${pack.max_attempts} attempts`} ·{" "}
                 {(pack.allowed_modules ?? []).join(", ") || "no formats"}
               </p>
               {categoryLabel(pack) && (
-                <p className="mt-0.5 truncate text-[11px] text-zinc-400">
+                <p className="mt-0.5 truncate text-[11px] text-ink-faint">
                   {categoryLabel(pack)}
                 </p>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-              <button onClick={() => onEdit(pack.id)} className={cardButton}>
+              <button type="button" onClick={() => onEdit(pack.id)} className={cardButton}>
                 Edit
               </button>
               {pack.status === "published" ? (
                 <button
+                  type="button"
                   onClick={() => onUnpublish(pack.id)}
                   disabled={busy}
                   className={cardButton}
@@ -224,22 +229,24 @@ export function PackListView({
                 </button>
               ) : (
                 <button
+                  type="button"
                   onClick={() => onPublish(pack.id)}
                   disabled={busy}
                   className={cn(
-                    "rounded-full bg-emerald-600 px-3.5 py-1.5 text-white",
-                    "hover:bg-emerald-700 disabled:opacity-50",
+                    "rounded-sm border border-live bg-live px-3 py-1.5 text-ink-inverse",
+                    "hover:bg-live/88 disabled:opacity-50",
                   )}
                 >
                   Publish
                 </button>
               )}
               <button
+                type="button"
                 onClick={() => onAskDelete(pack.id)}
                 disabled={busy}
                 className={cn(
-                  "rounded-full border border-red-200 px-3.5 py-1.5 text-red-600",
-                  "hover:bg-red-50 disabled:opacity-50",
+                  "rounded-sm border border-halt/35 px-3 py-1.5 text-halt",
+                  "hover:bg-halt-soft disabled:opacity-50",
                 )}
               >
                 Delete
@@ -249,37 +256,36 @@ export function PackListView({
         ))}
       </div>
 
-      {confirmDelete != null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl">
-            <h3 className="text-base font-bold">Delete this pack?</h3>
-            <p className="mt-1 text-sm text-zinc-500">
-              Learners who bought it keep their history, but it leaves the store.
-            </p>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                onClick={onCancelDelete}
-                className={cn(
-                  "rounded-full px-4 py-2 text-sm font-semibold text-zinc-600",
-                  "hover:text-zinc-900",
-                )}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={onConfirmDelete}
-                disabled={busy}
-                className={cn(
-                  "rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white",
-                  "hover:bg-red-700 disabled:opacity-50",
-                )}
-              >
-                Delete
-              </button>
-            </div>
+      <Modal
+        open={confirmDelete != null}
+        onClose={onCancelDelete}
+        title="Delete this pack?"
+        description="Learners who bought it keep their history, but it leaves the store."
+        size="sm"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onCancelDelete}
+              className="rounded-sm px-4 py-2 text-sm font-semibold text-ink-muted hover:text-ink"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirmDelete}
+              disabled={busy}
+              className="rounded-sm border border-halt bg-halt px-4 py-2 text-sm font-semibold text-ink-inverse hover:bg-halt/88 disabled:opacity-50"
+            >
+              Delete
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <p className="text-sm leading-relaxed text-ink-muted">
+          This removes the pack from the store straight away. It can&apos;t be undone.
+        </p>
+      </Modal>
 
       {toast && (
         <div className={toastClass}>

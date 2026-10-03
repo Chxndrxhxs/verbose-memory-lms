@@ -1,16 +1,16 @@
 import { useParams } from "react-router-dom";
 import { InstructorHeader } from "../components/InstructorHeader";
 import { PackBuilderContainer } from "../containers/PackBuilder.container";
-import { builderPageClass } from "../lib/builder";
+import { PageShell } from "../components/Panel";
 
 export default function PackEdit() {
   const { id } = useParams<{ id: string }>();
   return (
-    <div className="min-h-screen bg-[#f6f5f1]">
+    <div className="min-h-screen bg-slate-ground">
       <InstructorHeader />
-      <div className={builderPageClass}>
+      <PageShell>
         <PackBuilderContainer existingId={id} />
-      </div>
+      </PageShell>
     </div>
   );
 }

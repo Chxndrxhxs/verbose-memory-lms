@@ -38,11 +38,11 @@ export function AssignmentModelSelectStep({ assignment, onChange }: Props) {
 
   return (
     <div className={builderCardClass}>
-      <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
         Delivery format
       </p>
-      <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">How students take it</h2>
-      <p className="mt-1.5 text-[15px] text-zinc-500">
+      <h2 className="mt-1 text-xl font-semibold text-ink">How students take it</h2>
+      <p className="mt-1.5 text-[15px] text-ink-muted">
         One format per assignment. You can rearrange the tests in the next step.
       </p>
 
@@ -53,49 +53,50 @@ export function AssignmentModelSelectStep({ assignment, onChange }: Props) {
           return (
             <button
               key={model}
+              type="button"
               onClick={() => onChange({ modelType: model })}
               aria-pressed={active}
               className={cn(
-                "flex flex-col items-start rounded-2xl border-2 p-6 text-left transition-all",
+                "flex flex-col items-start rounded-sm border-2 p-6 text-left transition-colors",
                 active
-                  ? "border-zinc-900 bg-zinc-900 text-white shadow-lg"
-                  : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400",
+                  ? "border-ink bg-ink text-ink-inverse"
+                  : "border-rule bg-slate-panel text-ink-muted hover:border-ink",
               )}
             >
               <div className="flex w-full items-center justify-between">
                 <span
                   className={cn(
                     "flex h-10 w-10 items-center justify-center rounded-full",
-                    active ? "bg-white/20" : "bg-zinc-100",
+                    active ? "bg-ink-inverse/20" : "bg-slate-sunk",
                   )}
                 >
                   <Icon
                     size={20}
-                    className={active ? "text-white" : "text-zinc-600"}
+                    className={active ? "text-ink-inverse" : "text-ink-muted"}
                   />
                 </span>
                 <span
                   className={cn(
                     "flex h-5 w-5 items-center justify-center rounded-full text-[11px]",
-                    active ? "bg-white text-zinc-900" : "bg-zinc-100 text-transparent",
+                    active ? "bg-ink-inverse text-ink" : "bg-slate-sunk text-transparent",
                   )}
                 >
                   ✓
                 </span>
               </div>
-              <p className="mt-4 text-[15px] font-bold">{MODEL_LABELS[model]}</p>
+              <p className="mt-4 text-[15px] font-semibold">{MODEL_LABELS[model]}</p>
               <p
                 className={cn(
                   "mt-1.5 text-sm leading-relaxed",
-                  active ? "text-white/70" : "text-zinc-500",
+                  active ? "text-ink-inverse/70" : "text-ink-muted",
                 )}
               >
                 {MODEL_DESCRIPTIONS[model]}
               </p>
               <p
                 className={cn(
-                  "mt-4 text-xs font-semibold",
-                  active ? "text-white/80" : "text-zinc-400",
+                  "mt-4 text-xs font-semibold tnum",
+                  active ? "text-ink-inverse/80" : "text-ink-faint",
                 )}
               >
                 {plan[model]}

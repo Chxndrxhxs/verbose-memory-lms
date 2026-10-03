@@ -23,7 +23,7 @@ export function ExamBoardPicker({ value, onChange, error, label = "Exam board" }
 
   return (
     <label className={builderLabelClass}>
-      {label} <span className="text-red-500">*</span>
+      {label} <span className="text-halt">*</span>
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
@@ -36,7 +36,7 @@ export function ExamBoardPicker({ value, onChange, error, label = "Exam board" }
           </option>
         ))}
       </select>
-      {error && <p className="mt-1.5 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1.5 text-xs text-halt">{error}</p>}
     </label>
   );
 }

@@ -70,18 +70,19 @@ function TestPanel({
   };
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white shadow-sm">
-      <div className="flex items-center gap-3 border-b border-zinc-100 px-4 py-3">
+    <div className="rounded-sm border border-rule bg-slate-panel">
+      <div className="flex items-center gap-3 border-b border-rule px-4 py-3">
         <button
+          type="button"
           onClick={() => setExpanded(!expanded)}
           className="flex items-center gap-2"
         >
           {expanded ? (
-            <ChevronUp size={14} className="text-zinc-400" />
+            <ChevronUp size={14} className="text-ink-faint" />
           ) : (
-            <ChevronDown size={14} className="text-zinc-400" />
+            <ChevronDown size={14} className="text-ink-faint" />
           )}
-          <ListChecks size={16} className="text-zinc-600" />
+          <ListChecks size={16} className="text-ink-muted" />
           {editingTitle ? (
             <input
               autoFocus
@@ -89,11 +90,11 @@ function TestPanel({
               onChange={(e) => onUpdate({ title: e.target.value })}
               onBlur={() => setEditingTitle(false)}
               onKeyDown={(e) => e.key === "Enter" && setEditingTitle(false)}
-              className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-sm font-bold outline-none"
+              className="rounded-sm border border-rule bg-slate-panel px-2 py-1 text-sm font-semibold text-ink focus:border-ink"
             />
           ) : (
             <span
-              className="text-sm font-bold text-zinc-900 cursor-pointer hover:text-zinc-700"
+              className="cursor-pointer text-sm font-semibold text-ink hover:text-ink-muted"
               onClick={(e) => {
                 e.stopPropagation();
                 setEditingTitle(true);
@@ -105,7 +106,7 @@ function TestPanel({
         </button>
         <div className="ml-auto flex items-center gap-1">
           <div className="flex items-center gap-1">
-            <label className="text-[10px] text-zinc-400">Duration:</label>
+            <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">Duration:</label>
             <input
               type="number"
               min={1}
@@ -115,14 +116,15 @@ function TestPanel({
                   duration: Math.max(1, Number(e.target.value) || 1),
                 })
               }
-              className="w-14 rounded border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 text-xs outline-none focus:border-zinc-900"
+              className="w-16 rounded-sm border border-rule bg-slate-sunk px-2 py-1 text-xs tnum focus:border-ink"
             />
-            <span className="text-[10px] text-zinc-400">min</span>
+            <span className="text-[10px] text-ink-faint">min</span>
           </div>
           {index > 0 && (
             <button
+              type="button"
               onClick={onMoveUp}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+              className="flex h-8 w-8 items-center justify-center rounded-sm text-ink-faint hover:bg-slate-sunk hover:text-ink"
               title="Reorder test up"
             >
               <ArrowUp size={14} />
@@ -130,22 +132,25 @@ function TestPanel({
           )}
           {index < totalTests - 1 && (
             <button
+              type="button"
               onClick={onMoveDown}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+              className="flex h-8 w-8 items-center justify-center rounded-sm text-ink-faint hover:bg-slate-sunk hover:text-ink"
               title="Reorder test down"
             >
               <ArrowDown size={14} />
             </button>
           )}
           <button
+            type="button"
             onClick={onDuplicate}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+            className="flex h-8 w-8 items-center justify-center rounded-sm text-ink-faint hover:bg-slate-sunk hover:text-ink"
           >
             <Copy size={14} />
           </button>
           <button
+            type="button"
             onClick={onDelete}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-500"
+            className="flex h-8 w-8 items-center justify-center rounded-sm text-ink-faint hover:bg-halt-soft hover:text-halt"
           >
             <Trash2 size={14} />
           </button>
@@ -155,7 +160,7 @@ function TestPanel({
       {expanded && (
         <div className="px-4 py-3">
           <div className="mb-2">
-            <label className="mb-1 block text-xs font-semibold text-zinc-500">
+            <label className="mb-1 block text-xs font-semibold text-ink-muted">
               Description
             </label>
             <input
@@ -163,13 +168,13 @@ function TestPanel({
               value={test.description}
               onChange={(e) => onUpdate({ description: e.target.value })}
               placeholder="Test description (optional)"
-              className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-zinc-900 focus:bg-white"
+              className="w-full rounded-sm border border-rule bg-slate-sunk px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-ink focus:bg-slate-panel"
             />
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-500">
+              <span className="text-xs font-semibold text-ink-muted tnum">
                 Questions ({test.questions.length})
               </span>
               <div className="flex items-center gap-2">
@@ -189,7 +194,7 @@ function TestPanel({
                       e.target.value = "";
                     }}
                     defaultValue=""
-                    className="rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs outline-none"
+                    className="rounded-sm border border-rule bg-slate-sunk px-2 py-1 text-xs text-ink focus:border-ink"
                   >
                     <option value="" disabled>
                       Assign question…
@@ -202,8 +207,9 @@ function TestPanel({
                   </select>
                 )}
                 <button
+                  type="button"
                   onClick={addQuestionToTest}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-zinc-700"
+                  className="inline-flex items-center gap-2 text-xs font-semibold text-ink-muted hover:text-ink"
                 >
                   <Plus size={11} /> Add question
                 </button>
@@ -212,31 +218,34 @@ function TestPanel({
             {test.questions.map((q, i) => (
               <div
                 key={q.id}
-                className="flex items-center gap-2 rounded-lg bg-zinc-50 px-3 py-2 text-sm"
+                className="flex items-center gap-2 rounded-sm bg-slate-sunk px-3 py-2 text-sm"
               >
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[9px] font-bold text-zinc-600">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rule text-[9px] font-semibold text-ink-muted tnum">
                   {i + 1}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-zinc-700">
+                <span className="min-w-0 flex-1 truncate text-ink-muted">
                   {q.question || (
-                    <span className="text-zinc-400 italic">Untitled</span>
+                    <span className="italic text-ink-faint">Untitled</span>
                   )}
                 </span>
                 <button
+                  type="button"
                   onClick={() => moveQuestionInTest(q.id, "up")}
                   disabled={i === 0}
-                  className="flex h-5 w-5 items-center justify-center rounded text-zinc-300 hover:text-zinc-600 disabled:opacity-30"
+                  className="flex h-5 w-5 items-center justify-center rounded-sm text-ink-faint hover:text-ink disabled:opacity-30"
                 >
                   <ArrowUp size={12} />
                 </button>
                 <button
+                  type="button"
                   onClick={() => moveQuestionInTest(q.id, "down")}
                   disabled={i === test.questions.length - 1}
-                  className="flex h-5 w-5 items-center justify-center rounded text-zinc-300 hover:text-zinc-600 disabled:opacity-30"
+                  className="flex h-5 w-5 items-center justify-center rounded-sm text-ink-faint hover:text-ink disabled:opacity-30"
                 >
                   <ArrowDown size={12} />
                 </button>
                 <button
+                  type="button"
                   onClick={() =>
                     onUpdate({
                       questions: test.questions.filter(
@@ -244,7 +253,7 @@ function TestPanel({
                       ),
                     })
                   }
-                  className="flex h-5 w-5 items-center justify-center rounded text-zinc-300 hover:text-red-500"
+                  className="flex h-5 w-5 items-center justify-center rounded-sm text-ink-faint hover:text-halt"
                 >
                   <Trash2 size={10} />
                 </button>
@@ -270,26 +279,26 @@ function UnplacedPanel({
 }) {
   const [choices, setChoices] = useState<Record<string, string>>({});
   return (
-    <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
-      <p className="text-xs font-bold text-amber-800">
+    <div className="mt-4 border border-hold/30 bg-hold-soft p-4">
+      <p className="text-xs font-semibold text-hold tnum">
         {unplaced.length} pooled question{unplaced.length === 1 ? "" : "s"} not in
         any section — they won&apos;t reach students until placed.
       </p>
       {emptyTargets ? (
-        <p className="mt-1 text-xs text-amber-700">
+        <p className="mt-1 text-xs text-hold">
           Add a test below (or auto-arrange) to place them.
         </p>
       ) : (
-        <ul className="mt-2 max-h-48 space-y-1.5 overflow-y-auto">
+        <ul className="mt-2 max-h-48 space-y-2 overflow-y-auto">
           {unplaced.map((q) => {
             const chosen = choices[q.id] ?? targets[0]?.id ?? "";
             return (
               <li
                 key={q.id}
-                className="flex items-center gap-2 rounded-lg bg-white px-3 py-1.5"
+                className="flex items-center gap-2 rounded-sm bg-slate-panel px-3 py-2"
               >
-                <span className="min-w-0 flex-1 truncate text-xs text-zinc-700">
-                  {q.question || <span className="italic text-zinc-400">Untitled</span>}
+                <span className="min-w-0 flex-1 truncate text-xs text-ink-muted">
+                  {q.question || <span className="italic text-ink-faint">Untitled</span>}
                 </span>
                 <select
                   value={chosen}
@@ -297,8 +306,8 @@ function UnplacedPanel({
                     setChoices((prev) => ({ ...prev, [q.id]: e.target.value }))
                   }
                   className={cn(
-                    "max-w-36 truncate rounded-lg border border-zinc-200 bg-white",
-                    "px-2 py-1 text-[11px] outline-none",
+                    "max-w-36 truncate rounded-sm border border-rule bg-slate-panel",
+                    "px-2 py-1 text-[11px] text-ink focus:border-ink",
                   )}
                 >
                   {targets.map((t) => (
@@ -308,10 +317,11 @@ function UnplacedPanel({
                   ))}
                 </select>
                 <button
+                  type="button"
                   onClick={() => chosen && onPlace(q, chosen)}
                   className={cn(
-                    "shrink-0 rounded-full bg-zinc-900 px-3 py-1 text-[11px]",
-                    "font-semibold text-white",
+                    "shrink-0 rounded-sm bg-ink px-3 py-1 text-[11px]",
+                    "font-semibold text-ink-inverse",
                   )}
                 >
                   Place
@@ -329,16 +339,16 @@ export function AssignmentTestConfigStep({ assignment, onChange }: Props) {
   if (assignment.modelType === "practice") {
     return (
       <div className={builderCardClass}>
-        <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
           Sections
         </p>
-        <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">Configuration</h2>
-        <p className="mt-1.5 text-[15px] text-zinc-500">
+        <h2 className="mt-1 text-xl font-semibold text-ink">Configuration</h2>
+        <p className="mt-1.5 text-[15px] text-ink-muted">
           Practice doesn&apos;t require test/set configuration.
           Questions are placed directly under the assignment.
         </p>
-        <div className="mt-6 rounded-2xl border border-zinc-200/70 bg-zinc-50/70 p-5">
-          <p className="text-sm text-zinc-600">
+        <div className="mt-6 border border-rule bg-slate-sunk p-5">
+          <p className="text-sm text-ink-muted tnum">
             Your assignment has {assignment.questions.length} question(s) with a
             total duration of {assignment.duration} minute(s). Adjust these in
             the Basic Info step or the Preview step.
@@ -448,17 +458,17 @@ export function AssignmentTestConfigStep({ assignment, onChange }: Props) {
     <div className={builderCardClass}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
             Sections
           </p>
-          <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">
+          <h2 className="mt-1 text-xl font-semibold text-ink">
             Configure mock test sections
           </h2>
-          <p className="mt-1.5 text-[15px] text-zinc-500">
+          <p className="mt-1.5 text-[15px] text-ink-muted tnum">
             {tests.length} test{tests.length === 1 ? "" : "s"} · {placedCount} of{" "}
             {assignment.questions.length} questions placed
             {unplaced.length > 0 && (
-              <span className="font-semibold text-amber-700">
+              <span className="font-semibold text-hold tnum">
                 {" "}· {unplaced.length} unplaced
               </span>
             )}{" "}
@@ -467,22 +477,24 @@ export function AssignmentTestConfigStep({ assignment, onChange }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={autoArrange}
             disabled={assignment.questions.length === 0}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border",
-              "border-zinc-300 px-4 py-2 text-xs font-semibold",
-              "hover:bg-zinc-50 disabled:opacity-40",
+              "inline-flex items-center gap-2 rounded-sm border",
+              "border-rule-strong px-4 py-2 text-xs font-semibold",
+              "hover:bg-slate-sunk disabled:opacity-40",
             )}
             title="Split the pool into tests by category"
           >
             <Layers size={13} /> Auto-arrange
           </button>
           <button
+            type="button"
             onClick={addTest}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full bg-zinc-900",
-              "px-4 py-2 text-xs font-semibold text-white hover:opacity-90",
+              "inline-flex items-center gap-2 rounded-sm bg-ink",
+              "px-4 py-2 text-xs font-semibold text-ink-inverse hover:opacity-90",
             )}
           >
             <Plus size={13} /> Add test
@@ -519,19 +531,20 @@ export function AssignmentTestConfigStep({ assignment, onChange }: Props) {
       {tests.length === 0 && (
         <div
           className={cn(
-            "mt-6 flex flex-col items-center justify-center rounded-xl",
-            "border border-dashed border-zinc-300 py-12 text-center",
+            "mt-6 flex flex-col items-center justify-center rounded-sm",
+            "border border-dashed border-rule-strong py-12 text-center",
           )}
         >
-          <p className="text-sm font-semibold text-zinc-600">No tests yet</p>
-          <p className="mt-1 text-xs text-zinc-400">
+          <p className="text-sm font-semibold text-ink-muted">No tests yet</p>
+          <p className="mt-1 text-xs text-ink-faint">
             Add a test to organize your questions.
           </p>
           <button
+            type="button"
             onClick={addTest}
             className={cn(
-              "mt-3 inline-flex items-center gap-1.5 rounded-full bg-zinc-900",
-              "px-4 py-2 text-xs font-semibold text-white",
+              "mt-3 inline-flex items-center gap-2 rounded-sm bg-ink",
+              "px-4 py-2 text-xs font-semibold text-ink-inverse",
             )}
           >
             <Plus size={13} /> Add test

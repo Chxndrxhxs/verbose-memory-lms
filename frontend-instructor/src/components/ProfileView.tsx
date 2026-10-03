@@ -1,7 +1,14 @@
 import { Link } from "react-router-dom";
-import { User, ArrowRight, Trash2, AlertTriangle } from "@masterlms/shared";
-import { InstructorHeader } from "./InstructorHeader";
+import { ArrowRight, Trash2, User } from "@masterlms/shared";
 import type { SharedInstructorCourse as InstructorCourse } from "@masterlms/shared";
+import { absoluteMediaUrl } from "../lib/api";
+import { InstructorHeader } from "./InstructorHeader";
+import { PageHeader, PageShell, Panel, PanelHeader } from "./Panel";
+import { ListRows, ListRow, ListMessage } from "./DataGrid";
+import { Badge, TeachMark, statusTone } from "./Badge";
+import { Button } from "./Button";
+import { Field, Input, Notice } from "./Controls";
+import { Modal } from "./Modal";
 
 type AuthUser = {
   name?: string;
@@ -43,188 +50,313 @@ type Props = {
   onInvalidateCourses: () => void;
 };
 
-function Heatmap({ weeks = 26 }: { weeks?: number }) {
-  const cells: { d: string; level: number }[] = [];
-  const today = new Date();
-  for (let i = weeks * 7 - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const k = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-    const seed = (d.getDate() * 7 + d.getMonth() * 13 + d.getDay()) % 17;
-    const level = seed < 9 ? 0 : seed < 12 ? 1 : seed < 14 ? 2 : seed < 16 ? 3 : 4;
-    cells.push({ d: k, level });
-  }
-  const colors = ["bg-zinc-100", "bg-yellow-200", "bg-yellow-400", "bg-yellow-500", "bg-yellow-600"];
-  return (
-    <div className="overflow-x-auto">
-      <div className="flex gap-1 min-w-fit">
-        {Array.from({ length: weeks }).map((_, w) => (
-          <div key={w} className="grid grid-rows-7 gap-1">
-            {Array.from({ length: 7 }).map((__, d) => {
-              const c = cells[w * 7 + d];
-              return <span key={d} className={`h-3 w-3 rounded-sm ${colors[c.level]}`} />;
-            })}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function ProfileView(p: Props) {
   const { user, courses } = p;
+
   const total = courses.length;
   const published = courses.filter((c) => c.status === "published").length;
   const draft = total - published;
   const totalStudents = courses.reduce((a, c) => a + c.student_count, 0);
-  const avgRating = courses.length
-    ? (courses.reduce((a, c) => a + Number(c.average_rating || 0), 0) / courses.length).toFixed(1)
-    : "0.0";
+  const avgRating =
+    courses.length
+      ? (
+          courses.reduce((a, c) => a + Number(c.average_rating || 0), 0) / courses.length
+        ).toFixed(1)
+      : "0.0";
 
   return (
-    <>
+    <div className="min-h-screen bg-slate-ground">
       <InstructorHeader />
-      <div className="min-h-screen bg-[#f6f5f1]">
-        <div className="px-4 pt-6 sm:px-6">
-          <div className="w-full">
-          <div className="rounded-[28px] bg-gradient-to-br from-zinc-900 via-amber-900 to-zinc-900 p-6 text-white shadow-sm sm:p-8">
-            <div className="flex flex-wrap items-start gap-4">
-              <div className="h-20 w-20 overflow-hidden rounded-full border-4 border-yellow-400/40 bg-zinc-700 sm:h-24 sm:w-24">
-                {p.avatar ? <img src={p.avatar} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-2xl font-bold">{user.name?.[0] ?? "?"}</span>}
-              </div>
-              <div className="flex-1 min-w-0">
+      <PageShell>
+        <div className="space-y-6">
+          <PageHeader
+            eyebrow="Account"
+            title="Your profile"
+            description="What learners and admins see about you on QTNXT."
+            action={
+              p.editing ? (
                 <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-extrabold tracking-tight">{user.name || "Instructor"}</h1>
-                  <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-bold text-zinc-900">Teach</span>
+                  <Button variant="ghost" onClick={p.onCancelEditing}>
+                    Cancel
+                  </Button>
+                  <Button variant="primary" onClick={p.onSave} disabled={p.saving}>
+                    {p.saving ? "Saving…" : "Save changes"}
+                  </Button>
                 </div>
-                <p className="text-sm text-white/70">{user.email || user.mobile}</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                  <span className="rounded-full bg-white/15 px-2.5 py-1 font-semibold">Age {user.age ?? "—"}</span>
-                  <span className="rounded-full bg-white/15 px-2.5 py-1 font-semibold">{user.mobile}</span>
-                </div>
-              </div>
-              <button onClick={p.onToggleEditing} className="rounded-full bg-yellow-400 px-4 py-2 text-xs font-bold text-zinc-900 hover:bg-yellow-500">{p.editing ? "Cancel" : "Edit profile"}</button>
-            </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-4">
-              <div className="rounded-2xl bg-white/10 p-4 backdrop-blur"><p className="text-[10px] font-semibold uppercase tracking-widest text-white/60">Courses</p><p className="mt-1 text-2xl font-black">{total}</p></div>
-              <div className="rounded-2xl bg-white/10 p-4 backdrop-blur"><p className="text-[10px] font-semibold uppercase tracking-widest text-white/60">Published</p><p className="mt-1 text-2xl font-black">{published}</p></div>
-              <div className="rounded-2xl bg-white/10 p-4 backdrop-blur"><p className="text-[10px] font-semibold uppercase tracking-widest text-white/60">Students</p><p className="mt-1 text-2xl font-black">{totalStudents}</p></div>
-              <div className="rounded-2xl bg-white/10 p-4 backdrop-blur"><p className="text-[10px] font-semibold uppercase tracking-widest text-white/60">Avg. rating</p><p className="mt-1 text-2xl font-black">{avgRating}</p></div>
-            </div>
-          </div>
+              ) : (
+                <Button variant="secondary" onClick={p.onToggleEditing}>
+                  Edit profile
+                </Button>
+              )
+            }
+          />
 
-          {p.editing && (
-            <div className="mt-4 rounded-[28px] bg-white p-6 shadow-sm sm:p-8">
-              <h2 className="text-sm font-bold">Edit profile</h2>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div><label className="text-xs font-semibold">Name</label><input value={p.name} onChange={(e)=> p.onName(e.target.value)} className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" />{p.fieldErrors.name && <p className="mt-1 text-xs text-red-600">{p.fieldErrors.name}</p>}</div>
-                <div><label className="text-xs font-semibold">Email</label><input value={p.email} onChange={(e)=> p.onEmail(e.target.value)} type="email" className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" />{p.fieldErrors.email && <p className="mt-1 text-xs text-red-600">{p.fieldErrors.email}</p>}</div>
-                <div><label className="text-xs font-semibold">Age</label><input value={p.age} onChange={(e)=> p.onAge(e.target.value)} type="number" className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" />{p.fieldErrors.age && <p className="mt-1 text-xs text-red-600">{p.fieldErrors.age}</p>}</div>
-                <div>
-                  <label className="text-xs font-semibold">Avatar</label>
-                  <div className="mt-1 flex items-center gap-2">
-                    <div className="h-10 w-10 overflow-hidden rounded-full bg-zinc-100">
-                      {p.avatar ? <img src={p.avatar} className="h-full w-full object-cover" alt="" /> : <span className="flex h-full w-full items-center justify-center text-xs"><User size={20} className="text-zinc-400" /></span>}
-                    </div>
-                    <label className="rounded-full border px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-zinc-50">{p.avatarUploading ? "Uploading…" : "Upload"}<input type="file" accept="image/*" className="hidden" onChange={p.onAvatarPicked} disabled={p.avatarUploading} /></label>
-                  </div>
-                  {p.avatarError && <p className="mt-1 text-xs text-red-600">{p.avatarError}</p>}
-                </div>
+          {/* Identity block. Ink panel, squared, with the one signal mark. */}
+          <Panel tone="sunk" className="flex flex-wrap items-center gap-5">
+            {user.avatar ? (
+              <img src={user.avatar} alt="" className="h-16 w-16 shrink-0 object-cover" />
+            ) : (
+              <span className="flex h-16 w-16 shrink-0 items-center justify-center bg-slate-sunk text-ink-faint">
+                <User size={26} strokeWidth={1.8} aria-hidden />
+              </span>
+            )}
+
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-semibold text-ink">{user.name || "Unnamed instructor"}</h2>
+                <TeachMark />
               </div>
-              <div className="mt-4 flex gap-3">
-                <button onClick={p.onSave} disabled={p.saving || p.avatarUploading} className="rounded-full bg-[#0f172a] px-5 py-2 text-xs font-bold text-white disabled:opacity-60">{p.saving || p.avatarUploading ? "Saving…" : "Save changes"}</button>
-                <button onClick={p.onCancelEditing} className="rounded-full border px-5 py-2 text-xs font-medium">Cancel</button>
-              </div>
+              <p className="tnum mt-1 text-sm text-ink-muted">
+                +91 {user.mobile}
+                {user.email ? ` · ${user.email}` : " · no email on file"}
+              </p>
             </div>
+
+            <dl className="grid w-full grid-cols-2 gap-px border border-rule bg-rule sm:w-auto sm:grid-cols-4">
+              {[
+                ["Courses", total],
+                ["Published", published],
+                ["Drafts", draft],
+                ["Learners", totalStudents],
+              ].map(([k, v]) => (
+                <div key={k as string} className="bg-slate-panel px-4 py-3">
+                  <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
+                    {k}
+                  </dt>
+                  <dd className="tnum mt-1 text-xl font-semibold text-ink">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </Panel>
+
+          {p.toast && (
+            <Notice tone="live" role="status">
+              {p.toast}
+            </Notice>
           )}
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-3">
-            <div className="rounded-[28px] bg-white p-6 shadow-sm lg:col-span-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold">Activity</h2>
-                <span className="text-xs text-zinc-500">last 6 months</span>
-              </div>
-              <p className="mt-1 text-xs text-zinc-500">Courses published, lessons added, edits.</p>
-              <div className="mt-4">
-                <Heatmap weeks={26} />
-              </div>
-              <div className="mt-3 flex items-center gap-2 text-[11px] text-zinc-500">
-                <span>Less</span>
-                <span className="h-3 w-3 rounded-sm bg-zinc-100" />
-                <span className="h-3 w-3 rounded-sm bg-yellow-200" />
-                <span className="h-3 w-3 rounded-sm bg-yellow-400" />
-                <span className="h-3 w-3 rounded-sm bg-yellow-500" />
-                <span className="h-3 w-3 rounded-sm bg-yellow-600" />
-                <span>More</span>
-              </div>
-            </div>
-            <div className="rounded-[28px] bg-white p-6 shadow-sm">
-              <h2 className="text-sm font-bold">Account</h2>
-              <div className="mt-3 space-y-2 text-sm">
-                <div className="rounded-xl bg-zinc-50 p-3"><p className="text-[11px] font-semibold uppercase text-zinc-500">Email</p><p className="text-sm">{user.email || "—"}</p></div>
-                <div className="rounded-xl bg-zinc-50 p-3"><p className="text-[11px] font-semibold uppercase text-zinc-500">Mobile</p><p className="text-sm">{user.mobile}</p></div>
-                <div className="rounded-xl bg-zinc-50 p-3"><p className="text-[11px] font-semibold uppercase text-zinc-500">Role</p><p className="text-sm capitalize">{user.role ?? "Instructor"}</p></div>
-                <div className="rounded-xl bg-zinc-50 p-3"><p className="text-[11px] font-semibold uppercase text-zinc-500">Drafts</p><p className="text-sm">{draft} course{draft === 1 ? "" : "s"}</p></div>
-              </div>
-              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-red-700"><AlertTriangle size={15} /> Danger zone</div>
-                <p className="mt-1 text-xs text-red-600">Deleting your account permanently removes your profile, courses, and data from QTNXT.</p>
-                {p.confirmDelete ? (
-                  <div className="mt-3 rounded-lg bg-white p-3">
-                    <p className="text-xs font-semibold text-zinc-700">Type <span className="font-mono font-bold">delete</span> to confirm:</p>
-                    <div className="mt-2 flex gap-2">
-                      <input value={p.deleteConfirmText} onChange={(e) => p.onDeleteConfirmText(e.target.value)} placeholder="delete" className="flex-1 rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:bg-white" />
-                    </div>
-                    <div className="mt-2 flex gap-2">
-                      <button
-                        onClick={p.onConfirmDeleteClose}
-                        className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-zinc-50"
-                      >Cancel</button>
-                      <button
-                        onClick={p.onDelete}
-                        disabled={p.deleteConfirmText !== "delete" || p.deleting}
-                        className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
-                      >
-                        {p.deleting ? "Deleting…" : "Delete permanently"}
-                      </button>
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Panel className="lg:col-span-2">
+              <PanelHeader
+                title={p.editing ? "Edit details" : "Details"}
+                subtitle={
+                  p.editing
+                    ? "Learners see your name and email on every course you publish."
+                    : "Public information attached to your published courses."
+                }
+              />
+
+              {p.editing ? (
+                <form
+                  className="mt-5 space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    p.onSave();
+                  }}
+                >
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div>
+                      <span className="block text-xs font-semibold text-ink-muted">Profile photo</span>
+                      <input
+                        id="avatar"
+                        type="file"
+                        accept="image/*"
+                        onChange={p.onAvatarPicked}
+                        className="mt-1.5 block w-full max-w-[280px] text-xs text-ink-muted file:mr-3 file:border file:border-rule file:bg-slate-panel file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink"
+                      />
+                      <p className="mt-1.5 text-xs text-ink-faint">
+                        {p.avatarUploading ? "Uploading…" : "JPG or PNG, up to 2 MB"}
+                      </p>
+                      {p.avatarError && (
+                        <p className="mt-1 text-xs font-medium text-halt">{p.avatarError}</p>
+                      )}
                     </div>
                   </div>
-                ) : (
-                  <button onClick={p.onConfirmDeleteOpen} className="mt-2 flex items-center gap-1.5 rounded-full border border-red-300 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100"><Trash2 size={13} /> Delete account</button>
-                )}
-              </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Full name" htmlFor="name" error={p.fieldErrors.name}>
+                      <Input
+                        id="name"
+                        value={p.name}
+                        onChange={(e) => p.onName(e.target.value)}
+                        autoComplete="name"
+                      />
+                    </Field>
+                    <Field label="Email" htmlFor="email" error={p.fieldErrors.email}>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={p.email}
+                        onChange={(e) => p.onEmail(e.target.value)}
+                        autoComplete="email"
+                        placeholder="you@example.com"
+                      />
+                    </Field>
+                  </div>
+
+                  <Field
+                    label="Age"
+                    htmlFor="age"
+                    hint="Required. Learners must be at least 18 to enrol."
+                    error={p.fieldErrors.age}
+                  >
+                    <Input
+                      id="age"
+                      inputMode="numeric"
+                      value={p.age}
+                      onChange={(e) => p.onAge(e.target.value)}
+                      placeholder="e.g. 31"
+                      className="max-w-[160px]"
+                    />
+                  </Field>
+
+                  <div className="flex items-center gap-2 border-t border-rule pt-4">
+                    <Button type="submit" variant="primary" disabled={p.saving}>
+                      {p.saving ? "Saving…" : "Save changes"}
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={p.onCancelEditing}>
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <dl className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4">
+                  {[
+                    ["Full name", user.name || "—"],
+                    ["Email", user.email || "No email on file"],
+                    ["Mobile", `+91 ${user.mobile}`],
+                    ["Age", user.age == null ? "—" : String(user.age)],
+                    ["Average rating", avgRating],
+                    ["Role", user.role ?? "instructor"],
+                  ].map(([k, v]) => (
+                    <div key={k} className="border-b border-rule pb-2">
+                      <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
+                        {k}
+                      </dt>
+                      <dd className="mt-1 truncate text-sm font-medium text-ink">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </Panel>
+
+            <div className="space-y-6">
+              <Panel flush>
+                <PanelHeader className="border-b border-rule px-5 py-3" title="Danger zone" />
+                <div className="space-y-3 p-5">
+                  <Notice tone="warn">
+                    Deleting your account removes your courses, enrolments and unpaid drafts.
+                    Paid orders are retained for accounting. This cannot be undone.
+                  </Notice>
+                  <Button variant="danger" onClick={p.onConfirmDeleteOpen}>
+                    <Trash2 size={15} strokeWidth={2.25} aria-hidden />
+                    Delete my account
+                  </Button>
+                </div>
+              </Panel>
             </div>
           </div>
 
-          <div className="mt-4 rounded-[28px] bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold">Your courses</h2>
-              <Link to="/courses" className="inline-flex items-center gap-1 text-xs font-semibold text-[#3478ff]">Manage <ArrowRight size={12} strokeWidth={2.5} /></Link>
-            </div>
-            {p.loading ? <p className="mt-3 text-sm text-zinc-500">Loading…</p> : total === 0 ? (
-              <p className="mt-3 text-sm text-zinc-500">No courses yet. <Link to="/courses/create" className="inline-flex items-center gap-1 font-semibold text-[#3478ff]">Create one <ArrowRight size={12} strokeWidth={2.5} /></Link></p>
-            ) : (
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                {courses.map((c) => (
-                  <Link key={c.id} to={`/courses/${c.id}`} className="flex gap-3 rounded-2xl border bg-zinc-50 p-3 hover:bg-zinc-100">
-                    <img src={c.cover_image || "https://images.unsplash.com/photo-1558655146-d09347e92766?w=200&auto=format&fit=crop&q=80"} alt="" className="h-16 w-20 rounded-xl object-cover" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold leading-tight">{c.title}</p>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${c.status === "published" ? "bg-emerald-500 text-white" : "bg-yellow-400 text-zinc-900"}`}>{c.status}</span>
-                      </div>
-                      <p className="text-xs text-zinc-500">{c.student_count} students • {Number(c.price) === 0 ? "Free" : `₹${Number(c.price).toLocaleString("en-IN")}`}</p>
-                      <p className="text-[10px] text-zinc-400">Updated {new Date(c.updated_at).toLocaleDateString()}</p>
-                    </div>
+          <Panel flush>
+            <PanelHeader
+              className="border-b border-rule px-5 py-3"
+              title="Your courses"
+              meta={`${total} total`}
+              action={
+                <Link
+                  to="/courses"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-ink-muted transition-colors hover:text-ink"
+                >
+                  Manage all <ArrowRight size={12} strokeWidth={2.5} aria-hidden />
+                </Link>
+              }
+            />
+            {p.loading ? (
+              <p className="px-5 py-8 text-center text-sm text-ink-faint">Loading your courses…</p>
+            ) : courses.length === 0 ? (
+              <ListMessage
+                kind="empty"
+                title="No courses yet"
+                body="Your published and draft courses will be listed here so you can jump straight back into editing one."
+                action={
+                  <Link
+                    to="/courses/create"
+                    className="inline-flex h-9 items-center border border-ink bg-ink px-4 text-xs font-semibold text-ink-inverse transition-colors hover:bg-ink/88"
+                  >
+                    Create your first course
                   </Link>
-                ))}
-              </div>
+                }
+              />
+            ) : (
+              <ListRows>
+                {courses.map((c) => {
+                  const cover = c.cover_image ? absoluteMediaUrl(c.cover_image) : null;
+                  return (
+                  <ListRow key={c.id}>
+                    <div className="h-11 w-16 shrink-0 overflow-hidden border border-rule bg-slate-sunk">
+                      {cover ? (
+                        <img src={cover} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span aria-hidden className="block h-full w-full bg-rule/50" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        to={`/courses/${c.id}`}
+                        className="block max-w-[320px] truncate text-sm font-medium text-ink hover:underline"
+                      >
+                        {c.title}
+                      </Link>
+                      <p className="tnum truncate text-xs text-ink-faint">
+                        {c.student_count} {c.student_count === 1 ? "learner" : "learners"} · rated{" "}
+                        {Number(c.average_rating || 0).toFixed(1)}
+                      </p>
+                    </div>
+                    <Badge tone={statusTone(c.status)}>{c.status}</Badge>
+                  </ListRow>
+                  );
+                })}
+              </ListRows>
             )}
-          </div>
+          </Panel>
         </div>
-      </div>
-        {p.toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white shadow-xl">{p.toast}</div>}
-      </div>
-    </>
+      </PageShell>
+
+      <Modal
+        open={p.confirmDelete}
+        onClose={p.onConfirmDeleteClose}
+        title="Delete your account?"
+        description="This removes your profile, courses and enrolments. Paid orders are kept for accounting. This cannot be undone."
+        size="sm"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={p.onConfirmDeleteClose}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              disabled={p.deleteConfirmText !== "delete" || p.deleting}
+              onClick={p.onDelete}
+            >
+              {p.deleting ? "Deleting…" : "Delete permanently"}
+            </Button>
+          </div>
+        }
+      >
+        <Field
+          label="Type delete to confirm"
+          htmlFor="delete-confirm"
+          hint="This confirms you understand the account cannot be recovered."
+        >
+          <Input
+            id="delete-confirm"
+            value={p.deleteConfirmText}
+            onChange={(e) => p.onDeleteConfirmText(e.target.value)}
+            placeholder="delete"
+            autoComplete="off"
+          />
+        </Field>
+      </Modal>
+    </div>
   );
 }

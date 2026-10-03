@@ -4,10 +4,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home } from "@masterlms/shared";
+import { ArrowLeft } from "@masterlms/shared";
 import type { Role } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 import { api } from "../lib/api";
+import { TeachMark } from "../components/Badge";
+import { Button } from "../components/Button";
+import { Field } from "../components/Controls";
+import { cn } from "../lib/utils";
 
 const phoneSchema = z.object({
   phone: z.string().regex(/^[6-9]\d{9}$/, "Enter valid 10-digit mobile"),
@@ -53,7 +57,7 @@ export default function Login() {
   useEffect(() => {
     const reason = (location.state as { reason?: string } | null)?.reason;
     if (reason === "role") {
-      showToast("You're logged in as a learner — log in with an instructor account.", 4000);
+      showToast("You're logged in as a learner. Sign in with an instructor account.", 4000);
       nav(location.pathname, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,10 +87,19 @@ export default function Login() {
       if (data.user.role !== "instructor") {
         try {
           await api("/auth/become-instructor", { method: "POST" });
-        } catch { /* already instructor or failed — refetch decides */ }
+        } catch {
+          /* already instructor or failed — refetch decides */
+        }
       }
       try {
-        const me = await api<{ name: string; email: string; mobile: string; avatar?: string; age?: number; role?: Role }>("/users/me");
+        const me = await api<{
+          name: string;
+          email: string;
+          mobile: string;
+          avatar?: string;
+          age?: number;
+          role?: Role;
+        }>("/users/me");
         return { me, isNew: data.is_new, fallback: data.user };
       } catch {
         return { me: null, isNew: data.is_new, fallback: data.user };
@@ -104,7 +117,7 @@ export default function Login() {
           age: fallback.age,
         });
       if (role !== "instructor") {
-        showToast("Instructor access not granted for this account");
+        showToast("Instructor access is not enabled for this account.");
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["instructor-courses"] });
@@ -118,101 +131,146 @@ export default function Login() {
   const loading = sendOtp.isPending || verify.isPending;
 
   return (
-    <div className="min-h-screen w-full bg-[#f6f5f1] lg:grid lg:grid-cols-2">
-      <div className="relative hidden h-screen lg:block">
-        <img src="https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg?auto=compress&cs=tinysrgb&w=1400" alt="" className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        <div className="absolute left-10 top-10 flex items-center gap-2 text-white">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-bold text-[#0f172a]">K</span>
-          <span className="text-sm font-bold tracking-wide">QTNXT</span>
-          <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-bold text-zinc-900">Teach</span>
-        </div>
-        <div className="absolute bottom-10 left-10 right-10 text-white">
-          <p className="text-3xl font-extrabold leading-tight tracking-tight">Teach what you<br/>know.</p>
-          <p className="mt-3 max-w-sm text-sm text-white/80">Share skills, grow your audience, earn on your terms. Built for working professionals.</p>
-          <div className="mt-6 flex items-center gap-3 text-xs text-white/70">
-            <span className="h-px w-8 bg-white/40" />
-            <span>Join 2,400+ instructors already on QTNXT</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex min-h-screen flex-col bg-white px-6 py-8 sm:px-10 lg:px-16 lg:py-12">
-        <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 lg:hidden">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f172a] text-xs font-bold text-white">K</span>
-            <span className="text-sm font-bold">QTNXT</span>
-            <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-bold text-zinc-900">Teach</span>
+    <div className="min-h-screen bg-slate-ground">
+      <div className="mx-auto flex min-h-screen w-full max-w-[420px] flex-col px-4 py-8">
+        {/* One lockup only. The old page drew it twice, once per breakpoint. */}
+        <div className="flex items-center justify-between gap-3">
+          <Link to="/" className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center bg-ink text-[13px] font-bold text-ink-inverse">
+              Q
+            </span>
+            <span className="text-sm font-semibold tracking-tight text-ink">QTNXT</span>
+            <TeachMark />
           </Link>
-          <span className="hidden lg:block" />
-          <Link to="/" className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 hover:text-zinc-900">
-            <Home size={12} strokeWidth={2.5} />
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-muted transition-colors hover:text-ink"
+          >
+            <ArrowLeft size={13} strokeWidth={2.5} aria-hidden />
             Home
           </Link>
         </div>
 
-        <div className="flex flex-1 items-center">
-          <div className="mx-auto w-full max-w-sm">
-            <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">Instructor login</h1>
-            <p className="mt-2 text-sm text-zinc-500">{step === "phone" ? "Enter your mobile to get an OTP" : `OTP sent to +91 ${phone}`}</p>
+        <div className="flex flex-1 items-center py-10">
+          <div className="w-full">
+            <h1 className="text-2xl font-semibold tracking-tight text-ink">
+              Sign in to teach
+            </h1>
+            <p className="mt-1.5 text-sm text-ink-muted">
+              {step === "phone"
+                ? "Enter the mobile number on your instructor account."
+                : `We sent a 4-digit code to +91 ${phone}.`}
+            </p>
 
             {step === "phone" ? (
-              <form onSubmit={phoneForm.handleSubmit((v) => sendOtp.mutate(v.phone))} className="mt-8 space-y-5">
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700">Mobile number</label>
-                  <div className="mt-1.5 flex rounded-xl border border-zinc-200 bg-zinc-50 transition focus-within:border-zinc-900 focus-within:bg-white">
-                    <span className="flex items-center px-3 text-sm font-semibold text-zinc-700">+91</span>
+              <form
+                onSubmit={phoneForm.handleSubmit((v) => sendOtp.mutate(v.phone))}
+                className="mt-8 space-y-5"
+              >
+                <Field
+                  label="Mobile number"
+                  htmlFor="phone"
+                  error={phoneForm.formState.errors.phone?.message}
+                >
+                  <div className="flex border border-rule bg-slate-panel transition-colors focus-within:border-ink">
+                    <span className="flex items-center border-r border-rule px-3 text-sm font-medium text-ink-muted">
+                      +91
+                    </span>
                     <input
+                      id="phone"
+                      inputMode="numeric"
+                      autoComplete="tel-national"
                       {...phoneForm.register("phone")}
-                      onChange={(e) => phoneForm.setValue("phone", e.target.value.replace(/\D/g, "").slice(0, 10), { shouldValidate: true })}
+                      onChange={(e) =>
+                        phoneForm.setValue(
+                          "phone",
+                          e.target.value.replace(/\D/g, "").slice(0, 10),
+                          { shouldValidate: true },
+                        )
+                      }
                       placeholder="98765 43210"
-                      className="w-full bg-transparent px-2 py-3 text-sm outline-none"
+                      className="w-full bg-transparent px-3 py-3 text-sm text-ink placeholder:text-ink-faint"
                     />
                   </div>
-                  {phoneForm.formState.errors.phone && <p className="mt-1 text-xs text-red-600">{phoneForm.formState.errors.phone.message}</p>}
-                </div>
-                <button type="submit" disabled={loading} className="w-full rounded-full bg-[#0f172a] py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-60">
+                </Field>
+
+                <Button type="submit" variant="primary" size="lg" block disabled={loading}>
                   {sendOtp.isPending ? "Sending…" : "Send OTP"}
-                </button>
-                <p className="text-center text-xs text-zinc-500">Demo: OTP will appear in the toast below</p>
+                </Button>
+
+                <p className="text-xs leading-relaxed text-ink-faint">
+                  In this demo the code appears in the message below instead of being
+                  sent by SMS.
+                </p>
               </form>
             ) : (
-              <form onSubmit={otpForm.handleSubmit((v) => {
-  if (verifyDone.current || verify.isPending) return;
-  verify.mutate({ mobile: phone, code: v.otp });
-})}
-                  className="mt-8 space-y-5"
+              <form
+                onSubmit={otpForm.handleSubmit((v) => {
+                  if (verifyDone.current || verify.isPending) return;
+                  verify.mutate({ mobile: phone, code: v.otp });
+                })}
+                className="mt-8 space-y-5"
+              >
+                <Field
+                  label="Enter OTP"
+                  htmlFor="otp"
+                  error={otpForm.formState.errors.otp?.message}
                 >
-                  <div>
-                    <label className="text-xs font-semibold text-zinc-700">Enter OTP</label>
-                    <input
-                      {...otpForm.register("otp")}
-                      disabled={verify.isPending || verifyDone.current}
-                    onChange={(e) => otpForm.setValue("otp", e.target.value.replace(/\D/g, "").slice(0, 4), { shouldValidate: true })}
-                    placeholder="1 2 3 4"
-                    className="mt-1.5 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3.5 text-center text-xl tracking-[0.7em] outline-none transition focus:border-zinc-900 focus:bg-white"
+                  <input
+                    id="otp"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    disabled={verify.isPending || verifyDone.current}
+                    {...otpForm.register("otp")}
+                    onChange={(e) =>
+                      otpForm.setValue(
+                        "otp",
+                        e.target.value.replace(/\D/g, "").slice(0, 4),
+                        { shouldValidate: true },
+                      )
+                    }
+                    placeholder="0000"
+                    className="tnum w-full border border-rule bg-slate-panel px-3 py-3.5 text-center text-xl tracking-[0.5em] text-ink placeholder:text-ink-faint transition-colors focus:border-ink"
                   />
-                  {otpForm.formState.errors.otp && <p className="mt-1 text-xs text-red-600">{otpForm.formState.errors.otp.message}</p>}
-                </div>
-                <button type="submit" disabled={loading} className="w-full rounded-full bg-[#0f172a] py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-60">
-                  {verify.isPending ? "Verifying…" : "Verify OTP"}
-                </button>
-                <button type="button" onClick={() => { verifyDone.current = false; setStep("phone"); }} className="w-full rounded-full border border-zinc-200 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">Change number</button>
+                </Field>
+
+                <Button type="submit" variant="primary" size="lg" block disabled={loading}>
+                  {verify.isPending ? "Verifying…" : "Verify and sign in"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  block
+                  onClick={() => {
+                    verifyDone.current = false;
+                    setStep("phone");
+                  }}
+                >
+                  Change number
+                </Button>
               </form>
             )}
           </div>
         </div>
 
-        <div className="space-y-3 pt-8">
-          <p className="text-center text-xs text-zinc-500">By continuing you agree to our Terms • Privacy</p>
-          <Link to="/" className="flex items-center justify-center gap-2 rounded-full bg-zinc-100 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-200">
-            <Home size={14} strokeWidth={2.5} />
-            Skip — go to Home
-          </Link>
-        </div>
+        <p className="text-center text-xs text-ink-faint">
+          By continuing you agree to the QTNXT terms and privacy policy.
+        </p>
       </div>
 
-      {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white shadow-xl">{toast}</div>}
+      {/* Toast carries the outcome, so it is announced rather than only drawn. */}
+      <div aria-live="polite" aria-atomic="true">
+        {toast && (
+          <div
+            className={cn(
+              "fixed bottom-6 left-1/2 z-50 -translate-x-1/2 border border-rule-strong",
+              "bg-ink px-5 py-2.5 text-sm text-ink-inverse shadow-[0_18px_40px_-12px_rgba(20,24,38,0.4)]",
+            )}
+          >
+            {toast}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

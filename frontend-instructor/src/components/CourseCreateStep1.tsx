@@ -39,15 +39,15 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
 
   return (
     <div className={builderCardClass}>
-      <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
         Step 1 of 2 · Basics
       </p>
-      <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900">
+      <h1 className="mt-1 text-2xl font-semibold text-ink">
         Course details
       </h1>
-      <p className="mt-1.5 text-[15px] text-zinc-500">Set the basics — you can always edit these later.</p>
+      <p className="mt-1.5 text-[15px] text-ink-muted">Set the basics. You can always edit these later.</p>
 
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="mt-8 space-y-7">
+      <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="mt-8 space-y-6">
         <div>
           <label htmlFor="title" className={builderLabelClass}>Title *</label>
           <input
@@ -57,29 +57,29 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
             placeholder="Enter course title"
             className={builderFieldClass}
           />
-          {errors.title && <p className="mt-1.5 text-sm text-red-500">{errors.title}</p>}
+          {errors.title && <p className="mt-1.5 text-sm text-halt">{errors.title}</p>}
         </div>
 
         <div>
           <div className="mb-1.5 flex items-center justify-between">
             <label htmlFor="subtitle" className={builderLabelClass}>Subtitle</label>
-            <span className="text-xs font-semibold text-zinc-400">{values.subtitle.length}/255</span>
+            <span className="text-xs font-semibold text-ink-faint tnum">{values.subtitle.length}/255</span>
           </div>
           <input
             id="subtitle"
             value={values.subtitle}
             maxLength={255}
             onChange={(e) => onChange({ subtitle: e.target.value })}
-            placeholder="Short tagline — shown on course cards"
-            className={cn(builderFieldClass, errors.subtitle && "!border-red-400")}
+            placeholder="Short tagline, shown on course cards"
+            className={cn(builderFieldClass, errors.subtitle && "!border-halt")}
           />
-          {errors.subtitle && <p className="mt-1.5 text-sm text-red-500">{errors.subtitle}</p>}
+          {errors.subtitle && <p className="mt-1.5 text-sm text-halt">{errors.subtitle}</p>}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-zinc-200/70 bg-zinc-50/70 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4 border border-rule bg-slate-sunk p-5">
           <div className="flex min-w-0 items-center gap-3">
-            <p className="text-sm text-zinc-600">
-              <span className="font-semibold text-zinc-900">AI descriptions are coming soon.</span>{" "}
+            <p className="text-sm text-ink-muted">
+              <span className="font-semibold text-ink">AI descriptions are coming soon.</span>{" "}
               Write yours below for now.
             </p>
           </div>
@@ -88,13 +88,13 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
             onClick={onAiClick}
             disabled
             title="AI descriptions are coming soon"
-            className="inline-flex h-12 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-full border border-zinc-200 bg-white px-5 text-sm font-semibold opacity-70"
+            className="inline-flex h-12 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-sm border border-rule bg-slate-panel px-5 text-sm font-semibold opacity-70"
           >
-            <Sparkles size={16} className="text-[#3478ff]" />
-            <span className="text-[#152561]">
+            <Sparkles size={16} className="text-ink-faint" />
+            <span className="text-ink-muted">
               Generate using AI
             </span>
-            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-bold text-zinc-500">SOON</span>
+            <span className="rounded-sm bg-slate-sunk px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">Soon</span>
           </button>
         </div>
 
@@ -105,15 +105,15 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
             rows={5}
             value={values.description}
             onChange={(e) => onChange({ description: e.target.value })}
-            placeholder="Detailed overview — goals, audience, prerequisites… shown in the Description section"
+            placeholder="Detailed overview: goals, audience, prerequisites"
             className={cn(builderFieldClass, "resize-none")}
           />
-          {errors.description && <p className="mt-1.5 text-sm text-red-500">{errors.description}</p>}
+          {errors.description && <p className="mt-1.5 text-sm text-halt">{errors.description}</p>}
         </div>
 
         <div>
           <label htmlFor="learn" className={builderLabelClass}>
-            What you’ll learn <span className="font-normal text-zinc-400">(dot separated — each sentence becomes a bullet)</span>
+            What you’ll learn <span className="font-normal text-ink-faint">(dot separated — each sentence becomes a bullet)</span>
           </label>
           <textarea
             id="learn"
@@ -126,37 +126,39 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
         </div>
 
         <div>
-          <span className="mb-4 block text-[15px] font-bold text-zinc-900">Set pricing</span>
+          <span className="mb-4 block text-[15px] font-semibold text-ink">Set pricing</span>
           <div className="space-y-4">
             <label
               className={cn(
-                "flex cursor-pointer gap-4 rounded-2xl border p-6 transition-colors",
-                values.pricingType === FREE ? "border-[#3478ff] bg-[#eef1ff]" : "border-zinc-200 bg-white"
+                "flex cursor-pointer gap-4 border p-6 transition-colors",
+                values.pricingType === FREE
+                  ? "border-ink bg-slate-sunk"
+                  : "border-rule bg-slate-panel"
               )}
             >
               <input
                 type="radio"
                 checked={values.pricingType === FREE}
                 onChange={() => onChange({ pricingType: FREE, price: "", originalPrice: "", discountPercent: "" })}
-                className="mt-1 h-4 w-4 accent-[#3478ff]"
+                className="mt-1 h-4 w-4 accent-ink"
               />
               <div>
-                <p className="text-[15px] font-semibold text-zinc-900">Free plan</p>
-                <p className="mt-1 text-sm text-zinc-500">Allow unrestricted access to your content free of cost</p>
+                <p className="text-[15px] font-semibold text-ink">Free plan</p>
+                <p className="mt-1 text-sm text-ink-muted">Allow unrestricted access to your content free of cost</p>
               </div>
             </label>
 
-            <div className={cn("rounded-2xl border p-6 transition-colors", values.pricingType === ONE_TIME ? "border-[#3478ff] bg-[#eef1ff]" : "border-zinc-200 bg-white")}>
+            <div className={cn("border p-6 transition-colors", values.pricingType === ONE_TIME ? "border-ink bg-slate-sunk" : "border-rule bg-slate-panel")}>
               <label className="flex cursor-pointer gap-4">
                 <input
                   type="radio"
                   checked={values.pricingType === ONE_TIME}
                   onChange={() => onChange({ pricingType: ONE_TIME })}
-                  className="mt-1 h-4 w-4 accent-[#3478ff]"
+                  className="mt-1 h-4 w-4 accent-ink"
                 />
                 <div>
-                  <p className="text-[15px] font-semibold text-zinc-900">One-time plan</p>
-                  <p className="mt-1 text-sm text-zinc-500">Allow full course access with a single payment</p>
+                  <p className="text-[15px] font-semibold text-ink">One-time plan</p>
+                  <p className="mt-1 text-sm text-ink-muted">Allow full course access with a single payment</p>
                 </div>
               </label>
 
@@ -164,10 +166,11 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
                 <div className="mt-5 space-y-5">
                   <div className="grid gap-5 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-zinc-900">Actual amount *</label>
-                      <div className="flex items-center overflow-hidden rounded-xl border border-zinc-200 bg-white focus-within:border-[#3478ff]">
-                        <span className="flex items-center self-stretch border-r border-zinc-200 bg-zinc-50 px-3.5 text-sm text-zinc-600">₹</span>
+                      <label htmlFor="original-price" className="mb-1.5 block text-sm font-semibold text-ink">Actual amount *</label>
+                      <div className="flex items-center overflow-hidden rounded-sm border border-rule bg-slate-panel focus-within:border-ink">
+                        <span className="flex items-center self-stretch border-r border-rule bg-slate-sunk px-3 text-sm text-ink-muted tnum">₹</span>
                         <input
+                          id="original-price"
                           type="number"
                           min="0"
                           max="99999.99"
@@ -175,15 +178,16 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
                           value={values.originalPrice}
                           onChange={(e) => setOriginal(e.target.value)}
                           placeholder="Enter amount before discount"
-                          className="h-12 w-full px-4 text-[15px] outline-none"
+                          className="h-12 w-full px-4 text-[15px] tnum"
                         />
                       </div>
-                      {errors.originalPrice && <p className="mt-1.5 text-sm text-red-500">{errors.originalPrice}</p>}
+                      {errors.originalPrice && <p className="mt-1.5 text-sm text-halt">{errors.originalPrice}</p>}
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-zinc-900">Discount % <span className="font-normal text-zinc-400">(0–99)</span></label>
-                      <div className="flex items-center overflow-hidden rounded-xl border border-zinc-200 bg-white focus-within:border-[#3478ff]">
+                      <label htmlFor="discount-pct" className="mb-1.5 block text-sm font-semibold text-ink">Discount % <span className="font-normal text-ink-faint">(0–99)</span></label>
+                      <div className="flex items-center overflow-hidden rounded-sm border border-rule bg-slate-panel focus-within:border-ink">
                         <input
+                          id="discount-pct"
                           type="number"
                           min="0"
                           max="99"
@@ -191,42 +195,42 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
                           value={values.discountPercent}
                           onChange={(e) => setDiscount(e.target.value)}
                           placeholder="e.g. 20"
-                          className="h-12 w-full px-4 text-[15px] outline-none"
+                          className="h-12 w-full px-4 text-[15px] tnum"
                         />
-                        <span className="flex items-center self-stretch bg-zinc-50 px-3.5 text-sm text-zinc-600">%</span>
+                        <span className="flex items-center self-stretch bg-slate-sunk px-3 text-sm text-ink-muted tnum">%</span>
                       </div>
-                      {errors.price && <p className="mt-1.5 text-sm text-red-500">{errors.price}</p>}
+                      {errors.price && <p className="mt-1.5 text-sm text-halt">{errors.price}</p>}
                     </div>
                   </div>
 
                   {Number(values.originalPrice) > 0 && (
-                    <div className="flex items-center justify-between rounded-2xl border border-zinc-200/70 bg-zinc-50/70 px-5 py-4">
-                      <span className="text-sm text-zinc-600">
+                    <div className="flex items-center justify-between border border-rule bg-slate-sunk px-5 py-4">
+                      <span className="text-sm text-ink-muted">
                         Final amount{" "}
                         {pct > 0 ? (
-                          <span className="text-emerald-700">({pct}% off ₹{Number(values.originalPrice).toLocaleString("en-IN")})</span>
+                          <span className="text-live tnum">({pct}% off ₹{Number(values.originalPrice).toLocaleString("en-IN")})</span>
                         ) : (
-                          <span className="text-zinc-400">(no discount)</span>
+                          <span className="text-ink-faint">(no discount)</span>
                         )}
                       </span>
-                      <span className="text-xl font-bold tabular-nums">
+                      <span className="text-xl font-semibold tnum">
                         {priceNum > 0 ? `₹${priceNum.toLocaleString("en-IN")}` : "—"}
                       </span>
                     </div>
                   )}
 
-                  <label className="flex cursor-pointer items-center gap-2.5 text-sm text-zinc-700">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-muted">
                     <input
                       type="checkbox"
                       checked={values.pgFeesToLearner}
                       onChange={(e) => onChange({ pgFeesToLearner: e.target.checked })}
-                      className="h-4 w-4 accent-[#3478ff]"
+                      className="h-4 w-4 accent-ink"
                     />
-                    <span>Pass gateway fee to learners <span className="text-zinc-400">(added on top of price)</span></span>
+                    <span>Pass gateway fee to learners <span className="text-ink-faint">(added on top of price)</span></span>
                   </label>
 
                   {priceNum > 0 && (
-                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm text-emerald-800">
+                    <div className="border border-live/25 bg-live-soft px-5 py-3 text-sm text-live tnum">
                       Learner pays <b>₹{priceNum.toLocaleString("en-IN")}</b> · You keep ≈ <b>₹{keep.toLocaleString("en-IN")}</b> (85% revenue share)
                       {pct > 0 && <span> · <b>{pct}% off</b> MRP</span>}
                     </div>
@@ -245,7 +249,7 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
           <button
             type="submit"
             disabled={isSubmitting}
-            className="h-12 rounded-full bg-[#0f172a] px-7 text-[15px] font-bold text-white disabled:opacity-60"
+            className="h-12 rounded-sm bg-ink px-7 text-[15px] font-semibold text-ink-inverse disabled:opacity-60"
           >
             {isSubmitting ? (editing ? "Saving…" : "Creating…") : (editing ? "Save & continue" : "Continue →")}
           </button>

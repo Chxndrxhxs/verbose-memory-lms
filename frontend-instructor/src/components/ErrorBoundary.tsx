@@ -11,7 +11,9 @@ export class ErrorBoundary extends Component<
   render() {
     if (this.state.hasError)
       return (
-        <div className="p-8 text-center text-sm">Something went wrong.</div>
+        <div className="border border-halt/25 bg-halt-soft p-6 text-center text-sm text-halt">
+          Something went wrong.
+        </div>
       );
     return this.props.children;
   }

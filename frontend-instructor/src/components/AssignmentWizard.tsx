@@ -157,13 +157,13 @@ export function AssignmentWizard({
   return (
     <div className="space-y-6">
       <div className={builderCardClass}>
-        <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
           {assignment.id ? "Edit assignment" : "New assignment"}
         </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 sm:text-[28px]">
+        <h1 className="mt-1 text-2xl font-semibold text-ink">
           {assignment.title.trim() || "Untitled assignment"}
         </h1>
-        <p className="mt-1 text-[15px] text-zinc-500">
+        <p className="mt-1 text-[15px] text-ink-muted tnum">
           Step {step + 1} of {STEP_LABELS.length} · {STEP_LABELS[step]}
         </p>
         <ol className="mt-5 flex items-center gap-2 overflow-x-auto pb-1">
@@ -172,38 +172,39 @@ export function AssignmentWizard({
             const completed = i < step;
             return (
               <li key={label} className="flex shrink-0 items-center gap-2">
-                {i > 0 && <span className="h-px w-3 bg-zinc-300" aria-hidden />}
+                {i > 0 && <span className="h-px w-4 bg-rule-strong" aria-hidden />}
                 <button
                   key={label}
+                  type="button"
                   onClick={() => {
                     if (i <= step || (i <= step + 1 && !blocker)) setStep(i);
                   }}
                   title={captions[i]}
                   className={cn(
-                    "rounded-2xl border px-3.5 py-2 text-left transition-all",
+                    "rounded-sm border px-3 py-2 text-left transition-colors",
                     active
-                      ? "border-zinc-900 bg-zinc-900 text-white shadow-sm"
+                      ? "border-ink bg-ink text-ink-inverse"
                       : completed
-                        ? "border-emerald-200 bg-emerald-50 hover:border-emerald-300"
-                        : "border-zinc-200 bg-white hover:border-zinc-400",
+                        ? "border-live/25 bg-live-soft hover:border-live/50"
+                        : "border-rule bg-slate-panel hover:border-rule-strong",
                   )}
                 >
                   <span
                     className={cn(
-                      "block text-xs font-bold whitespace-nowrap",
+                      "block text-xs font-semibold whitespace-nowrap tnum",
                       active
-                        ? "text-white"
+                        ? "text-ink-inverse"
                         : completed
-                          ? "text-emerald-800"
-                          : "text-zinc-900",
+                          ? "text-live"
+                          : "text-ink",
                     )}
                   >
                     {i + 1}. {label}
                   </span>
                   <span
                     className={cn(
-                      "block max-w-32 truncate text-[11px]",
-                      active ? "text-white/70" : "text-zinc-500",
+                      "block max-w-32 truncate text-[11px] tnum",
+                      active ? "text-ink-inverse/70" : "text-ink-muted",
                     )}
                   >
                     {captions[i]}
@@ -219,12 +220,13 @@ export function AssignmentWizard({
 
       <div className={cn(builderCardClass, "flex items-center justify-between gap-3 !p-4 sm:!p-5")}>
         <button
+          type="button"
           onClick={goBack}
           disabled={step === 0}
           className={cn(
-            "inline-flex items-center gap-2 rounded-full border border-zinc-200",
-            "px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors",
-            "hover:bg-zinc-50 disabled:opacity-40",
+            "inline-flex items-center gap-2 rounded-sm border border-rule",
+            "px-4 py-2 text-sm font-semibold text-ink-muted transition-colors",
+            "hover:bg-slate-sunk disabled:opacity-40",
           )}
         >
           <ArrowLeft size={14} /> Back
@@ -232,12 +234,13 @@ export function AssignmentWizard({
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => onSave(false)}
             disabled={saving}
             className={cn(
-              "inline-flex items-center gap-2 rounded-full border border-zinc-200",
-              "px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors",
-              "hover:bg-zinc-50 disabled:opacity-50",
+              "inline-flex items-center gap-2 rounded-sm border border-rule",
+              "px-4 py-2 text-sm font-semibold text-ink-muted transition-colors",
+              "hover:bg-slate-sunk disabled:opacity-50",
             )}
           >
             <Save size={14} /> {saving ? "Saving…" : "Save draft"}
@@ -246,17 +249,18 @@ export function AssignmentWizard({
           {step < STEP_LABELS.length - 1 ? (
             <span className="inline-flex items-center gap-2">
               {blocker && (
-                <span className="hidden text-xs text-zinc-400 sm:block">
+                <span className="hidden text-xs text-ink-faint sm:block">
                   {blocker}
                 </span>
               )}
               <button
+                type="button"
                 onClick={advance}
                 disabled={Boolean(blocker) || saving}
                 title={blocker ?? "Save and continue"}
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-full bg-[#0f172a]",
-                  "px-4 py-2.5 text-sm font-semibold text-white shadow-sm",
+                  "inline-flex items-center gap-2 rounded-sm bg-ink",
+                  "px-4 py-2 text-sm font-semibold text-ink-inverse",
                   "transition-opacity hover:opacity-90 disabled:opacity-40",
                 )}
               >
@@ -265,6 +269,7 @@ export function AssignmentWizard({
             </span>
           ) : (
             <button
+              type="button"
               onClick={() => onSave(true)}
               disabled={saving || errors.length > 0}
               title={
@@ -273,9 +278,9 @@ export function AssignmentWizard({
                   : "Publish for students"
               }
               className={cn(
-                "inline-flex items-center gap-2 rounded-full bg-emerald-600",
-                "px-5 py-2.5 text-sm font-semibold text-white shadow-sm",
-                "transition-opacity hover:bg-emerald-700 disabled:opacity-50",
+                "inline-flex items-center gap-2 rounded-sm border border-live bg-live",
+                "px-5 py-2 text-sm font-semibold text-ink-inverse",
+                "transition-colors hover:bg-live/88 disabled:opacity-50",
               )}
             >
               <Check size={14} /> Publish
