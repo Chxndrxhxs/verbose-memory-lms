@@ -1,9 +1,21 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, Search, Trash2 } from "@masterlms/shared";
+import { Eye, EyeOff, ImageIcon, Trash2 } from "@masterlms/shared";
 import type { AdminCourse } from "../types/admin";
-import { cn } from "../lib/utils";
-import { Card } from "./Card";
+import { PageHeader } from "./Panel";
+import { Badge, statusTone } from "./Badge";
+import { Button } from "./Button";
+import { SearchInput, Select } from "./Controls";
+import {
+  GridHead,
+  GridMessage,
+  GridPanel,
+  GridScroll,
+  GridSkeleton,
+  Td,
+  Th,
+  Tr,
+} from "./DataGrid";
 import { Pagination } from "./Pagination";
 import { ConfirmDialog } from "./ConfirmDialog";
 
@@ -48,127 +60,149 @@ export function CoursesView({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-extrabold tracking-tight">Courses</h1>
-        <p className="text-sm text-zinc-500">Edit, publish, unpublish or remove any course on the platform.</p>
-      </div>
+      <PageHeader
+        title="Courses"
+        description="Edit, publish, unpublish or remove any course on the platform."
+      />
 
-      <Card>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[220px] flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" strokeWidth={2.5} />
-            <input
+      <GridPanel
+        toolbar={
+          <>
+            <SearchInput
               value={q}
-              onChange={(e) => onSearch(e.target.value)}
-              placeholder="Search title, instructor or category…"
-              className="w-full rounded-xl border bg-zinc-50 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-zinc-900"
+              onChange={onSearch}
+              placeholder="Search title, instructor or category"
+              busy={searchLoading}
             />
-            {searchLoading && <span className="absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 animate-ping rounded-full bg-zinc-400" />}
-          </div>
-          <select
-            value={status}
-            onChange={(e) => onStatus(e.target.value as "" | "draft" | "published")}
-            className="rounded-xl border bg-white px-3 py-2.5 text-sm font-medium text-zinc-700 outline-none"
-          >
-            <option value="">All statuses</option>
-            <option value="published">Published</option>
-            <option value="draft">Drafts</option>
-          </select>
-        </div>
-      </Card>
-
-      <Card className="p-0 overflow-hidden">
+            <Select
+              value={status}
+              onChange={(e) => onStatus(e.target.value as "" | "draft" | "published")}
+              aria-label="Filter by status"
+              className="w-auto min-w-[150px]"
+            >
+              <option value="">All statuses</option>
+              <option value="published">Published</option>
+              <option value="draft">Drafts</option>
+            </Select>
+          </>
+        }
+        footer={<Pagination page={page} pages={pages} total={total} onChange={onPage} />}
+      >
         {loading ? (
-          <div className="divide-y">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex animate-pulse items-center gap-3 px-5 py-4">
-                <div className="h-10 w-14 rounded-lg bg-zinc-200" />
-                <div className="h-4 w-52 rounded bg-zinc-200" />
-                <div className="ml-auto h-4 w-16 rounded bg-zinc-200" />
-              </div>
-            ))}
-          </div>
+          <GridSkeleton rows={6} cells={7} />
         ) : error ? (
-          <p className="px-5 py-8 text-center text-sm text-red-600">{error}</p>
+          <GridMessage kind="error" title="Could not load courses" body={error} />
         ) : data.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-zinc-400">No courses match.</p>
+          <GridMessage
+            kind="empty"
+            title={q || status ? "No courses match those filters" : "No courses yet"}
+            body={
+              q || status
+                ? "Try a different title, instructor or status."
+                : "Courses appear here once an instructor creates one in the instructor console."
+            }
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b text-[11px] uppercase tracking-wider text-zinc-400">
-                  <th className="px-5 py-3 font-semibold">Course</th>
-                  <th className="px-5 py-3 font-semibold">Instructor</th>
-                  <th className="px-5 py-3 font-semibold">Price</th>
-                  <th className="px-5 py-3 font-semibold">Students</th>
-                  <th className="px-5 py-3 font-semibold">Rating</th>
-                  <th className="px-5 py-3 font-semibold">Status</th>
-                  <th className="px-5 py-3 text-right font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {data.map((c) => (
-                  <tr key={c.id} className="hover:bg-zinc-50/60">
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        {c.cover_image ? (
-                          <img src={c.cover_image} alt="" className="h-10 w-14 rounded-lg object-cover bg-zinc-100" />
-                        ) : (
-                          <span className="flex h-10 w-14 items-center justify-center rounded-lg bg-zinc-100 text-[10px] font-bold text-zinc-400">
-                            NO IMG
-                          </span>
-                        )}
-                        <div className="min-w-0">
-                          <Link to={`/courses/${c.id}`} className="block max-w-[240px] truncate font-semibold text-zinc-800 hover:underline">
-                            {c.title}
-                          </Link>
-                          <p className="truncate text-xs text-zinc-400">{c.category}{c.subtitle ? ` · ${c.subtitle}` : ""}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-zinc-600">{c.instructor_name}</td>
-                    <td className="px-5 py-3 font-semibold text-zinc-700">
-                      {c.pricing_type === "free" ? "Free" : `₹${Number(c.price).toLocaleString("en-IN")}`}
-                    </td>
-                    <td className="px-5 py-3 text-zinc-600">{c.student_count}</td>
-                    <td className="px-5 py-3 text-zinc-600">{Number(c.average_rating).toFixed(1)} ★</td>
-                    <td className="px-5 py-3">
-                      <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase", c.status === "published" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
-                        {c.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex justify-end gap-1">
-                        <Link to={`/courses/${c.id}`} className="rounded-lg px-2.5 py-1 text-xs font-semibold text-[#0f172a] hover:bg-zinc-100">
-                          View
+          <GridScroll>
+            <GridHead>
+              <Th>Course</Th>
+              <Th>Instructor</Th>
+              <Th align="right">Price</Th>
+              <Th align="right">Students</Th>
+              <Th align="right">Rating</Th>
+              <Th>Status</Th>
+              <Th align="right">Actions</Th>
+            </GridHead>
+            <tbody>
+              {data.map((c) => (
+                <Tr key={c.id}>
+                  <Td>
+                    <div className="flex items-center gap-3">
+                      {c.cover_image ? (
+                        <img
+                          src={c.cover_image}
+                          alt=""
+                          className="h-9 w-14 shrink-0 bg-paper-sunk object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-9 w-14 shrink-0 items-center justify-center bg-paper-sunk text-ink-faint">
+                          <ImageIcon size={15} strokeWidth={2} aria-hidden />
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <Link
+                          to={`/courses/${c.id}`}
+                          className="block max-w-[240px] truncate text-sm font-medium text-ink hover:underline"
+                        >
+                          {c.title}
                         </Link>
-                        <button
-                          onClick={() => onToggle(c.id, c.status === "published" ? "draft" : "published")}
-                          disabled={togglingId === c.id}
-                          title={c.status === "published" ? "Unpublish" : "Publish"}
-                          className="rounded-lg px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-100 disabled:opacity-50"
-                        >
-                          {c.status === "published" ? <EyeOff size={16} strokeWidth={2.5} /> : <Eye size={16} strokeWidth={2.5} />}
-                        </button>
-                        <button
-                          onClick={() => setTarget(c)}
-                          disabled={deleting && deletingId === c.id}
-                          className="rounded-lg px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
-                        >
-                          <Trash2 size={16} strokeWidth={2.5} />
-                        </button>
+                        <p className="max-w-[240px] truncate text-xs text-ink-faint">
+                          {c.category}
+                          {c.subtitle ? ` · ${c.subtitle}` : ""}
+                        </p>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </Td>
+                  <Td className="text-ink-muted">{c.instructor_name}</Td>
+                  <Td align="right" className="tnum whitespace-nowrap text-ink">
+                    {c.pricing_type === "free"
+                      ? "Free"
+                      : `₹${Number(c.price).toLocaleString("en-IN")}`}
+                  </Td>
+                  <Td align="right" className="tnum text-ink-muted">
+                    {c.student_count}
+                  </Td>
+                  <Td align="right" className="tnum whitespace-nowrap text-ink-muted">
+                    {Number(c.average_rating).toFixed(1)}
+                  </Td>
+                  <Td>
+                    <Badge tone={statusTone(c.status)}>{c.status}</Badge>
+                  </Td>
+                  <Td align="right">
+                    <div className="flex justify-end gap-1">
+                      <Link
+                        to={`/courses/${c.id}`}
+                        className="inline-flex h-8 items-center border border-transparent px-2.5 text-xs font-semibold text-ink-muted transition-colors hover:border-rule hover:bg-paper-raised hover:text-ink"
+                      >
+                        View
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        onClick={() => onToggle(c.id, c.status === "published" ? "draft" : "published")}
+                        disabled={togglingId === c.id}
+                        aria-label={
+                          c.status === "published"
+                            ? `Unpublish ${c.title}`
+                            : `Publish ${c.title}`
+                        }
+                      >
+                        {c.status === "published" ? (
+                          <EyeOff size={15} strokeWidth={2.2} aria-hidden />
+                        ) : (
+                          <Eye size={15} strokeWidth={2.2} aria-hidden />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        onClick={() => setTarget(c)}
+                        disabled={deleting && deletingId === c.id}
+                        aria-label={`Delete ${c.title}`}
+                        className="text-halt hover:bg-halt-soft"
+                      >
+                        <Trash2 size={15} strokeWidth={2.2} aria-hidden />
+                      </Button>
+                    </div>
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </GridScroll>
         )}
-        <div className="px-5">
-          <Pagination page={page} pages={pages} total={total} onChange={onPage} />
-        </div>
-      </Card>
+      </GridPanel>
 
       <ConfirmDialog
         open={target !== null}

@@ -13,14 +13,14 @@ import {
 import { cn } from "../lib/utils";
 import { useAuth } from "../hooks/useAuth";
 
-const NAV: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
+const NAV: { to: string; label: string; icon: LucideIcon; end?: boolean; count?: string }[] = [
   { to: "/", label: "Dashboard", icon: LayoutGrid, end: true },
-  { to: "/users", label: "Users", icon: Users },
-  { to: "/courses", label: "Courses", icon: FileText },
-  { to: "/enrollments", label: "Enrollments", icon: UserPlus },
-  { to: "/payments", label: "Payments", icon: Receipt },
-  { to: "/assignments", label: "Assignments", icon: ListChecks },
-  { to: "/categories", label: "Categories", icon: Network },
+  { to: "/users", label: "Users", icon: Users, count: "Accounts" },
+  { to: "/courses", label: "Courses", icon: FileText, count: "Catalogue" },
+  { to: "/enrollments", label: "Enrollments", icon: UserPlus, count: "Activity" },
+  { to: "/payments", label: "Payments", icon: Receipt, count: "Ledger" },
+  { to: "/assignments", label: "Assignments", icon: ListChecks, count: "Assessments" },
+  { to: "/categories", label: "Categories", icon: Network, count: "Taxonomy" },
 ];
 
 export function AdminLayout() {
@@ -34,16 +34,22 @@ export function AdminLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f5f1]">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-[#0f172a] p-4 md:flex">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-white text-sm font-black text-[#0f172a]">Q</span>
+    <div className="min-h-screen bg-paper">
+      {/* Desktop rail: bordered, not floating. Structure from rules, not shadow. */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-56 flex-col border-r border-rule bg-paper-raised md:flex">
+        <div className="flex h-14 items-center gap-2.5 border-b border-rule px-4">
+          <span className="flex h-7 w-7 items-center justify-center bg-ink text-[13px] font-bold text-paper-raised">
+            Q
+          </span>
           <div className="leading-none">
-            <p className="text-sm font-bold tracking-tight text-white">QTNXT</p>
-            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Admin</p>
+            <p className="text-[13px] font-semibold tracking-tight text-ink">QTNXT</p>
+            <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-ink-faint">
+              Admin
+            </p>
           </div>
         </div>
-        <nav className="mt-8 flex flex-1 flex-col gap-1 overflow-y-auto">
+
+        <nav className="flex flex-1 flex-col overflow-y-auto p-2">
           {NAV.map((item) => (
             <NavLink
               key={item.to}
@@ -51,41 +57,76 @@ export function AdminLayout() {
               end={item.end}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition",
-                  isActive ? "bg-white/10 text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                  "group relative flex items-center gap-2.5 px-2.5 py-2 text-[13px] font-medium transition-colors duration-100",
+                  isActive
+                    ? "bg-paper-sunk text-ink"
+                    : "text-ink-muted hover:bg-paper-sunk hover:text-ink",
                 )
               }
             >
-              <item.icon size={16} strokeWidth={2.5} />
-              {item.label}
+              {({ isActive }) => (
+                <>
+                  {/* Active marker is a rail, not a filled pill. */}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 bg-ink transition-opacity",
+                      isActive ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                  <item.icon size={15} strokeWidth={2.2} aria-hidden />
+                  {item.label}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white"
-        >
-          <LogOut size={16} strokeWidth={2.5} />
-          Logout
-        </button>
-      </aside>
 
-      <header className="sticky top-0 z-20 flex items-center justify-between bg-white px-4 py-3 shadow-sm md:hidden">
-        <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#0f172a] text-xs font-black text-white">Q</span>
-          <div className="leading-none">
-            <p className="text-sm font-bold tracking-tight">QTNXT</p>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Admin</p>
+        <div className="border-t border-rule p-2">
+          <div className="flex items-center gap-2.5 px-2.5 py-2">
+            {user?.avatar ? (
+              <img src={user.avatar} alt="" className="h-7 w-7 shrink-0 object-cover" />
+            ) : (
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center bg-ink text-[11px] font-semibold text-paper-raised">
+                {(user?.name?.[0] ?? "A").toUpperCase()}
+              </span>
+            )}
+            <div className="min-w-0 flex-1 leading-tight">
+              <p className="truncate text-xs font-semibold text-ink">{user?.name}</p>
+              <p className="truncate text-[10px] uppercase tracking-[0.12em] text-ink-faint">
+                Administrator
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <p className="max-w-[120px] truncate text-xs font-semibold text-zinc-600">{user?.name}</p>
-          <button onClick={handleLogout} className="rounded-full p-2 text-zinc-500 hover:bg-zinc-100" aria-label="Logout">
-            <LogOut size={16} strokeWidth={2.5} />
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-2.5 px-2.5 py-2 text-[13px] font-medium text-ink-muted transition-colors hover:bg-paper-sunk hover:text-halt"
+          >
+            <LogOut size={15} strokeWidth={2.2} aria-hidden />
+            Log out
           </button>
         </div>
+      </aside>
+
+      {/* Mobile bar */}
+      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-rule bg-paper-raised px-4 md:hidden">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center bg-ink text-[13px] font-bold text-paper-raised">
+            Q
+          </span>
+          <p className="text-[13px] font-semibold tracking-tight text-ink">QTNXT Admin</p>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="flex h-9 w-9 items-center justify-center text-ink-muted transition-colors hover:bg-paper-sunk"
+          aria-label="Log out"
+        >
+          <LogOut size={16} strokeWidth={2.2} />
+        </button>
       </header>
-      <div className="flex gap-1 overflow-x-auto bg-[#0f172a] px-3 py-2 md:hidden">
+
+      {/* Mobile nav: a horizontal ledger strip, not pill chips. */}
+      <nav className="flex gap-0 overflow-x-auto border-b border-rule bg-paper px-3 md:hidden">
         {NAV.map((item) => (
           <NavLink
             key={item.to}
@@ -93,19 +134,21 @@ export function AdminLayout() {
             end={item.end}
             className={({ isActive }) =>
               cn(
-                "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold",
-                isActive ? "bg-white text-[#0f172a]" : "text-zinc-300 hover:bg-white/10"
+                "flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-semibold transition-colors",
+                isActive
+                  ? "border-ink text-ink"
+                  : "border-transparent text-ink-faint hover:text-ink-muted",
               )
             }
           >
-            <item.icon size={14} strokeWidth={2.5} />
+            <item.icon size={13} strokeWidth={2.2} aria-hidden />
             {item.label}
           </NavLink>
         ))}
-      </div>
+      </nav>
 
-      <main className="px-3 py-6 sm:px-6 md:ml-60 md:py-8">
-        <div className="mx-auto max-w-[1280px]">
+      <main className="px-4 py-6 sm:px-6 md:ml-56 md:py-8">
+        <div className="mx-auto max-w-[1400px]">
           <Outlet />
         </div>
       </main>

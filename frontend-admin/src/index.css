@@ -1,11 +1,131 @@
 @import "tailwindcss";
 
+/*
+ * QTNXT Admin — "ledger" system.
+ * Warm paper ground, warm ink, hairline rules, tabular figures.
+ * Colour is semantic: live / hold / halt / in-flight. Never decorative.
+ */
+
 @theme {
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-display: "Instrument Sans", system-ui, sans-serif;
+  /* Sans: Inter carries UI text. Display: Instrument Sans for headings. */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Instrument Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Paper ground — warm, tinted toward the brand hue. Never pure white. */
+  --color-paper: oklch(0.977 0.004 85);
+  --color-paper-raised: oklch(0.988 0.003 85);
+  --color-paper-sunk: oklch(0.958 0.006 85);
+
+  /* Ink — warm near-black. Never pure black. */
+  --color-ink: oklch(0.235 0.012 265);
+  --color-ink-muted: oklch(0.505 0.011 265);
+  --color-ink-faint: oklch(0.665 0.009 265);
+  --color-ink-inverse: oklch(0.975 0.004 85);
+
+  /* Rule — the only separator in the system. */
+  --color-rule: oklch(0.905 0.006 85);
+  --color-rule-strong: oklch(0.845 0.008 85);
+
+  /* Semantic roles. Each is paired with an icon or word, never colour alone. */
+  --color-live: oklch(0.545 0.115 155); /* published, paid, active */
+  --color-live-soft: oklch(0.945 0.032 155);
+  --color-hold: oklch(0.63 0.125 75); /* draft, pending */
+  --color-hold-soft: oklch(0.95 0.04 82);
+  --color-halt: oklch(0.552 0.185 25); /* failed, deleted, destructive */
+  --color-halt-soft: oklch(0.95 0.032 25);
+  --color-flight: oklch(0.5 0.105 245); /* in-progress, informational */
+  --color-flight-soft: oklch(0.945 0.03 245);
 }
 
-* { font-family: var(--font-sans); }
-h1,h2,h3 { font-family: var(--font-display); }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 999px; }
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-rule);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.018em;
+  }
+
+  /* One focus treatment for the whole app. Never removed, only replaced. */
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  ::selection {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  /* Scrollbars read as part of the ledger, not the OS. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-paper-sunk);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-rule-strong);
+    border: 3px solid var(--color-paper-sunk);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-faint);
+  }
+}
+
+@layer components {
+  /* Every figure in the product is tabular so columns of numbers align. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* Row of a data grid. Full-width hover, no pill. */
+  .grid-row {
+    transition: background-color 120ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  .grid-row:hover {
+    background-color: var(--color-paper-sunk);
+  }
+}
+
+/* iOS Safari zooms any input under 16px and breaks the layout. */
+@media (max-width: 639px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

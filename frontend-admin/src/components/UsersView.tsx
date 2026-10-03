@@ -1,17 +1,23 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, Trash2, User } from "@masterlms/shared";
+import { Trash2, User } from "@masterlms/shared";
 import type { AdminRole, AdminUser } from "../types/admin";
-import { cn } from "../lib/utils";
-import { Card } from "./Card";
+import { PageHeader } from "./Panel";
+import { RoleBadge } from "./Badge";
+import { Button } from "./Button";
+import { SearchInput, Select } from "./Controls";
+import {
+  GridHead,
+  GridMessage,
+  GridPanel,
+  GridScroll,
+  GridSkeleton,
+  Td,
+  Th,
+  Tr,
+} from "./DataGrid";
 import { Pagination } from "./Pagination";
 import { ConfirmDialog } from "./ConfirmDialog";
-
-const ROLE_STYLES: Record<AdminRole, string> = {
-  admin: "bg-[#0f172a] text-white",
-  instructor: "bg-violet-100 text-violet-700",
-  learner: "bg-emerald-100 text-emerald-700",
-};
 
 export function UsersView({
   data,
@@ -50,119 +56,128 @@ export function UsersView({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-extrabold tracking-tight">Users</h1>
-        <p className="text-sm text-zinc-500">Every account on the platform, editable and removable.</p>
-      </div>
+      <PageHeader
+        title="Users"
+        description="Every account on the platform, editable and removable."
+      />
 
-      <Card>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[220px] flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" strokeWidth={2.5} />
-            <input
+      <GridPanel
+        toolbar={
+          <>
+            <SearchInput
               value={q}
-              onChange={(e) => onSearch(e.target.value)}
-              placeholder="Search name, mobile or email…"
-              className="w-full rounded-xl border bg-zinc-50 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-zinc-900"
+              onChange={onSearch}
+              placeholder="Search name, mobile or email"
+              busy={searchLoading}
             />
-            {searchLoading && <span className="absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 animate-ping rounded-full bg-zinc-400" />}
-          </div>
-          <select
-            value={role}
-            onChange={(e) => onRole(e.target.value as AdminRole | "")}
-            className="rounded-xl border bg-white px-3 py-2.5 text-sm font-medium text-zinc-700 outline-none"
-          >
-            <option value="">All roles</option>
-            <option value="learner">Learners</option>
-            <option value="instructor">Instructors</option>
-            <option value="admin">Admins</option>
-          </select>
-        </div>
-      </Card>
-
-      <Card className="p-0 overflow-hidden">
+            <Select
+              value={role}
+              onChange={(e) => onRole(e.target.value as AdminRole | "")}
+              aria-label="Filter by role"
+              className="w-auto min-w-[150px]"
+            >
+              <option value="">All roles</option>
+              <option value="learner">Learners</option>
+              <option value="instructor">Instructors</option>
+              <option value="admin">Admins</option>
+            </Select>
+          </>
+        }
+        footer={
+          <Pagination page={page} pages={pages} total={total} onChange={onPage} />
+        }
+      >
         {loading ? (
-          <div className="divide-y">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex animate-pulse items-center gap-3 px-5 py-4">
-                <div className="h-9 w-9 rounded-full bg-zinc-200" />
-                <div className="h-4 w-40 rounded bg-zinc-200" />
-                <div className="ml-auto h-4 w-20 rounded bg-zinc-200" />
-              </div>
-            ))}
-          </div>
+          <GridSkeleton rows={6} cells={6} />
         ) : error ? (
-          <p className="px-5 py-8 text-center text-sm text-red-600">{error}</p>
+          <GridMessage
+            kind="error"
+            title="Could not load users"
+            body={error}
+          />
         ) : data.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-zinc-400">No users match.</p>
+          <GridMessage
+            kind="empty"
+            title={q || role ? "No accounts match those filters" : "No accounts yet"}
+            body={
+              q || role
+                ? "Try a different name, mobile or role. Clear the filters to see everyone."
+                : "Accounts appear here as soon as learners and instructors register."
+            }
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b text-[11px] uppercase tracking-wider text-zinc-400">
-                  <th className="px-5 py-3 font-semibold">User</th>
-                  <th className="px-5 py-3 font-semibold">Mobile</th>
-                  <th className="px-5 py-3 font-semibold">Role</th>
-                  <th className="px-5 py-3 font-semibold">City</th>
-                  <th className="px-5 py-3 font-semibold">Joined</th>
-                  <th className="px-5 py-3 text-right font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {data.map((u) => (
-                  <tr key={u.id} className="hover:bg-zinc-50/60">
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        {u.avatar ? (
-                          <img src={u.avatar} alt="" className="h-9 w-9 rounded-full bg-zinc-200" />
-                        ) : (
-                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-100 text-zinc-400">
-                            <User size={16} strokeWidth={2.5} />
-                          </span>
-                        )}
-                        <div className="min-w-0">
-                          <p className="max-w-[180px] truncate font-semibold text-zinc-800">
-                            <Link to={`/users/${u.id}`} className="hover:underline">{u.name || u.username}</Link>
-                          </p>
-                          <p className="truncate text-xs text-zinc-400">{u.email || "No email"}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-zinc-600">+91 {u.mobile}</td>
-                    <td className="px-5 py-3">
-                      <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase", ROLE_STYLES[u.role])}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-zinc-600">{u.city || "—"}</td>
-                    <td className="px-5 py-3 text-zinc-500">{new Date(u.date_joined).toLocaleDateString()}</td>
-                    <td className="px-5 py-3">
-                      <div className="flex justify-end gap-1">
+          <GridScroll>
+            <GridHead>
+              <Th>User</Th>
+              <Th>Mobile</Th>
+              <Th>Role</Th>
+              <Th>City</Th>
+              <Th>Joined</Th>
+              <Th align="right">Actions</Th>
+            </GridHead>
+            <tbody>
+              {data.map((u) => (
+                <Tr key={u.id}>
+                  <Td>
+                    <div className="flex items-center gap-3">
+                      {u.avatar ? (
+                        <img src={u.avatar} alt="" className="h-8 w-8 shrink-0 object-cover" />
+                      ) : (
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-paper-sunk text-ink-faint">
+                          <User size={15} strokeWidth={2.2} aria-hidden />
+                        </span>
+                      )}
+                      <div className="min-w-0">
                         <Link
                           to={`/users/${u.id}`}
-                          className="rounded-lg px-2.5 py-1 text-xs font-semibold text-[#0f172a] hover:bg-zinc-100"
+                          className="block max-w-[200px] truncate text-sm font-medium text-ink hover:underline"
                         >
-                          View
+                          {u.name || u.username}
                         </Link>
-                        <button
-                          onClick={() => setTarget(u)}
-                          disabled={deleting && deletingId === u.id}
-                          className="rounded-lg px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
-                        >
-                          <Trash2 size={16} strokeWidth={2.5} />
-                        </button>
+                        <p className="max-w-[200px] truncate text-xs text-ink-faint">
+                          {u.email || "No email"}
+                        </p>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </Td>
+                  <Td className="tnum whitespace-nowrap text-ink-muted">+91 {u.mobile}</Td>
+                  <Td>
+                    <RoleBadge role={u.role} />
+                  </Td>
+                  <Td className="text-ink-muted">{u.city || "—"}</Td>
+                  <Td className="tnum whitespace-nowrap text-ink-muted">
+                    {new Date(u.date_joined).toLocaleDateString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "2-digit",
+                    })}
+                  </Td>
+                  <Td align="right">
+                    <div className="flex justify-end gap-1">
+                      <Link
+                        to={`/users/${u.id}`}
+                        className="inline-flex h-8 items-center border border-transparent px-2.5 text-xs font-semibold text-ink-muted transition-colors hover:border-rule hover:bg-paper-raised hover:text-ink"
+                      >
+                        View
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        onClick={() => setTarget(u)}
+                        disabled={deleting && deletingId === u.id}
+                        aria-label={`Delete ${u.name || u.username}`}
+                      >
+                        <Trash2 size={15} strokeWidth={2.2} aria-hidden />
+                      </Button>
+                    </div>
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </GridScroll>
         )}
-        <div className="px-5">
-          <Pagination page={page} pages={pages} total={total} onChange={onPage} />
-        </div>
-      </Card>
+      </GridPanel>
 
       <ConfirmDialog
         open={target !== null}
