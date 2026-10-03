@@ -19,6 +19,9 @@ import type {
 } from "../hooks/useAssignmentQuestionState";
 import { LiveCamera } from "./LiveCamera";
 import { SubmitConfirmModal } from "./SubmitConfirmModal";
+import { Badge } from "./Badge";
+import { Button } from "./Button";
+import { Panel } from "./Panel";
 
 type Counts = {
   answered: number;
@@ -29,10 +32,10 @@ type Counts = {
 };
 
 const PALETTE_COLORS: Record<QuestionRow["status"], string> = {
-  answered: "bg-emerald-500 text-white hover:bg-emerald-600",
-  unanswered: "bg-red-500 text-white hover:bg-red-600",
-  review: "bg-orange-500 text-white hover:bg-orange-600",
-  "not-visited": "bg-white text-zinc-600 border border-zinc-300 hover:bg-zinc-50",
+  answered: "bg-live text-ink-inverse hover:bg-live/88",
+  unanswered: "bg-halt text-ink-inverse hover:bg-halt/88",
+  review: "bg-hold text-ink-inverse hover:bg-hold/88",
+  "not-visited": "bg-room-raised text-ink-muted border border-rule-strong hover:bg-room-sunk",
 };
 
 const LEGEND: {
@@ -41,18 +44,18 @@ const LEGEND: {
   dot: string;
   countKey: keyof Counts;
 }[] = [
-  { status: "answered", label: "Answered", dot: "bg-emerald-500", countKey: "answered" },
-  { status: "unanswered", label: "Not answered", dot: "bg-red-500", countKey: "unanswered" },
+  { status: "answered", label: "Answered", dot: "bg-live", countKey: "answered" },
+  { status: "unanswered", label: "Not answered", dot: "bg-halt", countKey: "unanswered" },
   {
     status: "review",
     label: "Marked for review",
-    dot: "bg-orange-500",
+    dot: "bg-hold",
     countKey: "review",
   },
   {
     status: "not-visited",
     label: "Not visited",
-    dot: "bg-zinc-200 border border-zinc-300",
+    dot: "bg-room-sunk border border-rule-strong",
     countKey: "notVisited",
   },
 ];
@@ -188,7 +191,7 @@ export function AssignmentTakeView({
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb]">
+    <div className="min-h-screen bg-room">
       <TopBar
         title={title}
         attempt={attempt}
@@ -221,18 +224,18 @@ export function AssignmentTakeView({
           {/* Question */}
           <div className="min-w-0">
             {current ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+              <Panel className="p-5 sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <h2 className="text-base font-bold text-zinc-900">
+                  <h2 className="tnum text-base font-semibold text-ink">
                     Question {currentIndex + 1}
                   </h2>
-                  <p className="text-xs font-medium text-zinc-500">
+                  <p className="text-xs font-medium text-ink-muted">
                     {section?.name}
                     {current.difficulty && ` · ${current.difficulty}`}
                   </p>
                 </div>
 
-                <p className="mt-4 text-[15px] font-medium leading-relaxed text-zinc-900">
+                <p className="mt-4 text-[15px] font-medium leading-relaxed text-ink">
                   {current.question}
                 </p>
 
@@ -240,31 +243,32 @@ export function AssignmentTakeView({
                   <img
                     src={absoluteMediaUrl(current.questionImage) ?? current.questionImage}
                     alt="Question figure"
-                    className="mt-4 h-52 w-full rounded-xl border border-zinc-200 object-contain"
+                    className="mt-4 h-52 w-full border border-rule bg-room-sunk object-contain"
                   />
                 )}
 
-                <div className="mt-5 space-y-2.5">
+                <div className="mt-5 space-y-3">
                   {current.options.map((option, oi) => {
                     const checked = current.selected === oi;
                     const image = optionImage(option);
                     return (
                       <button
                         key={oi}
+                        type="button"
                         onClick={() => onAnswer(oi)}
                         className={cn(
-                          "flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition",
+                          "flex w-full items-center gap-3 border px-4 py-3 text-left text-sm transition-colors",
                           checked
-                            ? "border-[#0f172a] bg-[#0f172a] text-white"
-                            : "border-zinc-200 bg-white text-zinc-800 hover:border-zinc-400",
+                            ? "border-ink bg-ink text-ink-inverse"
+                            : "border-rule bg-room-raised text-ink hover:border-rule-strong",
                         )}
                       >
                         <span
                           className={cn(
                             "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
                             checked
-                              ? "bg-white text-[#0f172a]"
-                              : "border border-zinc-300 text-zinc-600",
+                              ? "bg-room-raised text-ink"
+                              : "border border-rule-strong text-ink-muted",
                           )}
                         >
                           {String.fromCharCode(65 + oi)}
@@ -273,7 +277,7 @@ export function AssignmentTakeView({
                           <img
                             src={absoluteMediaUrl(image) ?? image}
                             alt={optionText(option)}
-                            className="h-14 w-20 shrink-0 rounded-md border border-zinc-200 bg-white object-contain"
+                            className="h-14 w-20 shrink-0 border border-rule bg-room-raised object-contain"
                           />
                         )}
                         <span className="min-w-0 flex-1">{optionText(option)}</span>
@@ -283,120 +287,116 @@ export function AssignmentTakeView({
                 </div>
 
                 {practice && current.selected !== undefined && current.explanation && (
-                  <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-900">
-                    <p className="font-bold">Explanation</p>
-                    <p className="mt-0.5">{current.explanation}</p>
+                  <div className="mt-4 border border-live/25 bg-live-soft p-3 text-xs leading-relaxed text-live">
+                    <p className="font-semibold">Explanation</p>
+                    <p className="mt-1">{current.explanation}</p>
                   </div>
                 )}
 
-                <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-4">
+                <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-rule pt-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={onMarkForReview}
-                      className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
-                    >
+                    <Button variant="secondary" size="sm" onClick={onMarkForReview}>
                       Mark for review &amp; next
-                    </button>
-                    <button
-                      onClick={onClear}
-                      className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
-                    >
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={onClear}>
                       Clear response
-                    </button>
+                    </Button>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={onPrevious}
                       disabled={currentIndex === 0}
-                      className="rounded-lg px-4 py-2 text-sm font-semibold text-zinc-400 disabled:cursor-not-allowed"
                     >
                       Previous
-                    </button>
+                    </Button>
                     {isCurrentSectionLast ? (
-                      <button
+                      <Button
+                        variant="primary"
+                        size="sm"
                         onClick={onSubmitSection}
                         disabled={submitting}
-                        className="rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
                       >
                         {isLastSection ? "Submit exam" : "Submit section"}
-                      </button>
+                      </Button>
                     ) : (
-                      <button
-                        onClick={onNext}
-                        className="rounded-lg bg-[#0f172a] px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
-                      >
+                      <Button variant="primary" size="sm" onClick={onNext}>
                         Save &amp; next
-                        <ChevronRight size={14} className="ml-1 inline" />
-                      </button>
+                        <ChevronRight size={14} className="ml-1 inline" aria-hidden />
+                      </Button>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-400">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-ink-faint">
                   <span className="flex items-center gap-2">
                     {saveStatus === "saved" && (
-                      <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
-                        <Check size={11} /> Answer saved
+                      <span className="inline-flex items-center gap-1 font-semibold text-live">
+                        <Check size={11} aria-hidden /> Answer saved
                       </span>
                     )}
                     {saveStatus === "saving" && (
-                      <span className="inline-flex items-center gap-1 text-zinc-500">
-                        <Save size={11} className="animate-pulse" /> Saving…
+                      <span className="inline-flex items-center gap-1 text-ink-muted">
+                        <Save size={11} className="animate-pulse" aria-hidden /> Saving…
                       </span>
                     )}
                     {saveStatus === "error" && (
-                      <span className="inline-flex items-center gap-1 font-semibold text-red-500">
-                        <AlertCircle size={11} /> Offline — retrying
+                      <span className="inline-flex items-center gap-1 font-semibold text-halt">
+                        <AlertCircle size={11} aria-hidden /> Offline — retrying
                       </span>
                     )}
                   </span>
-                  <span className="tabular-nums">
+                  <span className="tnum">
                     Question {currentIndex + 1} of {questions.length} · {current.marks}{" "}
                     {Number(current.marks) === 1 ? "mark" : "marks"}
                     {current.markedForReview && (
-                      <span className="ml-2 font-semibold text-orange-600">
+                      <span className="ml-2 font-semibold text-hold">
                         Marked for review
                       </span>
                     )}
                   </span>
                 </div>
-              </div>
+              </Panel>
             ) : (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-10 text-center text-sm text-zinc-500">
+              <Panel className="p-10 text-center text-sm text-ink-muted">
                 No questions in this section.
-              </div>
+              </Panel>
             )}
           </div>
 
           {/* Palette */}
           <aside className="lg:sticky lg:top-[76px] lg:self-start">
             <button
+              type="button"
               onClick={() => setPaletteOpen((v) => !v)}
-              className="flex w-full items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 shadow-sm lg:hidden"
+              aria-expanded={paletteOpen}
+              className="flex w-full items-center justify-between border border-rule bg-room-raised px-4 py-3 text-sm font-semibold text-ink lg:hidden"
             >
               <span className="flex items-center gap-2">
-                <Flag size={15} className="text-zinc-400" />
+                <Flag size={15} className="text-ink-faint" aria-hidden />
                 Question palette
-                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-500">
+                <Badge tone="muted" showIcon={false} className="tnum">
                   {counts.total}
-                </span>
+                </Badge>
               </span>
               <ChevronRight
                 size={16}
-                className={cn("text-zinc-400 transition-transform", paletteOpen && "rotate-90")}
+                aria-hidden
+                className={cn("text-ink-faint transition-transform", paletteOpen && "rotate-90")}
               />
             </button>
 
             <div className={cn("mt-3 lg:mt-0 lg:block", paletteOpen ? "block" : "hidden")}>
-              <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-                <h3 className="text-sm font-bold text-zinc-900">Question palette</h3>
+              <Panel className="p-4">
+                <h3 className="text-sm font-semibold text-ink">Question palette</h3>
 
-                <ul className="mt-3 space-y-1.5 text-[11px] text-zinc-600">
+                <ul className="mt-3 space-y-2 text-[11px] text-ink-muted">
                   {LEGEND.map((item) => (
                     <li key={item.status} className="flex items-center gap-2">
-                      <span className={cn("h-3 w-3 shrink-0 rounded-sm", item.dot)} />
+                      <span className={cn("h-3 w-3 shrink-0", item.dot)} />
                       <span>{item.label}</span>
-                      <span className="ml-auto font-semibold tabular-nums text-zinc-500">
+                      <span className="tnum ml-auto font-semibold text-ink-muted">
                         ({counts[item.countKey]})
                       </span>
                     </li>
@@ -405,16 +405,16 @@ export function AssignmentTakeView({
 
                 {sections.length > 1 && (
                   <>
-                    <p className="mt-4 break-words text-[11px] font-bold uppercase tracking-wide text-zinc-500">
+                    <p className="mt-4 break-words text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
                       {section?.name}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-zinc-400">
+                    <p className="tnum mt-1 text-[11px] text-ink-faint">
                       Q{(section?.startIndex ?? 0) + 1}–{(section?.endIndex ?? 0) + 1}
                     </p>
                   </>
                 )}
 
-                <div className="mt-2 grid grid-cols-5 gap-1.5">
+                <div className="mt-2 grid grid-cols-5 gap-2">
                   {questions.map((q, i) => {
                     const isCurrent = i === currentIndex;
                     const unlocked = isSectionUnlocked(
@@ -425,6 +425,7 @@ export function AssignmentTakeView({
                     return (
                       <button
                         key={`${q.stepId}-${q.questionId}`}
+                        type="button"
                         onClick={() => handlePaletteClick(i)}
                         disabled={!unlocked}
                         title={
@@ -435,9 +436,9 @@ export function AssignmentTakeView({
                         aria-label={`Question ${i + 1}: ${q.status.replace("-", " ")}`}
                         aria-current={isCurrent}
                         className={cn(
-                          "inline-flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition",
-                          unlocked ? PALETTE_COLORS[q.status] : "cursor-not-allowed bg-zinc-100 text-zinc-400",
-                          isCurrent && "ring-2 ring-[#0f172a] ring-offset-1",
+                          "tnum inline-flex h-9 w-9 items-center justify-center text-xs font-semibold transition-colors",
+                          unlocked ? PALETTE_COLORS[q.status] : "cursor-not-allowed bg-room-sunk text-ink-faint",
+                          isCurrent && "ring-2 ring-ink ring-offset-1",
                         )}
                       >
                         {i + 1}
@@ -446,27 +447,30 @@ export function AssignmentTakeView({
                   })}
                 </div>
 
-                <button
+                <Button
+                  variant="primary"
+                  block
                   onClick={() => setConfirmOpen(true)}
                   disabled={submitting}
-                  className="mt-5 w-full rounded-lg bg-[#2563eb] py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
+                  className="mt-5"
                 >
                   Submit test
-                </button>
+                </Button>
                 <button
+                  type="button"
                   onClick={() => setConfirmOpen(true)}
-                  className="mt-2 w-full text-center text-[11px] text-zinc-400 hover:text-zinc-600"
+                  className="mt-2 w-full text-center text-[11px] text-ink-faint transition-colors hover:text-ink-muted"
                 >
                   Exit without submitting
                 </button>
-              </div>
+              </Panel>
             </div>
           </aside>
         </div>
       </div>
 
       {!practice && secondsLeft <= 300 && !submitting && (
-        <div className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-lg">
+        <div role="status" className="tnum fixed bottom-4 left-1/2 z-40 -translate-x-1/2 border border-halt bg-halt px-4 py-2 text-xs font-semibold text-ink-inverse shadow-lg">
           {formatCountdown(secondsLeft)} left — submitting automatically
         </div>
       )}
@@ -503,43 +507,39 @@ function TopBar({
   submitting: boolean;
 }) {
   return (
-    <div className="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 px-3 py-3 backdrop-blur sm:px-6">
+    <div className="sticky top-0 z-30 border-b border-rule bg-room-raised/95 px-3 py-3 backdrop-blur sm:px-6">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="truncate text-sm font-bold text-zinc-900">{title ?? "Assignment"}</h1>
-          <p className="text-[11px] text-zinc-500">
+          <h1 className="truncate text-sm font-semibold text-ink">{title ?? "Assignment"}</h1>
+          <p className="text-[11px] text-ink-muted">
             {attempt.model_name} · {attempt.model_code}
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           {violations > 0 && (
-            <span className="hidden items-center gap-1 text-xs font-semibold text-amber-600 sm:inline-flex">
-              <PhoneOff size={13} /> {violations} violation{violations === 1 ? "" : "s"}
+            <span className="tnum hidden items-center gap-1 text-xs font-semibold text-hold sm:inline-flex">
+              <PhoneOff size={13} aria-hidden /> {violations} violation{violations === 1 ? "" : "s"}
             </span>
           )}
           {practice ? (
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800">
-              <Clock size={13} /> Untimed practice
-            </span>
+            <Badge tone="live" showIcon={false} className="px-3 py-1.5 text-xs">
+              <Clock size={13} aria-hidden /> Untimed practice
+            </Badge>
           ) : (
             <span
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-bold tabular-nums",
+                "tnum inline-flex items-center gap-1.5 border px-3 py-1.5 text-sm font-semibold",
                 secondsLeft < 60
-                  ? "animate-pulse bg-red-100 text-red-700"
-                  : "bg-zinc-100 text-zinc-900",
+                  ? "animate-pulse border-halt/25 bg-halt-soft text-halt"
+                  : "border-rule bg-room-sunk text-ink",
               )}
             >
-              <Clock size={14} /> {formatCountdown(secondsLeft)}
+              <Clock size={14} aria-hidden /> {formatCountdown(secondsLeft)}
             </span>
           )}
-          <button
-            onClick={onSubmit}
-            disabled={submitting}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
-          >
+          <Button variant="primary" size="sm" onClick={onSubmit} disabled={submitting}>
             Submit
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -560,13 +560,13 @@ function ProctorStrip({
       className={cn(
         "border-b px-3 py-2 text-[11px] sm:px-6",
         isFullscreen
-          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-          : "border-amber-200 bg-amber-50 text-amber-800",
+          ? "border-live/25 bg-live-soft text-live"
+          : "border-hold/30 bg-hold-soft text-hold",
       )}
     >
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-2">
-          <AlertTriangle size={13} />
+          <AlertTriangle size={13} aria-hidden />
           {isFullscreen ? (
             <>
               Fullscreen on. Tab switches, copying and camera disconnects are recorded
@@ -577,12 +577,9 @@ function ProctorStrip({
           )}
         </span>
         {!isFullscreen && (
-          <button
-            onClick={onEnterFullscreen}
-            className="rounded-md bg-amber-600 px-3 py-1 font-semibold text-white hover:bg-amber-700"
-          >
+          <Button variant="primary" size="sm" onClick={onEnterFullscreen}>
             Enter fullscreen
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -601,7 +598,7 @@ function SectionTabs({
   isUnlocked: (sectionIndex: number) => boolean;
 }) {
   return (
-    <div className="overflow-x-auto border-b border-zinc-200">
+    <div className="overflow-x-auto border-b border-rule">
       <div className="flex min-w-fit gap-6" role="tablist" aria-label="Exam sections">
         {sections.map((section, i) => {
           const active = i === currentSectionIndex;
@@ -609,21 +606,22 @@ function SectionTabs({
           return (
             <button
               key={`${section.stepId}-${i}`}
+              type="button"
               role="tab"
               aria-selected={active}
               disabled={!unlocked}
               onClick={() => onSelect(i)}
               title={unlocked ? undefined : "Submit the previous section to unlock"}
               className={cn(
-                "-mb-px flex items-center gap-1.5 border-b-2 px-1 py-3 text-sm font-medium whitespace-nowrap transition",
+                "-mb-px flex items-center gap-1.5 border-b-2 px-1 py-3 text-sm font-semibold whitespace-nowrap transition-colors",
                 active
-                  ? "border-[#2563eb] text-[#2563eb]"
+                  ? "border-ink text-ink"
                   : unlocked
-                    ? "border-transparent text-zinc-600 hover:text-zinc-900"
-                    : "cursor-not-allowed border-transparent text-zinc-300",
+                    ? "border-transparent text-ink-muted hover:text-ink"
+                    : "cursor-not-allowed border-transparent text-ink-faint",
               )}
             >
-              {!unlocked && <Lock size={12} className="shrink-0" />}
+              {!unlocked && <Lock size={12} className="shrink-0" aria-hidden />}
               {section.name}
             </button>
           );

@@ -334,9 +334,9 @@ export function CourseDetailContainer() {
     }
   };
 
-  if (isLoading) return <p className="py-10 text-center text-sm text-zinc-500">Loading…</p>;
-  if (isError) return <p className="py-10 text-center text-sm text-zinc-500">Couldn't load this course. <button onClick={() => refetch()} className="text-[#3478ff] underline">Retry</button> <Link to="/courses" className="text-[#3478ff] underline">Back</Link></p>;
-  if (!data) return <p className="py-10 text-center text-sm">Course not found. <Link to="/courses" className="text-[#3478ff] underline">Back</Link></p>;
+  if (isLoading) return <p className="py-10 text-center text-sm text-ink-muted">Loading…</p>;
+  if (isError) return <p className="py-10 text-center text-sm text-ink-muted">Couldn't load this course. <button type="button" onClick={() => refetch()} className="font-semibold text-ink underline">Retry</button> <Link to="/courses" className="font-semibold text-ink underline">Back</Link></p>;
+  if (!data) return <p className="py-10 text-center text-sm text-ink-muted">Course not found. <Link to="/courses" className="font-semibold text-ink underline">Back</Link></p>;
 
   return (
     <CourseDetailView

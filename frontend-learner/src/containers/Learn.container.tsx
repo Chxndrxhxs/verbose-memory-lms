@@ -190,9 +190,9 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
     rateMutation.mutate(selectedRating);
   };
 
-  if (courseQuery.isLoading) return <p className="py-10 text-center text-sm text-zinc-500">Loading course…</p>;
-  if (courseQuery.error) return <p className="py-10 text-center text-sm text-zinc-500">{String(courseQuery.error)}. <Link to={`/courses/${courseId}`} className="inline-flex items-center gap-1 text-[#3478ff] underline"><ArrowLeft size={12} strokeWidth={2.5} /> Back</Link></p>;
-  if (total === 0) return <p className="py-10 text-center text-sm text-zinc-500">No lessons yet. <Link to={`/courses/${courseId}`} className="inline-flex items-center gap-1 text-[#3478ff] underline"><ArrowLeft size={12} strokeWidth={2.5} /> Back to course</Link></p>;
+  if (courseQuery.isLoading) return <p className="py-10 text-center text-sm text-ink-muted">Loading course…</p>;
+  if (courseQuery.error) return <p className="py-10 text-center text-sm text-ink-muted">{String(courseQuery.error)}. <Link to={`/courses/${courseId}`} className="inline-flex items-center gap-1 font-semibold text-ink underline"><ArrowLeft size={12} strokeWidth={2.5} aria-hidden /> Back</Link></p>;
+  if (total === 0) return <p className="py-10 text-center text-sm text-ink-muted">No lessons yet. <Link to={`/courses/${courseId}`} className="inline-flex items-center gap-1 font-semibold text-ink underline"><ArrowLeft size={12} strokeWidth={2.5} aria-hidden /> Back to course</Link></p>;
 
   const embedUrl = activeLesson ? toEmbed(activeLesson.resource_url) : null;
   const textBody = activeLesson?.kind === "text" ? (activeLesson.resource_url ?? `*${activeLesson.title}*`) : "";

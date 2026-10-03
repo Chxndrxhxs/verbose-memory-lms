@@ -1,29 +1,168 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/*
+ * QTNXT — "quiet room".
+ *
+ * The old copy promised calm focus in four places, then designed like a
+ * casino: blurred gradient orbs, a marquee of vague adjectives, invented
+ * logos, invented testimonials. This system makes calm literal.
+ *
+ * Two registers share one spine:
+ *   brand  (landing, about, course detail) — the person deciding to trust us
+ *   product (lesson player, proctored exam) — the person mid-session, where
+ *           chrome recedes so the content is the only bright thing
+ *
+ * Marigold is the one accent and it means PROGRESS: your place in a course,
+ * your streak, your certificate. It never decorates.
+ */
+
 @theme {
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-display: "Instrument Sans", system-ui, sans-serif;
-  --font-serif: "Instrument Serif", Georgia, serif;
-  --font-news: "Newsreader", Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Instrument Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* Newsreader is the reading face: lesson bodies, course descriptions, long prose. */
+  --font-serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Room: a warm ivory reading surface. Never pure white, never grey. */
+  --color-room: oklch(0.977 0.006 85);
+  --color-room-raised: oklch(0.995 0.003 85);
+  --color-room-sunk: oklch(0.945 0.009 85);
+  --color-room-deep: oklch(0.19 0.025 335); /* aubergine ink panel */
+
+  /* Ink: warm aubergine, not navy. Reads as ink on paper, not as "app". */
+  --color-ink: oklch(0.235 0.028 335);
+  --color-ink-muted: oklch(0.505 0.016 335);
+  --color-ink-faint: oklch(0.665 0.013 335);
+  --color-ink-inverse: oklch(0.985 0.004 85);
+
+  --color-rule: oklch(0.9 0.008 85);
+  --color-rule-strong: oklch(0.835 0.011 85);
+
+  /* Marigold: reserved for progress and achievement. */
+  --color-gold: oklch(0.845 0.15 78);
+  --color-gold-deep: oklch(0.6 0.135 62);
+  --color-gold-wash: oklch(0.96 0.045 88);
+
+  /* Semantic state. Each pairs with an icon or a word, never colour alone. */
+  --color-live: oklch(0.54 0.12 152); /* enrolled, passed, completed */
+  --color-live-soft: oklch(0.945 0.035 152);
+  --color-hold: oklch(0.63 0.13 68); /* in progress, pending */
+  --color-hold-soft: oklch(0.955 0.04 82);
+  --color-halt: oklch(0.55 0.19 25); /* failed, destructive */
+  --color-halt-soft: oklch(0.95 0.032 25);
+  --color-flight: oklch(0.5 0.1 250); /* informational */
+  --color-flight-soft: oklch(0.945 0.03 250);
 }
 
-* { font-family: var(--font-sans); }
-h2,h3 { font-family: var(--font-display); }
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-rule);
+  }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 999px; }
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
 
-@keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  body {
+    background-color: var(--color-room);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  /* Long-form prose reads in the serif. */
+  .prose {
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+    line-height: 1.75;
+  }
+
+  /*
+   * ONE focus treatment for the whole app. The old build scattered
+   * outline-none across every input with almost no replacement.
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: var(--color-gold);
+    color: var(--color-ink);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-room-sunk);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-rule-strong);
+    border: 3px solid var(--color-room-sunk);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-faint);
+  }
 }
-@keyframes marquee-reverse {
-  0% { transform: translateX(-50%); }
-  100% { transform: translateX(0); }
+
+@layer components {
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  .row-hover {
+    transition: background-color 120ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  .row-hover:hover {
+    background-color: var(--color-room-sunk);
+  }
+
+  /* Reading measure for prose. Long lines lose the eye. */
+  .measure {
+    max-width: 68ch;
+  }
 }
 
 /* Clearance for the mobile bottom tab bar (rendered only below sm) */
 @media (max-width: 639.5px) {
-  body { padding-bottom: 68px; }
+  body {
+    padding-bottom: 68px;
+  }
+}
+
+/* iOS Safari zooms any input under 16px and breaks the layout. */
+@media (max-width: 639px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

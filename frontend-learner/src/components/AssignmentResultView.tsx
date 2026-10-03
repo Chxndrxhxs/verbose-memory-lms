@@ -14,6 +14,9 @@ import {
 } from "@masterlms/shared";
 import { cn } from "../lib/utils";
 import { TopNav } from "./TopNav";
+import { Badge } from "./Badge";
+import { Segmented } from "./Button";
+import { Panel } from "./Panel";
 
 type Props = {
   result: AssignmentResultPayload | undefined;
@@ -25,12 +28,12 @@ type ReviewFilter = "all" | "needs-work" | "correct";
 
 const backLink = cn(
   "inline-flex items-center gap-1.5 text-xs font-semibold",
-  "text-zinc-500 hover:text-zinc-900",
+  "text-ink-muted hover:text-ink transition-colors",
 );
 
 const resultPill = cn(
-  "inline-flex shrink-0 items-center gap-1 rounded-full",
-  "px-2.5 py-0.5 text-[11px] font-bold",
+  "inline-flex shrink-0 items-center gap-1",
+  "px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em]",
 );
 
 function fmtScore(value: string | number): string {
@@ -50,42 +53,35 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
     : "";
 
   return (
-    <div className="min-h-screen bg-[#f6f5f1]">
+    <div className="min-h-screen bg-room">
       <TopNav />
-      <div className="w-full px-3 py-6 sm:px-4">
+      <div className="mx-auto w-full max-w-3xl px-4 pb-12 pt-6 sm:px-6 sm:pt-8">
         {isLoading && (
-          <div className="rounded-[28px] bg-white p-10 text-sm text-zinc-500">
+          <Panel className="p-10 text-sm text-ink-muted">
             Loading result…
-          </div>
+          </Panel>
         )}
         {error && (
-          <div className="rounded-[28px] bg-white p-10 text-sm text-red-600">
+          <Panel className="p-10 text-sm text-halt">
             {error.message}
-          </div>
+          </Panel>
         )}
         {result && (
-          <div className="mx-auto max-w-3xl space-y-5">
-            <div className="rounded-[28px] bg-white p-8 shadow-sm sm:p-10">
+          <div className="space-y-5">
+            <Panel className="p-8 sm:p-10">
               <Link to="/assignments" className={backLink}>
-                <ArrowLeft size={14} strokeWidth={2.5} /> All tests
+                <ArrowLeft size={14} strokeWidth={2.5} aria-hidden /> All tests
               </Link>
               <div className="mt-5 flex flex-wrap items-center gap-3">
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-bold",
-                    result.attempt.passed
-                      ? "bg-emerald-100 text-emerald-800"
-                      : "bg-red-100 text-red-700",
-                  )}
-                >
+                <Badge tone={result.attempt.passed ? "live" : "halt"} showIcon={false} className="px-3 py-1.5 text-sm">
                   {result.attempt.passed ? (
-                    <Shield size={16} />
+                    <Shield size={16} aria-hidden />
                   ) : (
-                    <AlertCircle size={16} />
+                    <AlertCircle size={16} aria-hidden />
                   )}
                   {result.attempt.passed ? "Passed" : "Not passed"}
-                </span>
-                <span className="text-sm font-semibold text-zinc-500">
+                </Badge>
+                <span className="text-sm font-semibold text-ink">
                   {result.transcript.assignment}
                 </span>
               </div>
@@ -107,7 +103,7 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
 
               <div
                 className={cn(
-                  "mt-3 grid grid-cols-2 gap-3 rounded-2xl bg-zinc-50 p-4",
+                  "tnum mt-3 grid grid-cols-2 gap-3 border border-rule bg-room-sunk p-4",
                   "text-xs sm:grid-cols-4",
                 )}
               >
@@ -127,7 +123,7 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
                 <Meta label="Skipped" value={String(result.attempt.unanswered)} />
               </div>
 
-              <div className="mt-3 text-xs text-zinc-500">
+              <div className="tnum mt-3 text-xs text-ink-muted">
                 <span>+{result.attempt.positive_marks} correct</span>
                 {" · "}
                 <span>-{result.attempt.negative_marks} wrong</span>
@@ -137,35 +133,36 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
                 <Link
                   to={`/assignments/${result.attempt.assignment}`}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full bg-zinc-900",
-                    "px-5 py-2.5 text-sm font-semibold text-white transition",
-                    "hover:bg-zinc-800",
+                    "inline-flex h-12 items-center justify-center gap-1.5 border border-ink",
+                    "bg-ink px-6 text-sm font-semibold text-ink-inverse transition-colors",
+                    "hover:bg-ink/88",
                   )}
                 >
-                  <RefreshCw size={14} /> Retake test
+                  <RefreshCw size={14} aria-hidden /> Retake test
                 </Link>
                 <Link
                   to="/assignments"
                   className={cn(
-                    "rounded-full border border-zinc-200 px-5 py-2.5 text-sm",
-                    "font-semibold text-zinc-600 transition hover:bg-zinc-50",
+                    "inline-flex h-12 items-center justify-center border border-rule-strong",
+                    "bg-room-raised px-6 text-sm font-semibold text-ink transition-colors",
+                    "hover:bg-room-sunk",
                   )}
                 >
                   Back to tests
                 </Link>
               </div>
-            </div>
+            </Panel>
 
             {result.transcript.steps.length > 0 && (
-              <div className="rounded-[28px] bg-white p-8 shadow-sm sm:p-10">
-                <h2 className="text-sm font-bold">How each section went</h2>
+              <Panel className="p-8 sm:p-10">
+                <h2 className="text-sm font-semibold text-ink">How each section went</h2>
                 <div className="mt-4 overflow-x-auto">
                   <table className="w-full min-w-[420px] text-left text-sm">
                     <thead>
                       <tr
                         className={cn(
-                          "border-b border-zinc-100 text-[11px] uppercase",
-                          "tracking-wide text-zinc-400",
+                          "border-b border-rule text-[10px] uppercase",
+                          "tracking-[0.14em] text-ink-faint",
                         )}
                       >
                         <th className="py-2 pr-4 font-semibold">Section</th>
@@ -175,12 +172,12 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
                     </thead>
                     <tbody>
                       {result.transcript.steps.map((step) => (
-                        <tr key={step.step_id} className="border-b border-zinc-50">
-                          <td className="py-3 pr-4 font-medium">{step.name}</td>
-                          <td className="py-3 pr-4 text-zinc-500 tabular-nums">
+                        <tr key={step.step_id} className="row-hover border-b border-rule">
+                          <td className="py-3 pr-4 font-medium text-ink">{step.name}</td>
+                          <td className="tnum py-3 pr-4 text-ink-muted">
                             {step.attempted} / {step.questions}
                           </td>
-                          <td className="py-3 font-semibold text-emerald-600 tabular-nums">
+                          <td className="tnum py-3 font-semibold text-live">
                             {step.correct}
                           </td>
                         </tr>
@@ -188,41 +185,30 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </Panel>
             )}
 
             {review.length > 0 && (
-              <div className="rounded-[28px] bg-white p-8 shadow-sm sm:p-10">
+              <Panel className="p-8 sm:p-10">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-sm font-bold">Answer review</h2>
-                  <div className="flex gap-1 rounded-full bg-zinc-100 p-1 text-xs font-semibold">
-                    {(
-                      [
-                        ["all", `All (${review.length})`],
-                        ["needs-work", `Needs work (${needsWork.length})`],
-                        ["correct", `Correct (${correct.length})`],
-                      ] as [ReviewFilter, string][]
-                    ).map(([key, label]) => (
-                      <button
-                        key={key}
-                        onClick={() => setFilter(key)}
-                        className={cn(
-                          "rounded-full px-3 py-1.5",
-                          filter === key
-                            ? "bg-white text-zinc-900 shadow-sm"
-                            : "text-zinc-500",
-                        )}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+                  <h2 className="text-sm font-semibold text-ink">Answer review</h2>
+                  <Segmented
+                    size="sm"
+                    value={filter}
+                    onChange={setFilter}
+                    ariaLabel="Filter answer review"
+                    options={[
+                      { value: "all" as const, label: `All (${review.length})` },
+                      { value: "needs-work" as const, label: `Needs work (${needsWork.length})` },
+                      { value: "correct" as const, label: `Correct (${correct.length})` },
+                    ]}
+                  />
                 </div>
                 {visible.length === 0 ? (
                   <p
                     className={cn(
-                      "mt-4 rounded-2xl border border-dashed border-zinc-300 p-6",
-                      "text-center text-xs text-zinc-500",
+                      "mt-4 border border-dashed border-rule-strong p-6",
+                      "text-center text-xs text-ink-muted",
                     )}
                   >
                     Nothing in this group — nice work.
@@ -232,11 +218,11 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
                     {visible.map((item) => (
                       <div
                         key={item.question_id}
-                        className="rounded-2xl border border-zinc-100 p-4"
+                        className="border border-rule p-4"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="text-sm leading-relaxed font-medium">
+                            <p className="text-sm leading-relaxed font-medium text-ink">
                               {item.question}
                             </p>
                             {item.question_image && (
@@ -247,8 +233,8 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
                                 }
                                 alt="Question figure"
                                 className={cn(
-                                  "mt-2 h-32 w-full rounded-xl border",
-                                  "border-zinc-200 object-contain",
+                                  "mt-2 h-32 w-full border",
+                                  "border-rule object-contain bg-room-sunk",
                                 )}
                               />
                             )}
@@ -257,16 +243,16 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
                             <span
                               className={cn(
                                 resultPill,
-                                "bg-emerald-100 text-emerald-700",
+                                "bg-live-soft text-live",
                               )}
                             >
-                              <CheckCircle2 size={12} /> Correct
+                              <CheckCircle2 size={12} aria-hidden /> Correct
                             </span>
                           ) : (
                             <span
-                              className={cn(resultPill, "bg-red-100 text-red-600")}
+                              className={cn(resultPill, "bg-halt-soft text-halt")}
                             >
-                              <AlertCircle size={12} />{" "}
+                              <AlertCircle size={12} aria-hidden />{" "}
                               {item.selected === null ? "Skipped" : "Wrong"}
                             </span>
                           )}
@@ -279,15 +265,15 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
                               <div
                                 key={oi}
                                 className={cn(
-                                  "rounded-lg border px-3 py-2",
+                                  "border px-3 py-2",
                                   isCorrectChoice
-                                    ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                                    ? "border-live/30 bg-live-soft text-live"
                                     : isSelected
-                                      ? "border-red-300 bg-red-50 text-red-700"
-                                      : "border-zinc-100 bg-zinc-50 text-zinc-500",
+                                      ? "border-halt/30 bg-halt-soft text-halt"
+                                      : "border-rule bg-room-sunk text-ink-muted",
                                 )}
                               >
-                                <span className="mr-2 font-bold">
+                                <span className="mr-2 font-semibold">
                                   {String.fromCharCode(65 + oi)}.
                                 </span>
                                 {optionImage(option) && (
@@ -298,14 +284,14 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
                                     }
                                     alt={optionText(option)}
                                     className={cn(
-                                      "mb-1 h-16 w-24 rounded-md border",
-                                      "border-zinc-200 bg-white object-contain",
+                                      "mb-1 h-16 w-24 border",
+                                      "border-rule bg-room-raised object-contain",
                                     )}
                                   />
                                 )}
                                 <span>{optionText(option)}</span>
                                 {isCorrectChoice && (
-                                  <span className="ml-2 text-[10px] font-bold uppercase">
+                                  <span className="ml-2 text-[10px] font-semibold uppercase">
                                     Correct answer
                                   </span>
                                 )}
@@ -316,11 +302,11 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
                         {item.explanation && (
                           <p
                             className={cn(
-                              "mt-3 rounded-xl bg-zinc-50 p-3 text-xs leading-relaxed",
-                              "text-zinc-600",
+                              "mt-3 border border-rule bg-room-sunk p-3 text-xs leading-relaxed",
+                              "text-ink-muted",
                             )}
                           >
-                            <span className="font-bold text-zinc-800">
+                            <span className="font-semibold text-ink">
                               Explanation:{" "}
                             </span>
                             {item.explanation}
@@ -330,7 +316,7 @@ export function AssignmentResultView({ result, isLoading, error }: Props) {
                     ))}
                   </div>
                 )}
-              </div>
+              </Panel>
             )}
           </div>
         )}
@@ -349,15 +335,15 @@ function Stat({
   accent?: "good" | "bad";
 }) {
   return (
-    <div className="rounded-2xl bg-zinc-50 p-4">
-      <p className="text-[11px] font-semibold tracking-wide text-zinc-400 uppercase">
+    <div className="border border-rule bg-room-sunk p-4">
+      <p className="text-[10px] font-semibold tracking-[0.14em] text-ink-faint uppercase">
         {label}
       </p>
       <p
         className={cn(
-          "mt-1 text-lg font-bold tabular-nums",
-          accent === "good" && "text-emerald-600",
-          accent === "bad" && "text-red-500",
+          "tnum mt-1 text-lg font-semibold",
+          accent === "good" && "text-live",
+          accent === "bad" && "text-halt",
         )}
       >
         {value}
@@ -369,8 +355,8 @@ function Stat({
 function Meta({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="font-semibold tracking-wide text-zinc-400 uppercase">{label}</p>
-      <p className="mt-0.5 font-semibold text-zinc-800">{value}</p>
+      <p className="font-semibold tracking-[0.14em] text-ink-faint uppercase">{label}</p>
+      <p className="mt-1 font-semibold text-ink">{value}</p>
     </div>
   );
 }

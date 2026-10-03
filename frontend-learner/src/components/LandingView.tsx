@@ -1,161 +1,402 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2, Hexagon, Sparkles, CircleDot, AlignLeft, Play, Edit3, Plus, Minus } from "@masterlms/shared";
+import {
+  ArrowRight,
+  BookOpen,
+  Check,
+  ChevronDown,
+  Clock,
+  Play,
+  Shield,
+  Target,
+  type LucideIcon,
+} from "@masterlms/shared";
 import { CourseCard } from "./CourseCard";
 import { Header } from "./Header";
+import { cn } from "../lib/utils";
 import type { Course } from "../types/course";
 
-// HERO image commented out — soft gradient blur used instead
-// const HERO = "https://images.pexels.com/photos/31206089/pexels-photo-31206089.jpeg";
-const TESTIMONIAL_BG = "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=1600&auto=format&fit=crop&q=80";
+/*
+ * The old landing page had blurred gradient orbs, an infinite marquee of
+ * vague adjectives ("Growth oriented", "Curious", "Calm"), invented company
+ * logos (GOODSCOMPANY, Spotify, Google), and a fabricated testimonial from
+ * "Maya Chen". The hero image was commented out and replaced with the blur.
+ *
+ * None of it could belong to only this product. The new page makes specific,
+ * checkable promises instead, and the proof object is the actual catalogue
+ * plus the actual lesson player.
+ */
 
-function Pill({ children, color }: { children: string; color: string }) {
-  return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-white ${color} whitespace-nowrap`}>
-      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/20"><Sparkles size={10} strokeWidth={2.5} /></span>
-      {children}
-    </span>
-  );
-}
+const FAQS = [
+  {
+    q: "Who is QTNXT for?",
+    a: "Learners who already know they want to learn something specific. Every course is a real sequence of chapters and lessons, not a playlist of unrelated clips.",
+  },
+  {
+    q: "How do proctored assignments work?",
+    a: "Some assessments require the camera and screen monitoring before you begin. You see exactly what is checked, and you confirm it before the timer starts.",
+  },
+  {
+    q: "Do I get a certificate?",
+    a: "Yes. Finish every lesson in a course and the certificate unlocks, with your name and the date you completed it.",
+  },
+  {
+    q: "Can I try before paying?",
+    a: "Free courses are marked free in the catalogue. Paid courses often include preview lessons you can open before enrolling.",
+  },
+];
+
+const PILLARS: { title: string; body: string; Icon: LucideIcon }[] = [
+  {
+    Icon: BookOpen,
+    title: "Chapters, not playlists",
+    body: "Every course is an ordered structure. You always know what comes next and what is left.",
+  },
+  {
+    Icon: Clock,
+    title: "Your place is kept",
+    body: "Progress, notes and your current lesson are saved, so you can close the tab and come back to the same line.",
+  },
+  {
+    Icon: Shield,
+    title: "Honest assessment",
+    body: "Scores, attempt history and your best result are shown plainly. If you did badly, you can see exactly where.",
+  },
+  {
+    Icon: Target,
+    title: "Tests that match the work",
+    body: "Build an assessment from your own material, set marks and duration, then publish it to your learners.",
+  },
+];
 
 export function LandingView({ courses }: { courses: Course[] }) {
-  const [faq, setFaq] = useState<number | null>(0);
-  const featured = courses.slice(0, 4);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+
+  const totalLearners = courses.reduce((n, c) => n + c.studentCount, 0);
+  const freeCount = courses.filter((c) => c.rawPrice === 0).length;
+  const featured = courses.slice(0, 8);
+
   return (
-    <>
+    <div className="min-h-screen bg-room">
       <Header />
-      {/* HERO */}
-      <div className="px-3 pt-3 sm:px-4">
-        <div className="relative overflow-hidden rounded-[28px] bg-[#f8f7ff]">
-          {/* HERO image commented out — replaced with soft gradient blur */}
-          {/* <img src={HERO} alt="" className="h-[620px] w-full object-cover sm:h-[700px] lg:h-[760px]" /> */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#eef2ff] via-[#fdf2ff] to-[#fff7ed]" />
-          <div className="absolute -left-24 -top-24 h-[520px] w-[520px] rounded-full bg-[#c7d2fe]/50 blur-[90px]" />
-          <div className="absolute -bottom-32 -right-24 h-[560px] w-[560px] rounded-full bg-[#fbcfe8]/40 blur-[100px]" />
-          <div className="absolute left-1/2 top-1/2 h-[700px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#dbeafe]/30 blur-[100px]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(52,120,255,0.08),transparent_60%)]" />
 
-          <div className="relative flex min-h-[620px] flex-col items-center justify-center px-4 py-20 text-center sm:min-h-[700px] lg:min-h-[760px]">
-            <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border bg-white px-3 py-1 text-[11px] font-semibold text-zinc-700 shadow-sm">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> New courses every week • Free to start
-            </span>
-            <h1 className="max-w-[760px] leading-[0.88] tracking-[-0.04em]">
-              <span className="block font-news text-[34px] font-light tracking-[-0.03em] text-zinc-900 sm:text-[54px] lg:text-[62px]">Learn skills that</span>
-              <span className="block font-serif text-[42px] font-normal italic tracking-[-0.03em] text-zinc-900 sm:text-[66px] lg:text-[74px]"><span className="relative inline-block px-1.5"><span className="relative z-10">actually</span><span className="absolute inset-x-0 bottom-1.5 h-[10px] bg-yellow-400 -rotate-1 sm:h-[14px] lg:h-[16px]" /></span></span>
-              <span className="block font-sans text-[36px] font-black tracking-[-0.05em] text-zinc-900 sm:text-[58px] lg:text-[64px]">move you forward.</span>
-            </h1>
-            <p className="mt-4 max-w-[640px] text-[13px] font-light leading-relaxed tracking-wide text-zinc-600 sm:text-[15px]">Practical skills <span className="font-semibold text-zinc-900">•</span> calm focus sessions <span className="font-semibold text-zinc-900">•</span> follow your own rhythm and finish what you start.</p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-              <Link to="/courses" className="inline-flex items-center gap-2 rounded-full bg-[#0f172a] px-6 py-2.5 text-sm font-bold text-white shadow-lg transition hover:translate-y-[-1px] hover:bg-black">Get Started <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-zinc-900"><ArrowRight size={12} strokeWidth={3} /></span></Link>
-              <a href="#explore" className="inline-flex items-center gap-2 rounded-full border bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50"><Play size={12} strokeWidth={2.5} className="fill-zinc-700" /> Watch 30s tour</a>
+      {/*
+        Hero: asymmetric editorial split. The promise leads from the left; the
+        lesson player answers it on the right. No orbs, no blur, no centred
+        stack. The composition has to be recognisable as reading, not as SaaS.
+      */}
+      <section className="mx-auto grid w-full max-w-[1200px] gap-12 px-4 pb-16 pt-10 sm:px-6 sm:pt-16 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16 lg:pb-24">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+            <span aria-hidden className="h-1.5 w-1.5 bg-gold-deep" />
+            {courses.length} courses open now
+          </p>
+
+          <h1 className="mt-5 text-[40px] font-semibold leading-[1.04] tracking-[-0.035em] text-ink sm:text-[54px] lg:text-[60px]">
+            Learn the thing,
+            <br />
+            properly.
+          </h1>
+
+          <p className="measure mt-6 text-[15px] leading-relaxed text-ink-muted">
+            Real courses built as chapters and lessons, with assessments you can
+            actually pass and progress that survives a closed tab. Free courses
+            need no card.
+          </p>
+
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Link
+              to="/courses"
+              className="inline-flex h-12 items-center gap-2 border border-ink bg-ink px-6 text-sm font-semibold text-ink-inverse transition-colors hover:bg-ink/88"
+            >
+              Browse the catalogue
+              <ArrowRight size={16} strokeWidth={2.5} aria-hidden />
+            </Link>
+            <a
+              href="#how"
+              className="inline-flex h-12 items-center border border-rule-strong bg-room-raised px-6 text-sm font-semibold text-ink transition-colors hover:bg-room-sunk"
+            >
+              How it works
+            </a>
+          </div>
+
+          {/* Real counts from the catalogue, not invented social proof. */}
+          <dl className="mt-10 grid max-w-lg grid-cols-3 gap-px border border-rule bg-rule">
+            {[
+              [String(courses.length), "Courses"],
+              [totalLearners > 999 ? `${(totalLearners / 1000).toFixed(1)}k` : String(totalLearners), "Learners"],
+              [String(freeCount), "Free to start"],
+            ].map(([v, k]) => (
+              <div key={k} className="bg-room-raised px-4 py-4">
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
+                  {k}
+                </dt>
+                <dd className="tnum mt-1.5 text-2xl font-semibold text-ink">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        {/* The proof object: a real lesson player frame, in the real system. */}
+        <div className="min-w-0">
+          <div className="border border-rule-strong bg-room-raised">
+            <div className="flex items-center gap-3 border-b border-rule px-4 py-3">
+              <span className="flex h-7 w-7 items-center justify-center bg-ink text-ink-inverse">
+                <Play size={12} strokeWidth={2.5} aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-ink">Python Full Stack</p>
+                <p className="text-xs text-ink-faint">Chapter 2 · Your first live session</p>
+              </div>
+              <span className="tnum shrink-0 text-xs font-semibold text-gold-deep">68%</span>
             </div>
-            <div className="mt-5 flex items-center gap-3 text-[11px] font-medium text-zinc-500">
-              <span className="flex items-center gap-1.5"><span className="text-amber-400">★★★★★</span> 4.9/5</span><span className="h-3 w-px bg-zinc-200" /><span>No credit card needed</span><span className="h-3 w-px bg-zinc-200" /><span>Cancel anytime</span>
+
+            <div className="aspect-video w-full bg-room-deep p-6">
+              <div className="flex h-full flex-col justify-center gap-2">
+                <p className="font-serif text-[22px] leading-snug text-ink-inverse">
+                  Pause anywhere. Your place is kept.
+                </p>
+                <p className="max-w-[42ch] text-[13px] leading-relaxed text-ink-inverse/60">
+                  Progress, notes and the lesson you were on are saved as you go.
+                </p>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="w-full px-3 py-10 sm:px-4 sm:py-12">
-        <p className="text-center text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Our learners work at leading companies</p>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-6 text-sm font-bold tracking-tight text-zinc-500 sm:gap-10"><span className="text-zinc-400">GOODSCOMPANY</span><span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-zinc-400" /> Spotify</span><span className="text-zinc-600">Google</span><span className="text-zinc-500">∞ Meta</span><span className="text-zinc-500">SQUARE ENIX</span></div>
-      </div>
+            <div className="flex items-center gap-3 border-t border-rule px-4 py-3">
+              <div className="h-1.5 flex-1 bg-rule/50">
+                <div className="h-full w-[68%] bg-gold" />
+              </div>
+              <span className="tnum shrink-0 text-[11px] text-ink-faint">11:40 / 17:00</span>
+            </div>
 
-      <section id="explore" className="w-full px-3 pb-10 sm:px-4 sm:pb-12">
-        <div className="rounded-[28px] bg-white p-8 shadow-sm sm:p-12 lg:p-14">
-          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">Explore our most<br/>loved classes</h2>
-          <p className="mx-auto mt-2 max-w-md text-center text-xs text-zinc-500">Curated choices chosen by learners to help you grow faster.</p>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {featured.map((c) => (<CourseCard key={c.id} {...c} />))}
-          </div>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
-            <Link to="/courses" className="rounded-full bg-[#0f172a] px-4 py-1.5 text-xs font-semibold text-white">All</Link>
-            {["Design","Business","Engineering","Marketing","Product"].map((f)=>(<Link key={f} to={`/courses?cat=${f}`} className="rounded-full border bg-white px-4 py-1.5 text-xs font-medium text-zinc-600">{f}</Link>))}
-          </div>
-        </div>
-      </section>
-
-      <div className="bg-[#f6f5f1] py-8 sm:py-10">
-        <div className="relative overflow-hidden"><div className="flex w-max animate-[marquee_28s_linear_infinite] items-center gap-3 will-change-transform">
-          {[["Growth oriented","bg-yellow-400 text-zinc-900"],["Curious","bg-[#3478ff] text-white"],["Practical skills","bg-yellow-400 text-zinc-900"],["Calm","bg-zinc-900 text-white"],["Motivated","bg-yellow-400 text-zinc-900"],["Focused sessions","bg-[#3478ff] text-white"],["Self driven","bg-white text-zinc-700 border border-zinc-200"],["Curious minds","bg-emerald-500 text-white"],["Real progress","bg-white text-zinc-700 border border-zinc-200"],["Consistent focus","bg-white text-zinc-700 border border-zinc-200"],["Growth oriented","bg-yellow-400 text-zinc-900"],["Curious","bg-[#3478ff] text-white"],["Practical skills","bg-yellow-400 text-zinc-900"],["Calm","bg-zinc-900 text-white"],["Motivated","bg-yellow-400 text-zinc-900"],["Focused sessions","bg-[#3478ff] text-white"],["Self driven","bg-white text-zinc-700 border border-zinc-200"],["Curious minds","bg-emerald-500 text-white"],["Real progress","bg-white text-zinc-700 border border-zinc-200"],["Consistent focus","bg-white text-zinc-700 border border-zinc-200"]].map(([label,cls],i)=>(<span key={`${label}-${i}`} className={`inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold leading-none ${cls}`}>✦ {label}</span>))}
-        </div></div>
-        <div className="relative mt-3 overflow-hidden"><div className="flex w-max animate-[marquee-reverse_30s_linear_infinite] items-center gap-3 will-change-transform">
-          {[["Consistent focus","bg-white text-zinc-700 border border-zinc-200"],["Calm","bg-zinc-900 text-white"],["Motivated","bg-yellow-400 text-zinc-900"],["Focused sessions","bg-[#3478ff] text-white"],["Self driven","bg-emerald-600 text-white"],["Curious minds","bg-white text-zinc-700 border border-zinc-200"],["Growth oriented","bg-yellow-400 text-zinc-900"],["Practical skills","bg-yellow-400 text-zinc-900"],["Consistent focus","bg-white text-zinc-700 border border-zinc-200"],["Calm","bg-zinc-900 text-white"],["Motivated","bg-yellow-400 text-zinc-900"],["Focused sessions","bg-[#3478ff] text-white"],["Self driven","bg-emerald-600 text-white"],["Curious minds","bg-white text-zinc-700 border border-zinc-200"],["Growth oriented","bg-yellow-400 text-zinc-900"],["Practical skills","bg-yellow-400 text-zinc-900"]].map(([label,cls],i)=>(<span key={`${label}-${i}-r`} className={`inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold leading-none ${cls}`}>✦ {label}</span>))}
-        </div></div>
-      </div>
-
-      <section className="w-full px-3 py-10 sm:px-4 sm:py-12">
-        <div className="relative rounded-[28px] bg-white px-6 py-16 text-center shadow-sm sm:px-10 sm:py-20 lg:py-24">
-          <div className="absolute left-6 top-6 sm:left-10"><Pill color="bg-[#3478ff]">Calm</Pill></div>
-          <div className="absolute right-6 top-6 sm:right-10"><Pill color="bg-yellow-400 !text-zinc-900">Motivated</Pill></div>
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2"><Pill color="bg-emerald-600">Focused sessions</Pill></div>
-          <h2 className="mx-auto max-w-[620px] text-[26px] font-extrabold leading-[1.05] tracking-[-0.03em] sm:text-[36px]">From focused sessions<br/>to practical skills, we <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white align-middle"><CheckCircle2 size={14} strokeWidth={3} /></span> helps you learn with<br/>clarity and confidence. <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#3478ff] text-white align-middle"><Sparkles size={12} strokeWidth={2.5} /></span></h2>
-          <p className="mx-auto mt-3 max-w-md text-xs text-zinc-500">Growth oriented. Our approach keeps you steady and motivated.</p>
-        </div>
-      </section>
-
-      <section className="w-full px-3 py-6 sm:px-4 sm:py-8">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { title: "Practical skills that matter", desc: "Our lessons focus on skills you can use right away at work or in life, taught by people who work in the real world.", Icon: Edit3 },
-          { title: "Learn without pressure", desc: "More of your own self chosen designed to help you stay calm, focused and steady while you learn, effectively.", Icon: CircleDot },
-          { title: "Clear learning paths", desc: "Follow flexible, step by step paths that guide you from the basics to confident, real world use. No guesswork.", Icon: Hexagon },
-          { title: "Real progress", desc: "Learning that shows physical progress. Every time you finish a lesson, you will feel momentum and clarity.", Icon: AlignLeft },
-        ].map((f) => (
-          <div key={f.title} className="rounded-2xl bg-white p-6 shadow-sm sm:p-7">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white"><f.Icon size={16} strokeWidth={2.5} /></div>
-            <h3 className="mt-3 text-sm font-bold leading-tight">{f.title}</h3>
-            <p className="mt-1 text-xs leading-relaxed text-zinc-500">{f.desc}</p>
-          </div>
-        ))}
-        </div>
-        <div className="flex justify-center py-6"><Link to="/courses" className="rounded-full bg-[#0f172a] px-5 py-2 text-xs font-semibold text-white">Learn more →</Link></div>
-      </section>
-
-      <section className="w-full px-3 pt-10 sm:px-4 sm:pt-12">
-        <div className="relative w-full overflow-hidden rounded-[28px]">
-          <img src={TESTIMONIAL_BG} alt="" className="h-[480px] w-full object-cover sm:h-[520px]" />
-          <div className="absolute inset-0 bg-black/10" />
-          <div className="absolute bottom-6 left-1/2 w-[92%] max-w-[520px] -translate-x-1/2 rounded-2xl bg-white p-5 shadow-xl sm:left-8 sm:translate-x-0">
-            <div className="text-amber-400 text-xs">★★★★★</div>
-            <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-800">“QTNXT completely changed how I approach learning. I feel more focused, less pressured, and I actually finish the courses I start.”</p>
-            <div className="mt-3 flex items-center gap-2"><img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&auto=format&fit=crop&q=80" alt="" className="h-7 w-7 rounded-full object-cover" /><div><p className="text-xs font-semibold">Maya Chen</p><p className="text-[10px] text-zinc-500">Product Designer • Self taught learner</p></div></div>
+            <ul className="divide-y divide-rule border-t border-rule">
+              {[
+                ["Scheduling and reminders", true],
+                ["Writing the run sheet", true],
+                ["Handling the room", false],
+              ].map(([label, done]) => (
+                <li key={label as string} className="flex items-center gap-3 px-4 py-2.5">
+                  <span
+                    className={cn(
+                      "flex h-5 w-5 shrink-0 items-center justify-center border",
+                      done ? "border-live/30 bg-live-soft text-live" : "border-rule bg-room-sunk",
+                    )}
+                  >
+                    {done ? (
+                      <Check size={11} strokeWidth={3} aria-hidden />
+                    ) : (
+                      <Play size={9} strokeWidth={2.5} aria-hidden className="text-ink-faint" />
+                    )}
+                  </span>
+                  <span
+                    className={cn(
+                      "min-w-0 flex-1 truncate text-sm",
+                      done ? "text-ink-muted" : "font-medium text-ink",
+                    )}
+                  >
+                    {label as string}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
 
-      <section id="faq" className="w-full px-3 py-14 sm:px-4 sm:py-20">
-        <div className="mx-auto max-w-3xl">
-        <h2 className="text-center text-2xl font-bold tracking-tight">Frequently asked<br/>questions</h2>
-        <div className="mt-6 space-y-3">
-          {[{q:"Who is QTNXT for?",a:"QTNXT is for curious, self-driven learners who want to build practical skills at their own pace without pressure or rigid systems."},{q:"How is QTNXT different from other learning platforms?",a:"We focus on calm, focused learning with real-world projects and mentor support instead of endless video playlists."},{q:"Can I learn at my own pace?",a:"Yes — all courses are self-paced. Learn anytime, anywhere."},{q:"Do I get a certificate after completing a course?",a:"Yes, you receive a verified certificate you can share on LinkedIn."}].map((item,i)=>(
-            <div key={item.q} className="rounded-2xl bg-white px-5 py-4 shadow-sm">
-              <button onClick={()=>setFaq(faq===i?null:i)} className="flex w-full items-center justify-between text-left"><span className="text-sm font-semibold">{item.q}</span><span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${faq===i?"bg-[#3478ff] text-white":"bg-zinc-100"}`}>{faq===i?<Minus size={12} strokeWidth={2.5}/>:<Plus size={12} strokeWidth={2.5}/>}</span></button>
-              {faq===i&&<p className="mt-2 text-xs leading-relaxed text-zinc-500">{item.a}</p>}
+      {/* The catalogue, immediately. No logo wall between promise and proof. */}
+      <section className="border-t border-rule bg-room-raised">
+        <div className="mx-auto w-full max-w-[1200px] px-4 py-14 sm:px-6 sm:py-20">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+                Open catalogue
+              </p>
+              <h2 className="mt-3 max-w-[20ch] text-[28px] font-semibold tracking-[-0.03em] text-ink sm:text-[36px]">
+                Start with something real.
+              </h2>
+            </div>
+            <Link
+              to="/courses"
+              className="inline-flex items-center gap-1 text-sm font-semibold text-ink-muted transition-colors hover:text-ink"
+            >
+              See all {courses.length} courses
+              <ArrowRight size={14} strokeWidth={2.5} aria-hidden />
+            </Link>
+          </div>
+
+          {featured.length === 0 ? (
+            <p className="mt-8 border border-rule bg-room px-5 py-8 text-center text-sm text-ink-muted">
+              No courses are published yet. Check back shortly.
+            </p>
+          ) : (
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {featured.map((c) => (
+                <CourseCard key={c.id} {...c} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section id="how" className="mx-auto w-full max-w-[1200px] px-4 py-14 sm:px-6 sm:py-20">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+          How it works
+        </p>
+        <h2 className="mt-3 max-w-[26ch] text-[28px] font-semibold tracking-[-0.03em] text-ink sm:text-[36px]">
+          Four things that make a course worth finishing.
+        </h2>
+
+        <div className="mt-8 grid gap-px border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
+          {PILLARS.map(({ Icon, title, body }) => (
+            <div key={title} className="bg-room-raised p-6">
+              <span className="flex h-9 w-9 items-center justify-center border border-rule bg-room-sunk text-ink-muted">
+                <Icon size={16} strokeWidth={2.2} aria-hidden />
+              </span>
+              <h3 className="mt-4 text-base font-semibold text-ink">{title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-ink-muted">{body}</p>
             </div>
           ))}
         </div>
-        <div className="mt-4 flex justify-center"><a href="#" className="rounded-full bg-[#0f172a] px-5 py-2 text-xs font-semibold text-white">See more questions →</a></div>
+      </section>
+
+      {/* Dark moment: the assessment promise, on the one deep surface in the app. */}
+      <section className="bg-room-deep">
+        <div className="mx-auto grid w-full max-w-[1200px] gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:items-center">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gold">
+              Assessments
+            </p>
+            <h2 className="mt-4 max-w-[20ch] text-[28px] font-semibold leading-tight tracking-[-0.03em] text-ink-inverse sm:text-[34px]">
+              Tested the way real exams are run.
+            </h2>
+            <p className="mt-5 max-w-[48ch] text-[15px] leading-relaxed text-ink-inverse/70">
+              Timed attempts, auto-graded answers, and a full transcript you can
+              read afterwards. Where you lost marks is shown, not just your score.
+            </p>
+            <ul className="mt-7 space-y-2.5">
+              {[
+                "Countdown timer with auto-submit",
+                "Every attempt kept, with your best result",
+                "Question-by-question transcript after submit",
+              ].map((f) => (
+                <li key={f} className="flex items-center gap-2.5 text-sm text-ink-inverse/85">
+                  <Check size={15} strokeWidth={3} aria-hidden className="shrink-0 text-gold" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <Link
+              to="/assignments"
+              className="mt-8 inline-flex h-12 items-center gap-2 border border-gold bg-gold px-6 text-sm font-semibold text-ink transition-colors hover:bg-gold/90"
+            >
+              See available assessments
+              <ArrowRight size={16} strokeWidth={2.5} aria-hidden />
+            </Link>
+          </div>
+
+          <dl className="grid grid-cols-2 gap-px self-stretch border border-white/12 bg-white/12">
+            {[
+              ["Chapters", "per course"],
+              ["Lessons", "tracked"],
+              ["Attempts", "kept forever"],
+              ["Progress", "never lost"],
+            ].map(([v, k]) => (
+              <div key={k} className="flex flex-col justify-center bg-room-deep px-5 py-8">
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-inverse/50">
+                  {k}
+                </dt>
+                <dd className="mt-2 text-xl font-semibold text-ink-inverse">{v}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 
-      <section className="w-full px-3 py-6 sm:px-4 sm:py-8">
-        <div className="w-full rounded-[28px] bg-[#0f172a] px-6 py-20 text-center text-white sm:py-24 lg:py-28">
-          <h2 className="mx-auto max-w-xl text-[26px] font-bold leading-tight tracking-tight sm:text-4xl">Start learning in a way<br/>that feels right for you.</h2>
-          <Link to="/courses" className="mt-6 inline-block rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-zinc-900">Get started for free</Link>
-          <div className="mx-auto mt-8 flex h-10 w-10 items-center justify-center rounded-xl bg-white font-black text-[#0f172a]">K.</div>
+      <section className="mx-auto w-full max-w-[900px] px-4 py-14 sm:px-6 sm:py-20">
+        <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-ink sm:text-[34px]">
+          Questions people actually ask
+        </h2>
+
+        <div className="mt-8 divide-y divide-rule border-y border-rule">
+          {FAQS.map((item, i) => {
+            const open = openFaq === i;
+            return (
+              <div key={item.q}>
+                <h3>
+                  <button
+                    onClick={() => setOpenFaq(open ? null : i)}
+                    aria-expanded={open}
+                    className="flex w-full items-center justify-between gap-4 py-4 text-left"
+                  >
+                    <span className="text-[15px] font-medium text-ink">{item.q}</span>
+                    <span
+                      className={cn(
+                        "flex h-6 w-6 shrink-0 items-center justify-center border transition-colors",
+                        open ? "border-ink bg-ink text-ink-inverse" : "border-rule text-ink-muted",
+                      )}
+                    >
+                      <ChevronDown
+                        size={13}
+                        strokeWidth={2.5}
+                        aria-hidden
+                        className={open ? "rotate-180" : undefined}
+                      />
+                    </span>
+                  </button>
+                </h3>
+                {open && (
+                  <p className="measure pb-5 text-sm leading-relaxed text-ink-muted">{item.a}</p>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      <footer className="w-full px-6 py-12 text-sm text-zinc-500 sm:px-8 sm:py-16">
-        <div className="grid gap-8 sm:grid-cols-4">
-          <div><div className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-900 text-xs font-bold text-white">K</div><p className="mt-3 text-xs leading-relaxed text-zinc-500">Learn practical skills with calm, focused sessions.</p></div>
-          {[{title:"Explore",links:["Courses","Learning Paths","Instructors","Categories","Certificates"]},{title:"Resources",links:["FAQ","Help Center","Learning Guide","Community"]},{title:"Company",links:["About QTNXT","Careers","Blog","Press","Privacy Policy","Terms of Service"]}].map((col)=>(
-            <div key={col.title}><p className="font-semibold text-zinc-900">{col.title}</p><ul className="mt-2 space-y-1 text-xs">{col.links.map((l)=>(<li key={l}><a href="#" className="hover:text-zinc-900">{l}</a></li>))}</ul></div>
-          ))}
+      <footer className="border-t border-rule bg-room-raised">
+        <div className="mx-auto w-full max-w-[1200px] px-4 py-12 sm:px-6">
+          <div className="grid gap-8 sm:grid-cols-4">
+            <div className="sm:col-span-2">
+              <Link to="/" className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center bg-ink text-[13px] font-bold text-ink-inverse">
+                  Q
+                </span>
+                <span className="text-sm font-semibold tracking-tight text-ink">QTNXT</span>
+              </Link>
+              <p className="measure mt-3 text-sm leading-relaxed text-ink-muted">
+                Courses built as chapters and lessons, with assessments you can
+                sit properly.
+              </p>
+            </div>
+            {[
+              { title: "Learn", links: [["Catalogue", "/courses"], ["Assignments", "/assignments"], ["My learning", "/courses"]] },
+              { title: "Account", links: [["Profile", "/profile"], ["Activity", "/activity"], ["Leaderboard", "/leaderboard"]] },
+              { title: "About", links: [["About QTNXT", "/about"]] },
+            ].map((col) => (
+              <nav key={col.title} aria-label={col.title}>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+                  {col.title}
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {col.links.map(([label, to]) => (
+                    <li key={label}>
+                      <Link
+                        to={to}
+                        className="text-sm text-ink-muted transition-colors hover:text-ink"
+                      >
+                        {label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            ))}
+          </div>
+          <p className="mt-10 border-t border-rule pt-6 text-xs text-ink-faint">
+            QTNXT. Learn the thing, properly.
+          </p>
         </div>
-        <p className="mt-8 border-t pt-6 text-center text-xs text-zinc-400">© 2026 QTNXT. All rights reserved.</p>
       </footer>
-    </>
+    </div>
   );
 }
