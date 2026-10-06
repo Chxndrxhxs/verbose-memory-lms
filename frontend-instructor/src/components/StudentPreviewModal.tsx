@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   LESSON_KIND_BADGE,
   Minus,
-  Play,
   Plus,
   absoluteMediaUrl,
   X,
@@ -273,15 +272,7 @@ export function StudentPreviewModal({
             <div>
               <div className="sticky top-0 overflow-hidden border border-rule bg-slate-panel">
                 {cover && (
-                  <div className="relative">
-                    <img src={cover} alt="" className="h-40 w-full object-cover" />
-                    <span className="absolute inset-0 m-auto flex h-12 w-12 items-center justify-center rounded-full border border-rule bg-slate-panel text-ink">
-                      <Play size={20} strokeWidth={2.5} className="ml-1" />
-                    </span>
-                    <span className="absolute bottom-2 right-2 rounded-sm bg-ink/80 px-2 py-1 text-[10px] font-semibold text-ink-inverse">
-                      Preview this course
-                    </span>
-                  </div>
+                  <img src={cover} alt="" className="h-40 w-full object-cover" />
                 )}
                 <div className="p-5">
                   <span className="text-2xl font-semibold tnum">{price}</span>
