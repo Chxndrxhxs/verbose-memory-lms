@@ -37,8 +37,8 @@ type Notice = { kind: "success" | "error" | "info"; text: string; detail?: strin
 const inputClass = builderFieldClass;
 
 const topicInput = cn(
-  "min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white",
-  "px-4 py-3 text-sm outline-none focus:border-zinc-900",
+  "min-w-0 flex-1 rounded-sm border border-rule bg-slate-panel",
+  "px-4 py-3 text-sm text-ink placeholder:text-ink-faint focus:border-ink",
 );
 
 function makeId(prefix: string): string {
@@ -343,13 +343,13 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
     <div className="space-y-6">
       <div className={builderCardClass}>
         <p className={builderEyebrowClass}>From a document</p>
-        <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">Copy from your PDF</h2>
-        <p className="mt-1.5 text-[15px] text-zinc-500">
+        <h2 className="mt-1 text-xl font-semibold text-ink">Copy from your PDF</h2>
+        <p className="mt-1.5 text-[15px] text-ink-muted">
           Copies the numbered questions and options already printed in the file —
           best when the upload is a question paper.
         </p>
         {!hasSource ? (
-          <p className="mt-5 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-5 text-sm text-zinc-500">
+          <p className="mt-5 border border-dashed border-rule-strong bg-slate-sunk p-5 text-sm text-ink-muted">
             No document uploaded yet. Go back one step to upload, or generate
             questions below without one.
           </p>
@@ -357,14 +357,15 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
           <div className="mt-4">
             <div className="flex flex-wrap items-center gap-3">
               <button
+                type="button"
                 onClick={() => handleExtract()}
                 disabled={extracting}
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-full px-5 py-2.5",
-                  "text-sm font-semibold text-white shadow-sm",
+                  "inline-flex items-center gap-2 rounded-sm border px-5 py-2",
+                  "text-sm font-semibold",
                   extracting
-                    ? "cursor-wait bg-zinc-400"
-                    : "bg-emerald-600 hover:bg-emerald-700",
+                    ? "cursor-wait border-rule bg-slate-sunk text-ink-faint"
+                    : "border-live bg-live text-ink-inverse hover:bg-live/88",
                 )}
               >
                 <FileText size={16} className={extracting ? "animate-pulse" : ""} />
@@ -372,10 +373,11 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
               </button>
               {extracting ? (
                 <button
+                  type="button"
                   onClick={cancelExtract}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full border",
-                    "border-zinc-300 px-4 py-2.5 text-xs font-semibold hover:bg-zinc-50",
+                    "inline-flex items-center gap-2 rounded-sm border",
+                    "border-rule-strong px-4 py-2 text-xs font-semibold hover:bg-slate-sunk",
                   )}
                 >
                   <X size={13} /> Cancel
@@ -384,11 +386,12 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
                 extractProgress &&
                 extractProgress.pending.length > 0 && (
                   <button
+                    type="button"
                     onClick={() => handleExtract(extractProgress.pending)}
                     className={cn(
-                      "inline-flex items-center gap-2 rounded-full border",
-                      "border-emerald-600 px-5 py-2.5 text-sm font-semibold",
-                      "text-emerald-700 hover:bg-emerald-50",
+                      "inline-flex items-center gap-2 rounded-sm border tnum",
+                      "border-live px-5 py-2 text-sm font-semibold",
+                      "text-live hover:bg-live-soft",
                     )}
                   >
                     Resume ({extractProgress.pending.length} pages left)
@@ -400,7 +403,7 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
               <ProgressBar done={extractProgress.done} total={extractProgress.total} />
             )}
             {extractProgress && extractProgress.pending.length > 0 && !extracting && (
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className="mt-1 text-xs text-ink-muted tnum">
                 {extractProgress.done} of {extractProgress.total} pages done —{" "}
                 {extractProgress.pending.length} pending.
               </p>
@@ -412,8 +415,8 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
 
       <div className={builderCardClass}>
         <p className={builderEyebrowClass}>New with AI</p>
-        <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">Write new questions with AI</h2>
-        <p className="mt-1.5 text-[15px] text-zinc-500">
+        <h2 className="mt-1 text-xl font-semibold text-ink">Write new questions with AI</h2>
+        <p className="mt-1.5 text-[15px] text-ink-muted">
           {hasSource
             ? "Fresh questions about the document content."
             : "Fresh questions about your topics below — no upload needed."}
@@ -430,7 +433,7 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
               onChange={(e) =>
                 setCount(Math.max(1, Number(e.target.value) || 1))
               }
-              className={inputClass}
+              className={cn(inputClass, "tnum")}
             />
           </label>
           <label className={builderLabelClass}>
@@ -438,7 +441,7 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
             <select
               value={difficulty}
               onChange={(e) => setDifficulty(e.target.value as QuestionDifficulty)}
-              className={cn(inputClass, "bg-white")}
+              className={inputClass}
             >
               <option value="easy">Easy</option>
               <option value="medium">Medium</option>
@@ -455,7 +458,7 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
               onChange={(e) =>
                 setMarksPerQuestion(Math.max(1, Number(e.target.value) || 1))
               }
-              className={inputClass}
+              className={cn(inputClass, "tnum")}
             />
           </label>
           <label className={builderLabelClass}>
@@ -463,7 +466,7 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
             <select
               value={numberOfOptions}
               onChange={(e) => setNumberOfOptions(Number(e.target.value))}
-              className={cn(inputClass, "bg-white")}
+              className={cn(inputClass, "tnum")}
             >
               <option value={3}>3 options</option>
               <option value={4}>4 options</option>
@@ -472,10 +475,10 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
           </label>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-zinc-200/70 bg-zinc-50/70 p-5 sm:p-6">
-          <p className="text-sm font-bold text-zinc-900">
+        <div className="mt-6 border border-rule bg-slate-sunk p-5 sm:p-6">
+          <p className="text-sm font-semibold text-ink">
             Topics{" "}
-            <span className="font-normal text-zinc-500">
+            <span className="font-normal text-ink-muted">
               —{" "}
               {hasSource
                 ? "optional, controls what the questions cover"
@@ -513,13 +516,14 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
                     title="Questions on this topic"
                     aria-label="Questions on this topic"
                     className={cn(
-                      "w-20 rounded-xl border border-zinc-200 bg-white",
-                      "px-3 py-3 text-sm outline-none focus:border-zinc-900",
+                      "w-20 rounded-sm border border-rule bg-slate-panel",
+                      "px-3 py-2 text-sm tnum focus:border-ink",
                     )}
                   />
                   <button
+                    type="button"
                     onClick={() => setTopics((prev) => prev.filter((_, j) => j !== i))}
-                    className="rounded-xl p-2.5 text-zinc-400 hover:bg-red-50 hover:text-red-500"
+                    className="rounded-sm p-3 text-ink-faint hover:bg-halt-soft hover:text-halt"
                     title="Remove topic"
                     aria-label="Remove topic"
                   >
@@ -529,7 +533,7 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
               ))}
             </div>
           )}
-          <div className="mt-4 flex items-center gap-2.5">
+          <div className="mt-4 flex items-center gap-2">
             <input
               type="text"
               value={newTopic}
@@ -540,21 +544,22 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
               className={topicInput}
             />
             <button
+              type="button"
               onClick={addTopic}
               className={cn(
-                "inline-flex h-12 shrink-0 items-center gap-1.5 rounded-full border",
-                "border-zinc-300 px-4 text-sm font-semibold hover:bg-white",
+                "inline-flex h-12 shrink-0 items-center gap-2 rounded-sm border",
+                "border-rule-strong px-4 text-sm font-semibold hover:bg-slate-panel",
               )}
             >
               <Plus size={14} /> Add topic
             </button>
           </div>
-          <label className="mt-4 flex items-center gap-2.5 text-sm text-zinc-600">
+          <label className="mt-4 flex items-center gap-2 text-sm text-ink-muted">
             <input
               type="checkbox"
               checked={generateExplanations}
               onChange={(e) => setGenerateExplanations(e.target.checked)}
-              className="h-4 w-4 accent-zinc-900"
+              className="h-4 w-4 accent-ink"
             />
             Write an explanation for each answer
           </label>
@@ -562,12 +567,15 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <button
+            type="button"
             onClick={handleGenerate}
             disabled={generating}
             className={cn(
-              "inline-flex h-12 items-center gap-2 rounded-full px-6",
-              "text-[15px] font-semibold text-white shadow-sm",
-              generating ? "cursor-wait bg-zinc-400" : "bg-[#3478ff] hover:bg-[#2a60cc]",
+              "inline-flex h-12 items-center gap-2 rounded-sm border px-6",
+              "text-[15px] font-semibold",
+              generating
+                ? "cursor-wait border-rule bg-slate-sunk text-ink-faint"
+                : "border-ink bg-ink text-ink-inverse hover:bg-ink/88",
             )}
           >
             <Sparkles size={16} className={generating ? "animate-spin" : ""} />
@@ -577,21 +585,22 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
         {generateNotice && <NoticeBox notice={generateNotice} />}
 
         {aiUnavailable && (
-          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-5">
-            <p className="flex items-start gap-2.5 text-sm text-amber-800">
+          <div className="mt-4 border border-hold/30 bg-hold-soft p-5">
+            <p className="flex items-start gap-2 text-sm text-hold">
               <Database size={15} className="mt-0.5 shrink-0" />
               <span>
                 The AI service isn&apos;t reachable, so these would be local
-                placeholders — review and edit every one before publishing.
+                placeholders. Review and edit every one before publishing.
               </span>
             </p>
             <button
+              type="button"
               onClick={handleSampleGenerate}
               disabled={generating}
               className={cn(
-                "mt-4 inline-flex h-11 items-center gap-2 rounded-full border",
-                "border-amber-300 bg-white px-5 text-sm font-semibold",
-                "hover:bg-amber-100 disabled:opacity-50",
+                "mt-4 inline-flex h-11 items-center gap-2 rounded-sm border",
+                "border-hold/40 bg-slate-panel px-5 text-sm font-semibold text-ink",
+                "hover:bg-slate-sunk disabled:opacity-50",
               )}
             >
               <Database size={14} />
@@ -602,7 +611,7 @@ export function AssignmentGenerateStep({ assignment, onChange }: Props) {
       </div>
 
       {poolCount > 0 && (
-        <p className="rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
+        <p className="border border-live/25 bg-live-soft p-4 text-sm font-semibold text-live tnum">
           {poolCount} question{poolCount === 1 ? "" : "s"} in your pool — continue to
           review them.
         </p>
@@ -615,13 +624,13 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
   const pct = Math.round((done / Math.max(1, total)) * 100);
   return (
     <div className="mt-3">
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-rule">
         <div
-          className="h-full rounded-full bg-emerald-600 transition-all duration-500"
+          className="h-full rounded-full bg-live transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <p className="mt-1 text-xs text-zinc-500">
+      <p className="mt-1 text-xs text-ink-muted tnum">
         {done} of {total} pages done.
       </p>
     </div>
@@ -632,10 +641,10 @@ function NoticeBox({ notice }: { notice: Notice }) {
   return (
     <div
       className={cn(
-        "mt-4 flex items-start gap-2.5 rounded-2xl border p-4 text-sm",
-        notice.kind === "success" && "border-emerald-200 bg-emerald-50 text-emerald-800",
-        notice.kind === "error" && "border-red-200 bg-red-50 text-red-700",
-        notice.kind === "info" && "border-zinc-200 bg-zinc-100 text-zinc-600",
+        "mt-4 flex items-start gap-2 border p-4 text-sm",
+        notice.kind === "success" && "border-live/25 bg-live-soft text-live",
+        notice.kind === "error" && "border-halt/25 bg-halt-soft text-halt",
+        notice.kind === "info" && "border-rule bg-slate-sunk text-ink-muted",
       )}
     >
       {notice.kind === "error" && <AlertTriangle size={14} className="mt-0.5 shrink-0" />}

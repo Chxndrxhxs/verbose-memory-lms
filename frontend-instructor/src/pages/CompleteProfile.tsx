@@ -17,6 +17,9 @@ import {
 } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 import { api, absoluteMediaUrl, uploadFile } from "../lib/api";
+import { TeachMark } from "../components/Badge";
+import { Button } from "../components/Button";
+import { Field, Input, Notice } from "../components/Controls";
 
 const schema = z.object({
   name: nameField("Full name", { min: 2 }),
@@ -34,7 +37,12 @@ export default function CompleteProfile() {
   const [avatar, setAvatar] = useState<string | null>(user?.avatar ?? null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Form>({
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<Form>({
     resolver: zodResolver(schema) as never,
     defaultValues: {
       name: user?.name ?? "",
@@ -45,7 +53,13 @@ export default function CompleteProfile() {
   });
 
   useEffect(() => {
-    if (!user) api<{ name: string } | null>("/users/me").then((u) => { if (u) setUser(u as unknown as { name: string; email: string; mobile: string }); else nav("/login"); }).catch(() => nav("/login"));
+    if (!user)
+      api<{ name: string } | null>("/users/me")
+        .then((u) => {
+          if (u) setUser(u as unknown as { name: string; email: string; mobile: string });
+          else nav("/login");
+        })
+        .catch(() => nav("/login"));
   }, []);
 
   const onAvatarPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,95 +79,175 @@ export default function CompleteProfile() {
   };
 
   const onSubmit = async (data: Form) => {
+    setSaveError(null);
     try {
       let avatarUrl = avatar || "";
       if (avatarFile) {
         const uploaded = await uploadFile(avatarFile, "avatar");
         avatarUrl = absoluteMediaUrl(uploaded.url) ?? "";
       }
-      const updated = await api<{ name: string; email: string; mobile: string; age: number; city: string; avatar: string }>("/auth/complete-profile", { method: "PATCH", body: JSON.stringify({ name: data.name, email: data.email, age: Number(data.age), city: data.city, avatar: avatarUrl }) });
-      setUser({ name: updated.name || data.name, email: updated.email, mobile: updated.mobile, age: updated.age, avatar: avatarUrl || undefined });
-      setToast("Profile saved! Welcome to QTNXT");
+      const updated = await api<{
+        name: string;
+        email: string;
+        mobile: string;
+        age: number;
+        city: string;
+        avatar: string;
+      }>("/auth/complete-profile", {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          age: Number(data.age),
+          city: data.city,
+          avatar: avatarUrl,
+        }),
+      });
+      setUser({
+        name: updated.name || data.name,
+        email: updated.email,
+        mobile: updated.mobile,
+        age: updated.age,
+        avatar: avatarUrl || undefined,
+      });
+      setToast("Profile saved. Opening your studio.");
       setTimeout(() => nav("/dashboard"), 800);
-    } catch (e) { setToast(String(e)); setTimeout(()=>setToast(null),2200); }
+    } catch (e) {
+      const msg = String(e);
+      // A failure is a recovery path: say what broke and keep them on the form.
+      setSaveError(msg);
+      setToast(null);
+    }
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#f6f5f1] lg:grid lg:grid-cols-2">
-      <div className="flex min-h-screen flex-col bg-white px-6 py-8 sm:px-10 lg:px-16 lg:py-12">
+    <div className="min-h-screen bg-slate-ground">
+      <div className="mx-auto flex min-h-screen w-full max-w-[560px] flex-col px-4 py-8">
         <Link to="/" className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f172a] text-xs font-bold text-white">K</span>
-          <span className="text-sm font-bold">QTNXT</span>
-          <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-bold text-zinc-900">Teach</span>
+          <span className="flex h-7 w-7 items-center justify-center bg-ink text-[13px] font-bold text-ink-inverse">
+            Q
+          </span>
+          <span className="text-sm font-semibold tracking-tight text-ink">QTNXT</span>
+          <TeachMark />
         </Link>
 
-        <div className="flex flex-1 items-center">
-          <div className="mx-auto w-full max-w-md">
-            <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">Instructor profile</h1>
-            <p className="mt-2 text-sm text-zinc-500">Set up your teaching profile — students will see this.</p>
+        <div className="flex flex-1 items-center py-10">
+          <div className="w-full">
+            <h1 className="text-2xl font-semibold tracking-tight text-ink">
+              Set up your instructor profile
+            </h1>
+            <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">
+              Learners see your name, city and photo on every course you publish. You can
+              change any of this later.
+            </p>
 
             <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
-              <div className="flex items-center gap-4">
-                <div className="h-16 w-16 overflow-hidden rounded-full bg-zinc-100 flex items-center justify-center">
-                  {avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : <User size={24} className="text-zinc-400" />}
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden border border-rule bg-slate-sunk text-ink-faint">
+                  {avatar ? (
+                    <img src={avatar} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <User size={24} strokeWidth={1.8} aria-hidden />
+                  )}
                 </div>
-                <label className="rounded-full border border-zinc-200 px-4 py-1.5 text-xs font-semibold cursor-pointer hover:bg-zinc-50">Upload photo<input type="file" accept="image/*" className="hidden" onChange={onAvatarPicked} /></label>
-                <span className="text-xs text-zinc-400">PNG/JPG, max 2MB</span>
+                <div>
+                  <label
+                    htmlFor="avatar"
+                    className="inline-flex h-9 cursor-pointer items-center border border-rule-strong bg-slate-panel px-4 text-xs font-semibold text-ink transition-colors hover:bg-slate-sunk"
+                  >
+                    Upload photo
+                  </label>
+                  <input
+                    id="avatar"
+                    type="file"
+                    accept="image/*"
+                    onChange={onAvatarPicked}
+                    className="sr-only"
+                  />
+                  <p className="mt-1.5 text-xs text-ink-faint">JPG or PNG, up to 2 MB</p>
+                </div>
               </div>
-              {avatarError && <p className="-mt-3 text-xs text-red-500">{avatarError}</p>}
+              {avatarError && (
+                <p className="text-xs font-medium text-halt" role="alert">
+                  {avatarError}
+                </p>
+              )}
 
-              <div>
-                <label className="text-xs font-semibold text-zinc-700">Full name</label>
-                <input {...register("name")} placeholder="Ayse Sharma" className="mt-1.5 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white" />
-                {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
-              </div>
+              <Field label="Full name" htmlFor="name" error={errors.name?.message}>
+                <Input id="name" placeholder="Ayse Sharma" autoComplete="name" {...register("name")} />
+              </Field>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700">Email</label>
-                  <input {...register("email")} placeholder="ayse@mail.com" className="mt-1.5 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white" />
-                  {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700">Age</label>
-                  <input type="number" min={MIN_AGE} max={MAX_AGE} inputMode="numeric" placeholder={`${MIN_AGE}–${MAX_AGE}`} {...register("age")} className="mt-1.5 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white" />
-                  {errors.age && <p className="mt-1 text-xs text-red-500">{errors.age.message}</p>}
-                </div>
+                <Field label="Email" htmlFor="email" error={errors.email?.message}>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="ayse@mail.com"
+                    autoComplete="email"
+                    {...register("email")}
+                  />
+                </Field>
+                <Field
+                  label="Age"
+                  htmlFor="age"
+                  hint={`${MIN_AGE} to ${MAX_AGE}`}
+                  error={errors.age?.message}
+                >
+                  <Input
+                    id="age"
+                    type="number"
+                    min={MIN_AGE}
+                    max={MAX_AGE}
+                    inputMode="numeric"
+                    {...register("age")}
+                  />
+                </Field>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-zinc-700">City</label>
-                <input {...register("city")} placeholder="Bengaluru, Mumbai, Delhi…" className="mt-1.5 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white" />
-                {errors.city && <p className="mt-1 text-xs text-red-500">{errors.city.message}</p>}
-              </div>
+              <Field label="City" htmlFor="city" error={errors.city?.message}>
+                <Input
+                  id="city"
+                  placeholder="Bengaluru, Mumbai, Delhi"
+                  autoComplete="address-level2"
+                  {...register("city")}
+                />
+              </Field>
 
-              <div>
-                <label className="text-xs font-semibold text-zinc-700">Mobile</label>
-                <input value={user?.mobile ?? ""} readOnly className="mt-1.5 w-full rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-2.5 text-sm text-zinc-500" />
-              </div>
+              <Field
+                label="Mobile"
+                htmlFor="mobile"
+                hint="Your sign-in number. This cannot be changed here."
+              >
+                <Input
+                  id="mobile"
+                  value={user?.mobile ?? ""}
+                  readOnly
+                  className="tnum bg-slate-sunk text-ink-muted"
+                />
+              </Field>
 
-              <button disabled={isSubmitting} className="w-full rounded-full bg-[#0f172a] py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-60 flex items-center justify-center gap-2">
-                {isSubmitting ? "Saving…" : <>Continue to QTNXT <ArrowRight size={14} strokeWidth={2.5} /></>}
-              </button>
+              {saveError && (
+                <Notice tone="error" role="alert" title="Could not save your profile">
+                  {saveError} Check each field and try again.
+                </Notice>
+              )}
+
+              <Button type="submit" variant="primary" size="lg" block disabled={isSubmitting}>
+                {isSubmitting ? "Saving…" : "Continue to your studio"}
+                {!isSubmitting && <ArrowRight size={16} strokeWidth={2.5} aria-hidden />}
+              </Button>
             </form>
           </div>
         </div>
       </div>
 
-      <div className="relative hidden h-screen lg:block">
-        <img src="https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?auto=compress&cs=tinysrgb&w=1400" alt="" className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        <div className="absolute bottom-10 left-10 right-10 text-white">
-          <p className="text-3xl font-extrabold leading-tight tracking-tight">Your teaching<br/>journey starts here.</p>
-          <p className="mt-3 max-w-sm text-sm text-white/80">Build your profile once — students across India will find you by skill and city.</p>
-          <div className="mt-6 flex items-center gap-3 text-xs text-white/70">
-            <span className="h-px w-8 bg-white/40" />
-            <span>One last step before going live</span>
+      <div aria-live="polite" aria-atomic="true">
+        {toast && (
+          <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 border border-rule-strong bg-ink px-5 py-2.5 text-sm text-ink-inverse shadow-[0_18px_40px_-12px_rgba(20,24,38,0.4)]">
+            {toast}
           </div>
-        </div>
+        )}
       </div>
-
-      {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white shadow-xl">{toast}</div>}
     </div>
   );
 }

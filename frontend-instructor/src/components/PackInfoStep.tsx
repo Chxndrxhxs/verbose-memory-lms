@@ -14,11 +14,11 @@ export function PackInfoStep({ info, onChange }: Props) {
 
   return (
     <div className={builderCardClass}>
-      <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
         Step 1 of 4 · Basics
       </p>
-      <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">Pack details</h2>
-      <p className="mt-1.5 text-[15px] text-zinc-500">
+      <h2 className="mt-1 text-xl font-semibold text-ink">Pack details</h2>
+      <p className="mt-1.5 text-[15px] text-ink-muted">
         This is how the pack appears in the learner store.
       </p>
 
@@ -64,7 +64,7 @@ export function PackInfoStep({ info, onChange }: Props) {
             <img
               src={info.cover.trim()}
               alt="Pack cover preview"
-              className="mt-1.5 h-44 w-32 rounded-2xl border border-zinc-200 object-cover"
+              className="mt-1.5 h-44 w-32 border border-rule object-cover"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = "none";
               }}

@@ -22,13 +22,13 @@ type Props = {
 };
 
 const checkRow = cn(
-  "flex items-center gap-3 rounded-xl border border-zinc-200",
-  "bg-white px-4 py-3.5",
+  "flex items-center gap-3 rounded-sm border border-rule",
+  "bg-slate-panel px-4 py-3",
 );
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="border-t border-zinc-100 pt-6 first:border-t-0 first:pt-0">
+    <section className="border-t border-rule pt-6 first:border-t-0 first:pt-0">
       <h3 className={builderEyebrowClass}>{title}</h3>
       <div className="mt-4 space-y-5">{children}</div>
     </section>
@@ -38,8 +38,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 export function AssignmentBasicInfoStep({ assignment, onChange, errors }: Props) {
   return (
     <div className={builderCardClass}>
-      <h2 className="text-xl font-bold tracking-tight text-zinc-900">About this assignment</h2>
-      <p className="mt-1.5 text-[15px] text-zinc-500">
+      <h2 className="text-xl font-semibold text-ink">About this assignment</h2>
+      <p className="mt-1.5 text-[15px] text-ink-muted">
         What students see, when it runs, and how it scores.
       </p>
 
@@ -47,7 +47,7 @@ export function AssignmentBasicInfoStep({ assignment, onChange, errors }: Props)
         <Section title="1 · Details">
           <div>
             <label className={builderLabelClass} htmlFor="assignment-title">
-              Title <span className="text-red-500">*</span>
+              Title <span className="text-halt">*</span>
             </label>
             <input
               id="assignment-title"
@@ -126,7 +126,7 @@ export function AssignmentBasicInfoStep({ assignment, onChange, errors }: Props)
                 onChange={(e) =>
                   onChange({ duration: Math.max(1, Number(e.target.value) || 1) })
                 }
-                className={builderFieldClass}
+                className={cn(builderFieldClass, "tnum")}
               />
             </div>
             <div>
@@ -163,14 +163,14 @@ export function AssignmentBasicInfoStep({ assignment, onChange, errors }: Props)
                   onChange({ totalMarks: Number(e.target.value) || 0 })
                 }
                 placeholder="Auto-sums from questions when published"
-                className={builderFieldClass}
+                className={cn(builderFieldClass, "tnum")}
               />
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className={builderHintClass}>
                 {MIN_TOTAL_MARKS}–{MAX_TOTAL_MARKS}. Leave blank to auto-sum from
                 questions.
               </p>
               {errors.find((e) => e.field === "totalMarks") && (
-                <p className="mt-1 text-xs text-red-600">
+                <p className="mt-1 text-xs text-halt tnum">
                   {errors.find((e) => e.field === "totalMarks")?.message}
                 </p>
               )}
@@ -191,7 +191,7 @@ export function AssignmentBasicInfoStep({ assignment, onChange, errors }: Props)
                     ),
                   })
                 }
-                className={builderFieldClass}
+                className={cn(builderFieldClass, "tnum")}
               />
             </div>
           </div>
@@ -204,7 +204,7 @@ export function AssignmentBasicInfoStep({ assignment, onChange, errors }: Props)
               onChange={(e) =>
                 onChange({ negativeMarking: e.target.checked })
               }
-              className="h-4 w-4 rounded border-zinc-300 accent-zinc-900"
+              className="h-4 w-4 rounded-sm border-rule-strong accent-ink"
             />
             <label htmlFor="negative-marking" className={builderSectionTitleClass}>
               Negative marking
@@ -221,7 +221,7 @@ export function AssignmentBasicInfoStep({ assignment, onChange, errors }: Props)
                 }
                 placeholder="0.25"
                 title="Marks deducted per wrong answer"
-                className={cn(builderFieldClass, "mt-0 w-28 !py-2.5")}
+                className={cn(builderFieldClass, "mt-0 w-28 tnum")}
               />
             )}
           </div>
@@ -237,7 +237,7 @@ export function AssignmentBasicInfoStep({ assignment, onChange, errors }: Props)
                 onChange={(e) =>
                   onChange({ randomizeQuestions: e.target.checked })
                 }
-                className="h-4 w-4 rounded border-zinc-300 accent-zinc-900"
+                className="h-4 w-4 rounded-sm border-rule-strong accent-ink"
               />
               <div>
                 <label htmlFor="randomize-questions" className={builderSectionTitleClass}>
@@ -255,7 +255,7 @@ export function AssignmentBasicInfoStep({ assignment, onChange, errors }: Props)
                 onChange={(e) =>
                   onChange({ randomizeOptions: e.target.checked })
                 }
-                className="h-4 w-4 rounded border-zinc-300 accent-zinc-900"
+                className="h-4 w-4 rounded-sm border-rule-strong accent-ink"
               />
               <div>
                 <label htmlFor="randomize-options" className={builderSectionTitleClass}>

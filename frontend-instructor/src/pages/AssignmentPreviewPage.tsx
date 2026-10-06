@@ -3,6 +3,7 @@ import { InstructorHeader } from "../components/InstructorHeader";
 import { useAssignment } from "../hooks/useAssignments";
 import { AssignmentPreviewStep } from "../components/AssignmentPreview";
 import { createEmptyAssignment } from "../types/assignment";
+import { PageShell, PageHeader } from "../components/Panel";
 
 export default function AssignmentPreviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -10,25 +11,22 @@ export default function AssignmentPreviewPage() {
   const assignment = data ?? createEmptyAssignment();
 
   return (
-    <div className="min-h-screen bg-[#f6f5f1]">
+    <div className="min-h-screen bg-slate-ground">
       <InstructorHeader />
-      <div className="w-full px-4 py-6 sm:px-6">
-        <div className="rounded-[20px] bg-white p-6 shadow-sm">
-          <h1 className="text-xl font-bold">Assignment Preview</h1>
-          <p className="text-sm text-zinc-500">
-            See how this assignment appears to students.
-          </p>
-          <div className="mt-4">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-20 text-sm text-zinc-500">
-                Loading…
-              </div>
-            ) : (
-              <AssignmentPreviewStep assignment={assignment} />
-            )}
-          </div>
+      <PageShell>
+        <div className="space-y-6">
+          <PageHeader
+            eyebrow="Student view"
+            title="Assignment preview"
+            description="This is exactly what a learner sees when they sit the assignment."
+          />
+          {isLoading ? (
+            <p className="py-20 text-center text-sm text-ink-muted">Loading the assignment…</p>
+          ) : (
+            <AssignmentPreviewStep assignment={assignment} />
+          )}
         </div>
-      </div>
+      </PageShell>
     </div>
   );
 }

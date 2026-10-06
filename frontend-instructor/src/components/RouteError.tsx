@@ -7,13 +7,13 @@ export function RouteError() {
     : "Something went wrong while opening this page.";
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f6f5f1] p-6">
-      <section className="max-w-md rounded-2xl bg-white p-8 text-center shadow-sm">
-        <h1 className="text-xl font-bold text-zinc-900">Unable to open this page</h1>
-        <p className="mt-2 text-sm text-zinc-500">{message}</p>
+    <main className="flex min-h-screen items-center justify-center bg-slate-ground p-6">
+      <section className="max-w-md border border-rule bg-slate-panel p-8 text-center">
+        <h1 className="text-2xl font-semibold text-ink">Unable to open this page</h1>
+        <p className="mt-2 text-sm text-ink-muted">{message}</p>
         <Link
           to="/assignments"
-          className="mt-6 inline-flex rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white"
+          className="mt-6 inline-flex rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-ink-inverse"
         >
           Return to assignments
         </Link>

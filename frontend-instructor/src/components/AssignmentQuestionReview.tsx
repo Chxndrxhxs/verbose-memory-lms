@@ -31,28 +31,28 @@ type Props = {
 };
 
 const filterInput =
-  "h-12 rounded-xl border border-zinc-200 bg-white px-4 text-sm outline-none focus:border-zinc-900";
+  "h-12 rounded-sm border border-rule bg-slate-panel px-4 text-sm text-ink focus:border-ink";
 
 const iconBtn = cn(
-  "flex h-10 w-10 items-center justify-center rounded-xl",
-  "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700",
+  "flex h-10 w-10 items-center justify-center rounded-sm",
+  "text-ink-faint hover:bg-slate-sunk hover:text-ink",
 );
 
-const badgePill = "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold";
+const badgePill = "shrink-0 rounded-sm border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em]";
 
 const editArea = cn(
-  "w-full resize-none rounded-xl border border-zinc-200 bg-white",
-  "px-4 py-3 text-[15px] outline-none focus:border-zinc-900",
+  "w-full resize-none rounded-sm border border-rule bg-slate-panel",
+  "px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint focus:border-ink",
 );
 
 const ghostPill = cn(
-  "inline-flex h-11 items-center gap-1.5 rounded-full border border-zinc-200",
-  "px-4 text-sm font-semibold text-zinc-600 hover:bg-zinc-50",
+  "inline-flex h-11 items-center gap-2 rounded-sm border border-rule",
+  "px-4 text-sm font-semibold text-ink-muted hover:bg-slate-sunk",
 );
 
 const darkPill = cn(
-  "inline-flex h-11 items-center gap-1.5 rounded-full bg-zinc-900",
-  "px-5 text-sm font-semibold text-white hover:opacity-90",
+  "inline-flex h-11 items-center gap-2 rounded-sm bg-ink",
+  "px-5 text-sm font-semibold text-ink-inverse hover:opacity-90",
 );
 
 function QuestionCard({
@@ -145,13 +145,13 @@ function QuestionCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border bg-white",
-        flags.length > 0 ? "border-amber-300" : "border-zinc-200/70",
+        "border bg-slate-panel",
+        flags.length > 0 ? "border-hold/40" : "border-rule",
       )}
     >
       <div
         className={cn(
-          "flex items-center gap-3 border-b border-zinc-100 px-4 py-3.5",
+          "flex items-center gap-3 border-b border-rule px-4 py-3",
           "sm:gap-4 sm:px-5 sm:py-4",
         )}
       >
@@ -160,41 +160,43 @@ function QuestionCard({
           checked={selected}
           onChange={onToggleSelect}
           title="Select for bulk actions"
-          className="h-4 w-4 shrink-0 accent-zinc-900"
+          className="h-4 w-4 shrink-0 accent-ink"
         />
         <span
           className={cn(
-            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
-            "bg-zinc-900 text-[10px] font-bold text-white",
+            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full tnum",
+            "bg-ink text-[10px] font-semibold text-ink-inverse",
           )}
         >
           {index + 1}
         </span>
         <button
+          type="button"
           onClick={onToggleExpand}
-          className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-zinc-800"
+          className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-ink"
         >
           {question.question || (
-            <span className="italic text-zinc-400">Untitled question</span>
+            <span className="italic text-ink-faint">Untitled question</span>
           )}
         </button>
         {flags.length > 0 && (
           <span
-            className={cn(badgePill, "hidden bg-amber-100 text-amber-800 sm:inline")}
+            className={cn(badgePill, "hidden border-hold/30 bg-hold-soft text-hold sm:inline")}
           >
             Needs review
           </span>
         )}
         {question.topic && (
-          <span className={cn(badgePill, "hidden bg-sky-100 text-sky-700 md:inline")}>
+          <span className={cn(badgePill, "hidden border-flight/25 bg-flight-soft text-flight md:inline")}>
             {question.topic}
           </span>
         )}
-        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
-          <button onClick={onToggleExpand} className={iconBtn}>
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1">
+          <button type="button" onClick={onToggleExpand} className={iconBtn}>
             {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
           <button
+            type="button"
             onClick={() => setEditing(!editing)}
             className={iconBtn}
             title={editing ? "Done editing" : "Edit"}
@@ -202,6 +204,7 @@ function QuestionCard({
             {editing ? <Check size={14} /> : <Pencil size={14} />}
           </button>
           <button
+            type="button"
             onClick={onDuplicate}
             className={cn(iconBtn, "hidden sm:flex")}
             title="Duplicate"
@@ -210,6 +213,7 @@ function QuestionCard({
           </button>
           {index > 0 && (
             <button
+              type="button"
               onClick={onMoveUp}
               className={cn(iconBtn, "hidden sm:flex")}
               title="Move up"
@@ -219,6 +223,7 @@ function QuestionCard({
           )}
           {index < total - 1 && (
             <button
+              type="button"
               onClick={onMoveDown}
               className={cn(iconBtn, "hidden sm:flex")}
               title="Move down"
@@ -227,8 +232,9 @@ function QuestionCard({
             </button>
           )}
           <button
+            type="button"
             onClick={onDelete}
-            className={cn(iconBtn, "text-red-400 hover:bg-red-50 hover:text-red-600")}
+            className={cn(iconBtn, "text-halt hover:bg-halt-soft hover:text-halt")}
             title="Delete"
           >
             <Trash2 size={14} />
@@ -239,14 +245,14 @@ function QuestionCard({
       {expanded && (
         <div className="px-5 py-5 sm:px-6 sm:py-6">
           {flags.length > 0 && (
-            <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <p className="mb-4 border border-hold/30 bg-hold-soft px-4 py-3 text-sm text-hold">
               {flags.includes("empty") && "Question text is empty. "}
               {flags.includes("options") && "Needs at least 2 non-empty options. "}
               {flags.includes("answer") && "The marked answer is empty or invalid."}
             </p>
           )}
           <div className="mb-4">
-            <label className="mb-1.5 block text-sm font-semibold text-zinc-900">
+            <label className="mb-2 block text-sm font-semibold text-ink">
               Question
             </label>
             {editing ? (
@@ -261,7 +267,7 @@ function QuestionCard({
                   <img
                     src={absoluteMediaUrl(question.questionImage) ?? question.questionImage}
                     alt="Question figure"
-                    className="h-20 w-28 rounded-lg border border-zinc-200 bg-white object-contain"
+                    className="h-20 w-28 rounded-sm border border-rule bg-slate-panel object-contain"
                   />
                 )}
                 <div className="flex flex-wrap items-center gap-2">
@@ -273,6 +279,7 @@ function QuestionCard({
                     onChange={(e) => handleFigureFile(e.target.files)}
                   />
                   <button
+                    type="button"
                     onClick={() => figureInputRef.current?.click()}
                     disabled={uploadingFigure}
                     className={cn(ghostPill, "transition-colors disabled:opacity-50")}
@@ -286,15 +293,16 @@ function QuestionCard({
                   </button>
                   {question.questionImage && (
                     <button
+                      type="button"
                       onClick={() => onUpdate({ questionImage: "" })}
-                      className={cn(ghostPill, "transition-colors hover:bg-zinc-50")}
+                      className={cn(ghostPill, "transition-colors hover:bg-slate-sunk")}
                     >
                       <X size={12} /> Remove
                     </button>
                   )}
                 </div>
                 {figureError && (
-                  <p className="text-xs text-red-600">{figureError}</p>
+                  <p className="text-xs text-halt">{figureError}</p>
                 )}
               </div>
             ) : (
@@ -303,12 +311,12 @@ function QuestionCard({
                   <img
                     src={absoluteMediaUrl(question.questionImage) ?? question.questionImage}
                     alt="Question figure"
-                    className="h-20 w-28 shrink-0 rounded-lg border border-zinc-200 bg-white object-contain"
+                    className="h-20 w-28 shrink-0 rounded-sm border border-rule bg-slate-panel object-contain"
                   />
                 )}
-                <p className="text-sm text-zinc-800">
+                <p className="text-sm text-ink">
                   {question.question || (
-                    <span className="italic text-zinc-400">
+                    <span className="italic text-ink-faint">
                       Click edit to add question text
                     </span>
                   )}
@@ -317,20 +325,21 @@ function QuestionCard({
             )}
           </div>
 
-          <div className="space-y-2.5">
-            <label className="block text-sm font-semibold text-zinc-900">
-              Options <span className="font-normal text-zinc-500">— click a letter to mark correct</span>
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-ink">
+              Options <span className="font-normal text-ink-muted">— click a letter to mark correct</span>
             </label>
             {question.options.map((opt, i) => (
-              <div key={i} className="flex items-center gap-2.5">
+              <div key={i} className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => onUpdate({ correctAnswer: i })}
                   className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                    "border-2 text-sm font-bold transition-colors",
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full tnum",
+                    "border-2 text-sm font-semibold transition-colors",
                     question.correctAnswer === i
-                      ? "border-emerald-500 bg-emerald-500 text-white"
-                      : "border-zinc-300 text-zinc-500 hover:border-zinc-400",
+                      ? "border-live bg-live text-ink-inverse"
+                      : "border-rule-strong text-ink-muted hover:border-ink",
                   )}
                   title={
                     question.correctAnswer === i
@@ -355,25 +364,25 @@ function QuestionCard({
                 ) : (
                   <span
                     className={cn(
-                      "flex flex-1 items-center gap-2.5 rounded-xl border",
-                      "border-zinc-100 px-4 py-3 text-[15px]",
+                      "flex flex-1 items-center gap-2 rounded-sm border",
+                      "border-rule px-4 py-3 text-[15px]",
                       question.correctAnswer === i
-                        ? "bg-emerald-50 font-medium text-emerald-800"
-                        : "text-zinc-700",
+                        ? "border-live/25 bg-live-soft font-medium text-live"
+                        : "text-ink-muted",
                     )}
                   >
                     {optionImage(opt) && (
                       <img
                         src={absoluteMediaUrl(optionImage(opt)) ?? optionImage(opt)}
                         alt={optionText(opt)}
-                        className="h-16 w-24 shrink-0 rounded-md border border-zinc-200 bg-white object-contain"
+                        className="h-16 w-24 shrink-0 rounded-sm border border-rule bg-slate-panel object-contain"
                       />
                     )}
                     {optionText(opt) || (
-                      <span className="italic text-zinc-400">Empty</span>
+                      <span className="italic text-ink-faint">Empty</span>
                     )}
                     {optionImage(opt) && !optionText(opt) && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-zinc-400">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
                         <ImageIcon size={11} /> Figure
                       </span>
                     )}
@@ -381,10 +390,11 @@ function QuestionCard({
                 )}
                 {editing && question.options.length > 2 && (
                   <button
+                    type="button"
                     onClick={() => removeOption(i)}
                     className={cn(
-                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
-                      "text-zinc-400 hover:bg-red-50 hover:text-red-500",
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-sm",
+                      "text-ink-faint hover:bg-halt-soft hover:text-halt",
                     )}
                   >
                     <Trash2 size={12} />
@@ -394,10 +404,11 @@ function QuestionCard({
             ))}
             {editing && question.options.length < 6 && (
               <button
+                type="button"
                 onClick={addOption}
                 className={cn(
-                  "inline-flex items-center gap-1.5 text-xs font-semibold",
-                  "text-zinc-500 hover:text-zinc-700",
+                  "inline-flex items-center gap-2 text-xs font-semibold",
+                  "text-ink-muted hover:text-ink",
                 )}
               >
                 <Plus size={12} /> Add option
@@ -407,7 +418,7 @@ function QuestionCard({
 
           {editing && question.explanation !== undefined && (
             <div className="mt-4">
-              <label className="mb-1.5 block text-sm font-semibold text-zinc-900">
+              <label className="mb-2 block text-sm font-semibold text-ink">
                 Explanation
               </label>
               <textarea
@@ -421,8 +432,8 @@ function QuestionCard({
           )}
 
           <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
-            <div className="flex items-center gap-2.5">
-              <label className="text-sm text-zinc-500">Category:</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-ink-muted">Category:</label>
               {editing ? (
                 <input
                   type="text"
@@ -430,25 +441,25 @@ function QuestionCard({
                   onChange={(e) => onUpdate({ topic: e.target.value })}
                   placeholder="e.g. Percentage"
                   className={cn(
-                    "h-12 w-44 rounded-xl border border-zinc-200 bg-white",
-                    "px-3.5 text-sm outline-none focus:border-zinc-900",
+                    "h-12 w-44 rounded-sm border border-rule bg-slate-panel",
+                    "px-3 text-sm text-ink placeholder:text-ink-faint focus:border-ink",
                   )}
                 />
               ) : (
                 <span
                   className={cn(
-                    "rounded-full px-2.5 py-1 text-[11px] font-bold",
+                    "rounded-sm border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em]",
                     question.topic
-                      ? "bg-sky-100 text-sky-700"
-                      : "bg-zinc-100 text-zinc-400",
+                      ? "border-flight/25 bg-flight-soft text-flight"
+                      : "border-rule bg-slate-sunk text-ink-faint",
                   )}
                 >
                   {question.topic || "Untagged"}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2.5">
-              <label className="text-sm text-zinc-500">Marks:</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-ink-muted">Marks:</label>
               {editing ? (
                 <input
                   type="number"
@@ -458,18 +469,18 @@ function QuestionCard({
                     onUpdate({ marks: Math.max(1, Number(e.target.value) || 1) })
                   }
                   className={cn(
-                    "h-12 w-20 rounded-xl border border-zinc-200 bg-white",
-                    "px-3.5 text-sm outline-none focus:border-zinc-900",
+                    "h-12 w-20 rounded-sm border border-rule bg-slate-panel",
+                    "px-3 text-sm tnum focus:border-ink",
                   )}
                 />
               ) : (
-                <span className="text-sm font-semibold text-zinc-700">
+                <span className="text-sm font-semibold text-ink tnum">
                   {question.marks}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2.5">
-              <label className="text-sm text-zinc-500">Difficulty:</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-ink-muted">Difficulty:</label>
               {editing ? (
                 <select
                   value={question.difficulty}
@@ -479,8 +490,8 @@ function QuestionCard({
                     })
                   }
                   className={cn(
-                    "h-12 rounded-xl border border-zinc-200 bg-white",
-                    "px-3.5 text-sm outline-none focus:border-zinc-900",
+                    "h-12 rounded-sm border border-rule bg-slate-panel",
+                    "px-3 text-sm text-ink focus:border-ink",
                   )}
                 >
                   {(
@@ -497,12 +508,12 @@ function QuestionCard({
               ) : (
                 <span
                   className={cn(
-                    "rounded-full px-2.5 py-1 text-[11px] font-bold",
+                    "rounded-sm border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em]",
                     question.difficulty === "easy"
-                      ? "bg-green-100 text-green-700"
+                      ? "border-live/25 bg-live-soft text-live"
                       : question.difficulty === "hard"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-amber-100 text-amber-700",
+                        ? "border-halt/25 bg-halt-soft text-halt"
+                        : "border-hold/30 bg-hold-soft text-hold",
                   )}
                 >
                   {DIFFICULTY_LABELS[question.difficulty]}
@@ -629,39 +640,39 @@ export function AssignmentQuestionReviewStep({ assignment, onChange }: Props) {
     <div className={builderCardClass}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
             Question pool
           </p>
-          <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">Review questions</h2>
-          <p className="mt-1.5 text-[15px] text-zinc-500">
+          <h2 className="mt-1 text-xl font-semibold text-ink">Review questions</h2>
+          <p className="mt-1.5 text-[15px] text-ink-muted tnum">
             {questions.length} question{questions.length === 1 ? "" : "s"}
             {reviewCount > 0 && (
-              <span className="font-semibold text-amber-700">
+              <span className="font-semibold text-hold tnum">
                 {" "}· {reviewCount} need{reviewCount === 1 ? "s" : ""} review
               </span>
             )}
           </p>
         </div>
-        <button onClick={addQuestion} className={darkPill}>
+        <button type="button" onClick={addQuestion} className={darkPill}>
           <Plus size={14} /> Add question
         </button>
       </div>
 
       {questions.length > 0 && (
-        <div className="mt-6 space-y-3 rounded-2xl border border-zinc-200/70 bg-zinc-50/70 p-4 sm:p-5">
-          <div className="flex flex-wrap items-center gap-2.5">
+        <div className="mt-6 space-y-3 border border-rule bg-slate-sunk p-4 sm:p-5">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="relative min-w-0 flex-1 basis-56">
               <Search
                 size={15}
-                className="absolute top-1/2 left-4 -translate-y-1/2 text-zinc-400"
+                className="absolute top-1/2 left-3 -translate-y-1/2 text-ink-faint"
               />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search questions…"
                 className={cn(
-                  "h-12 w-full rounded-xl border border-zinc-200 bg-white",
-                  "py-2 pr-4 pl-11 text-sm outline-none focus:border-zinc-900",
+                  "h-12 w-full rounded-sm border border-rule bg-slate-panel",
+                  "py-2 pr-4 pl-9 text-sm text-ink placeholder:text-ink-faint focus:border-ink",
                 )}
               />
             </span>
@@ -679,31 +690,33 @@ export function AssignmentQuestionReviewStep({ assignment, onChange }: Props) {
               ))}
             </select>
             <button
+              type="button"
               onClick={() => setReviewOnly((v) => !v)}
               className={cn(
-                "h-12 rounded-xl border px-4 text-sm font-semibold",
+                "h-12 rounded-sm border px-4 text-sm font-semibold",
                 reviewOnly
-                  ? "border-amber-400 bg-amber-100 text-amber-800"
-                  : "border-zinc-200 bg-white text-zinc-500",
+                  ? "border-hold/40 bg-hold-soft text-hold"
+                  : "border-rule bg-slate-panel text-ink-muted",
               )}
             >
               Needs review{reviewOnly ? " ✓" : ""}
             </button>
             <button
+              type="button"
               onClick={() =>
                 setCollapsed(new Set(questions.map((q) => q.id)))
               }
               className={cn(
-                "h-12 rounded-xl border border-zinc-200 bg-white px-4",
-                "text-sm font-semibold text-zinc-500",
+                "h-12 rounded-sm border border-rule bg-slate-panel px-4",
+                "text-sm font-semibold text-ink-muted hover:bg-slate-sunk",
               )}
             >
               Collapse all
             </button>
           </div>
           {selected.size > 0 && (
-            <div className="flex flex-wrap items-center gap-2.5 border-t border-zinc-200 pt-3">
-              <span className="text-sm font-semibold text-zinc-600">
+            <div className="flex flex-wrap items-center gap-2 border-t border-rule pt-3">
+              <span className="text-sm font-semibold text-ink-muted tnum">
                 {selected.size} selected
               </span>
               <input
@@ -711,32 +724,35 @@ export function AssignmentQuestionReviewStep({ assignment, onChange }: Props) {
                 onChange={(e) => setBulkCategory(e.target.value)}
                 placeholder="Set category…"
                 className={cn(
-                  "h-12 w-44 rounded-xl border border-zinc-200 bg-white",
-                  "px-3.5 text-sm outline-none focus:border-zinc-900",
+                  "h-12 w-44 rounded-sm border border-rule bg-slate-panel",
+                  "px-3 text-sm text-ink placeholder:text-ink-faint focus:border-ink",
                 )}
               />
               <button
+                type="button"
                 onClick={applyBulkCategory}
                 disabled={!bulkCategory.trim()}
                 className={cn(
-                  "h-11 rounded-full bg-zinc-900 px-4",
-                  "text-sm font-semibold text-white disabled:opacity-40",
+                  "h-11 rounded-sm bg-ink px-4",
+                  "text-sm font-semibold text-ink-inverse disabled:opacity-40",
                 )}
               >
                 Apply
               </button>
               <button
+                type="button"
                 onClick={deleteSelected}
                 className={cn(
-                  "h-11 rounded-full border border-red-200 px-4",
-                  "text-sm font-semibold text-red-600 hover:bg-red-50",
+                  "h-11 rounded-sm border border-halt/35 px-4",
+                  "text-sm font-semibold text-halt hover:bg-halt-soft",
                 )}
               >
                 Delete
               </button>
               <button
+                type="button"
                 onClick={() => setSelected(new Set())}
-                className="text-sm font-semibold text-zinc-400 hover:text-zinc-600"
+                className="text-sm font-semibold text-ink-faint hover:text-ink-muted"
               >
                 Clear
               </button>
@@ -771,8 +787,8 @@ export function AssignmentQuestionReviewStep({ assignment, onChange }: Props) {
       {questions.length > 0 && visible.length === 0 && (
         <p
           className={cn(
-            "mt-6 rounded-2xl border border-dashed border-zinc-300 p-8",
-            "text-center text-sm text-zinc-500",
+            "mt-6 border border-dashed border-rule-strong p-8",
+            "text-center text-sm text-ink-muted",
           )}
         >
           No questions match your filters.
@@ -782,15 +798,15 @@ export function AssignmentQuestionReviewStep({ assignment, onChange }: Props) {
       {questions.length === 0 && (
         <div
           className={cn(
-            "mt-6 flex flex-col items-center justify-center rounded-2xl",
-            "border border-dashed border-zinc-300 py-14 text-center",
+            "mt-6 flex flex-col items-center justify-center",
+            "border border-dashed border-rule-strong py-14 text-center",
           )}
         >
-          <p className="text-[15px] font-semibold text-zinc-600">No questions yet</p>
-          <p className="mt-1.5 text-sm text-zinc-400">
+          <p className="text-[15px] font-semibold text-ink-muted">No questions yet</p>
+          <p className="mt-1.5 text-sm text-ink-faint">
             Go back to get questions from your PDF, or add one manually.
           </p>
-          <button onClick={addQuestion} className={cn(darkPill, "mt-4")}>
+          <button type="button" onClick={addQuestion} className={cn(darkPill, "mt-4")}>
             <Plus size={14} /> Add question
           </button>
         </div>

@@ -123,7 +123,7 @@ function StepIndicator({ step, canGoBuilder, onNavigate }: {
     <div
       role="tablist"
       aria-label="Course setup steps"
-      className="grid grid-cols-2 gap-1 rounded-full border border-zinc-200 bg-white p-1 shadow-sm"
+      className="grid grid-cols-2 gap-1 border border-rule bg-slate-sunk p-1"
     >
       {STEP_LABELS.map((label, i) => {
         const locked = i === 1 && !canGoBuilder;
@@ -136,13 +136,15 @@ function StepIndicator({ step, canGoBuilder, onNavigate }: {
             title={locked ? "Save course details first" : `Go to ${label}`}
             onClick={() => { if (!locked) onNavigate(i); }}
             disabled={locked}
-            className={`flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-              active ? "bg-[#0f172a] text-white shadow" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+            className={`flex items-center justify-center gap-2 rounded-sm px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              active
+                ? "bg-ink text-ink-inverse"
+                : "text-ink-muted hover:bg-slate-panel hover:text-ink"
             }`}
           >
             <span
               className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
-                active ? "bg-white/20 text-white" : "bg-zinc-200 text-zinc-600"
+                active ? "bg-ink-inverse/20 text-ink-inverse" : "bg-rule text-ink-muted"
               }`}
             >
               {i + 1}
@@ -468,7 +470,7 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
       const { url } = await uploadFile(file);
       updateLesson(chapterId, lessonId, { resource_url: url });
     } catch {
-      showToast("Upload failed — try again");
+      showToast("Upload failed. Try again.");
     } finally {
       setUploadingId(null);
     }
@@ -501,17 +503,17 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
         try {
           localStorage.removeItem(draftKey);
         } catch { /* storage unavailable */ }
-        showToast("Published ✓ — visible to learners");
+        showToast("Published. It is now visible to learners.");
         setTimeout(() => nav("/courses"), 900);
       } else {
         setServerDirty(false);
         setLastSavedAt(new Date().toLocaleTimeString());
-        showToast("Saved ✓ — stay here, keep building");
+        showToast("Saved. Stay here and keep building.");
       }
     } catch (e) {
       const msg = String(e);
       showToast(
-        /network|fetch|load/i.test(msg) ? "Couldn't save — check connection, then retry" : msg,
+        /network|fetch|load/i.test(msg) ? "Could not save. Check your connection, then retry." : msg,
         4000
       );
     } finally {
@@ -533,7 +535,7 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
     {
       label: "Cover image added",
       ok: coverImage.trim().length > 0,
-      hint: "Upload a cover — it's the first thing learners see",
+      hint: "Upload a cover. It is the first thing learners see.",
     },
     {
       label: "At least 1 lesson",
@@ -541,7 +543,7 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
       hint: "Add a chapter with a titled lesson",
     },
     {
-      label: values.pricingType === "free" ? "Free course — price OK" : "Price valid",
+      label: values.pricingType === "free" ? "Free course, price is fine" : "Price valid",
       ok: !paidInvalid,
       hint: "Selling price must be above ₹0 and not exceed MRP",
     },
@@ -549,8 +551,8 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f6f5f1]">
-        <div className="w-full px-4 py-16 text-center text-sm text-zinc-500 sm:px-4">Loading course…</div>
+      <div className="min-h-screen bg-slate-ground">
+        <div className="w-full px-4 py-16 text-center text-sm text-ink-muted sm:px-4">Loading course…</div>
       </div>
     );
   }
@@ -564,7 +566,7 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
         : "";
 
   return (
-    <div className="min-h-screen bg-[#f6f5f1]">
+    <div className="min-h-screen bg-slate-ground">
       <InstructorHeader />
       {step === 0 ? (
         <div className="mx-auto w-full max-w-[1120px] px-4 py-8 sm:px-6">
@@ -643,12 +645,17 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
       )}
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white shadow-xl">
+        <div
+        aria-live="polite"
+        aria-atomic="true"
+        className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 border border-rule-strong bg-ink px-5 py-2.5 text-sm text-ink-inverse shadow-[0_18px_40px_-12px_rgba(20,24,38,0.4)]"
+      >
           <span>{toast}</span>
           {toastAction && (
             <button
+              type="button"
               onClick={() => { toastAction.run(); setToast(null); setToastAction(null); }}
-              className="rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold text-zinc-900"
+              className="rounded-sm border border-ink-inverse/30 px-3 py-1 text-xs font-semibold text-ink-inverse transition-colors hover:bg-ink-inverse/10"
             >
               {toastAction.label}
             </button>

@@ -58,24 +58,25 @@ export function CourseCreateStep2(props: Props) {
     <div className={cn("mt-6", empty && "grid gap-6 lg:grid-cols-[1fr_340px]")}>
       <div className="space-y-6 min-w-0">
             <div className={builderCardClass}>
-              <h2 className="text-xl font-bold tracking-tight text-zinc-900">Course cover</h2>
-              <p className="mt-1.5 text-[15px] text-zinc-500">The first thing learners see on the course card.</p>
+              <h2 className="text-xl font-semibold text-ink">Course cover</h2>
+              <p className="mt-1.5 text-[15px] text-ink-muted">The first thing learners see on the course card.</p>
               <div className="mt-5">
                 <CoverPhotoUpload value={coverImage} onChange={onCoverChange} />
               </div>
             </div>
 
             <div className={builderCardClass}>
-              <h2 className="text-xl font-bold tracking-tight text-zinc-900">Course content</h2>
-              <p className="mt-1.5 text-[15px] text-zinc-500">Build chapters first, then add lessons inside each chapter.</p>
+              <h2 className="text-xl font-semibold text-ink">Course content</h2>
+              <p className="mt-1.5 text-[15px] text-ink-muted">Build chapters first, then add lessons inside each chapter.</p>
               <div className="mt-6 space-y-4">
                 {chapters.map((ch) => (
                   <ChapterSection key={ch.id} {...chapterProps(ch)} />
                 ))}
               </div>
               <button
+                type="button"
                 onClick={onAddChapter}
-                className="mt-5 flex h-12 w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-zinc-300 bg-white text-[15px] font-semibold text-zinc-600 hover:border-zinc-400 hover:bg-zinc-50"
+                className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-sm border-2 border-dashed border-rule-strong bg-slate-panel text-[15px] font-semibold text-ink-muted hover:border-ink hover:bg-slate-sunk"
               >
                 <Plus size={16} /> Add new chapter
               </button>
@@ -86,31 +87,33 @@ export function CourseCreateStep2(props: Props) {
           once there is content the builder gets the full width. */}
       {empty && (
         <div className="mt-6 space-y-5 lg:sticky lg:top-[76px] lg:mt-0">
-          <div className={`${builderCardClass} !border-0 !bg-[#eef1ff] !shadow-none`}>
-            <p className="text-[15px] font-bold text-zinc-900">Add content to your course</p>
-            <p className="mt-1.5 text-sm leading-relaxed text-zinc-600">
+          <div className={`${builderCardClass} !border-0 !bg-slate-sunk`}>
+            <p className="text-[15px] font-semibold text-ink">Add content to your course</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">
               Add chapters, edit names, and make changes to your content quickly and easily.
             </p>
             <button
+              type="button"
               onClick={onAiGenerate}
               disabled
               title="AI outlines are coming soon — add chapters manually for now"
-              className="mt-5 flex h-12 w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-[#4490ff] to-[#0620a7] text-[15px] font-bold text-white opacity-70"
+              className="mt-5 flex h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-sm bg-ink text-[15px] font-semibold text-ink-inverse opacity-70"
             >
-              <span className="inline-flex items-center gap-1.5"><Sparkles size={16} /> AI outline · Soon</span>
+              <span className="inline-flex items-center gap-2"><Sparkles size={16} /> AI outline · Soon</span>
             </button>
           </div>
-          <div className="flex items-center gap-3 text-xs font-semibold text-zinc-400">
-            <span className="h-px flex-1 bg-zinc-200" /> OR <span className="h-px flex-1 bg-zinc-200" />
+          <div className="flex items-center gap-3 text-xs font-semibold text-ink-faint">
+            <span className="h-px flex-1 bg-rule" /> OR <span className="h-px flex-1 bg-rule" />
           </div>
           <div className={builderCardClass}>
-            <p className="text-[15px] font-bold text-zinc-900">Add first chapter manually</p>
-            <p className="mt-1.5 text-sm leading-relaxed text-zinc-600">
+            <p className="text-[15px] font-semibold text-ink">Add first chapter manually</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">
               Use <b>Headings</b> for the chapter title and add lessons' content inside.
             </p>
             <button
+              type="button"
               onClick={onFirstManual}
-              className="mt-5 h-12 w-full rounded-full border border-zinc-200 text-[15px] font-semibold text-zinc-800 hover:bg-zinc-50"
+              className="mt-5 h-12 w-full rounded-sm border border-rule text-[15px] font-semibold text-ink hover:bg-slate-sunk"
             >
               Add manually
             </button>

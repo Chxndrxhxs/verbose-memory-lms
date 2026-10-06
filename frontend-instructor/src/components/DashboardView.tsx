@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
-import { ArrowRight } from "@masterlms/shared";
+import { ArrowRight, Plus, Users, FileText, Star, DollarSign } from "@masterlms/shared";
 import { InstructorHeader } from "./InstructorHeader";
-import { StatCard } from "./StatCard";
 import { useAuth } from "../hooks/useAuth";
 import type { InstructorOverview } from "../containers/Dashboard.container";
+import { PageShell, Panel, PanelHeader, PageHeader, Eyebrow } from "./Panel";
+import { ListMessage, SkeletonRows } from "./DataGrid";
+import { cn } from "../lib/utils";
 
 function timeAgo(iso: string): string {
   const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -27,7 +29,7 @@ export function DashboardView({
   isLoading: boolean;
 }) {
   const user = useAuth((s) => s.user);
-  const firstName = user?.name?.split(" ")[0] || "Instructor";
+  const firstName = user?.name?.split(" ")[0] || "there";
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
@@ -35,72 +37,213 @@ export function DashboardView({
   const revenue = overview?.revenue_inr ?? 0;
   const courses = overview?.total_courses ?? 0;
   const drafts = overview?.drafts ?? 0;
-  const rating = overview && Number(overview.average_rating) > 0 ? Number(overview.average_rating).toFixed(1) : "New";
+  const rating =
+    overview && Number(overview.average_rating) > 0
+      ? Number(overview.average_rating).toFixed(1)
+      : null;
   const recent = overview?.recent_enrollments ?? [];
 
   return (
-    <div className="min-h-screen bg-[#f6f5f1]">
+    <div className="min-h-screen bg-slate-ground">
       <InstructorHeader />
-      <div className="w-full px-4 py-6 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">{greeting}, {firstName}</h1>
-            <p className="text-sm text-zinc-500">Here’s what’s happening with your courses today.</p>
-          </div>
-          <Link to="/courses/create" className="rounded-full bg-[#0f172a] px-5 py-2.5 text-sm font-bold text-white">+ Create course</Link>
-        </div>
+      <PageShell>
+        <div className="space-y-6">
+          <PageHeader
+            eyebrow={greeting}
+            title={`${firstName}, here is your studio`}
+            description="Revenue, learners and what still needs finishing."
+            action={
+              <Link
+                to="/courses/create"
+                className="inline-flex h-10 items-center gap-2 border border-ink bg-ink px-4 text-sm font-semibold text-ink-inverse transition-colors hover:bg-ink/88"
+              >
+                <Plus size={15} strokeWidth={2.75} aria-hidden />
+                Create course
+              </Link>
+            }
+          />
 
-        {isLoading ? (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse rounded-2xl bg-white p-5 shadow-sm">
-                <div className="h-8 w-8 rounded-full bg-zinc-100" />
-                <div className="mt-3 h-3 w-20 rounded bg-zinc-100" />
-                <div className="mt-2 h-7 w-24 rounded bg-zinc-100" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Total students" value={students.toLocaleString("en-IN")} sub={students === 0 ? "Share your course link" : "enrolled learners"} icon="◉" accent="bg-[#3478ff]" />
-            <StatCard label="Revenue" value={`₹${revenue.toLocaleString("en-IN")}`} sub={revenue === 0 ? "No sales yet" : "lifetime earnings"} icon="₹" accent="bg-emerald-600" />
-            <StatCard label="Courses" value={String(courses)} sub={drafts === 0 ? (courses === 0 ? "Create your first" : "all published") : `${drafts} draft${drafts === 1 ? "" : "s"}`} icon="▭" accent="bg-zinc-900" />
-            <StatCard label="Rating" value={rating} sub={overview?.top_course ? `top: ${overview.top_course.title}` : "no ratings yet"} icon="★" accent="bg-yellow-400 !text-zinc-900" />
-          </div>
-        )}
-
-        <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_340px]">
-          <div className="rounded-[20px] bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between"><h3 className="text-sm font-bold">Recent enrollments</h3><Link to="/courses" className="inline-flex items-center gap-1 text-xs font-semibold text-[#3478ff]">View all <ArrowRight size={12} strokeWidth={2.5} /></Link></div>
-            <div className="mt-4 space-y-3">
-              {isLoading ? (
-                <p className="text-sm text-zinc-500">Loading…</p>
-              ) : recent.length === 0 ? (
-                <div className="rounded-xl border border-dashed px-3 py-8 text-center">
-                  <p className="text-sm font-semibold">No enrollments yet</p>
-                  <p className="mt-1 text-xs text-zinc-500">Publish a course and share your link to get your first learners.</p>
-                  <Link to="/courses/create" className="mt-3 inline-block rounded-full bg-[#0f172a] px-4 py-2 text-xs font-bold text-white">Create course</Link>
+          {isLoading ? (
+            <div className="grid gap-px border border-rule bg-rule lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="bg-slate-panel p-5">
+                  <div className="h-2.5 w-20 animate-pulse bg-slate-sunk" />
+                  <div className="mt-3 h-8 w-24 animate-pulse bg-slate-sunk" />
                 </div>
+              ))}
+            </div>
+          ) : (
+            /*
+             * Revenue is the number an instructor opens this panel for, so it
+             * gets the dominant cell. The rest are counts, read at a glance.
+             */
+            <div className="grid gap-px border border-rule bg-rule lg:grid-cols-4">
+              <Metric
+                label="Revenue earned"
+                value={`₹${revenue.toLocaleString("en-IN")}`}
+                caption={revenue === 0 ? "No sales yet" : "85% of every payment"}
+                dominant
+                Icon={DollarSign}
+              />
+              <Metric
+                label="Learners enrolled"
+                value={students.toLocaleString("en-IN")}
+                caption={students === 0 ? "Share a course link" : "across all courses"}
+                Icon={Users}
+              />
+              <Metric
+                label="Courses"
+                value={String(courses)}
+                caption={courses === 0 ? "Nothing published" : drafts > 0 ? `${drafts} still draft` : "all published"}
+                Icon={FileText}
+              />
+              <Metric
+                label="Average rating"
+                value={rating ?? "—"}
+                caption={rating ? `top: ${overview?.top_course?.title ?? "—"}` : "no ratings yet"}
+                Icon={Star}
+              />
+            </div>
+          )}
+
+          <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+            <Panel flush>
+              <PanelHeader
+                className="border-b border-rule px-5 py-3"
+                title="Recent enrolments"
+                meta={`${recent.length} latest`}
+                action={
+                  <Link
+                    to="/courses"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-ink-muted transition-colors hover:text-ink"
+                  >
+                    All courses <ArrowRight size={12} strokeWidth={2.5} aria-hidden />
+                  </Link>
+                }
+              />
+              {isLoading ? (
+                <SkeletonRows rows={4} />
+              ) : recent.length === 0 ? (
+                <ListMessage
+                  kind="empty"
+                  title="No learners yet"
+                  body="Publish a course and share its link. Enrolments appear here the moment someone joins."
+                  action={
+                    <Link
+                      to="/courses/create"
+                      className="inline-flex h-9 items-center border border-ink bg-ink px-4 text-xs font-semibold text-ink-inverse transition-colors hover:bg-ink/88"
+                    >
+                      Create your first course
+                    </Link>
+                  }
+                />
               ) : (
-                recent.map((e) => (
-                  <div key={`${e.learner}-${e.course}-${e.enrolled_at}`} className="flex items-center justify-between rounded-xl border px-3 py-3">
-                    <div className="flex items-center gap-3"><div className="h-8 w-8 rounded-full bg-zinc-100" /><div><p className="text-sm font-semibold">{e.learner}</p><p className="text-xs text-zinc-500">{e.course}</p></div></div>
-                    <div className="text-right"><p className="text-xs font-semibold">{priceLabel(e.price)}</p><p className="text-[11px] text-zinc-400">{timeAgo(e.enrolled_at)}</p></div>
-                  </div>
-                ))
+                <ul className="divide-y divide-rule">
+                  {recent.map((e) => (
+                    <li
+                      key={`${e.learner}-${e.course}-${e.enrolled_at}`}
+                      className="row-hover flex items-center gap-3 px-5 py-3"
+                    >
+                      <span
+                        aria-hidden
+                        className="flex h-8 w-8 shrink-0 items-center justify-center bg-slate-sunk text-xs font-semibold text-ink-muted"
+                      >
+                        {(e.learner[0] ?? "?").toUpperCase()}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-ink">{e.learner}</p>
+                        <p className="truncate text-xs text-ink-faint">joined {e.course}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="tnum text-sm font-semibold text-ink">{priceLabel(e.price)}</p>
+                        <p className="tnum text-[11px] text-ink-faint">{timeAgo(e.enrolled_at)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
-            </div>
-          </div>
-          <div className="rounded-[20px] bg-white p-6 shadow-sm">
-            <h3 className="text-sm font-bold">Quick actions</h3>
-            <div className="mt-4 grid gap-2">
-              <Link to="/courses/create" className="rounded-xl border bg-zinc-50 p-4 hover:bg-white"><p className="text-sm font-bold">Create new course</p><p className="text-xs text-zinc-500">Start from scratch</p></Link>
-              <Link to="/assignments" className="rounded-xl border bg-zinc-50 p-4 hover:bg-white"><p className="text-sm font-bold">Review assignments</p><p className="text-xs text-zinc-500">Pending reviews</p></Link>
-              <Link to="/analytics" className="rounded-xl border bg-zinc-50 p-4 hover:bg-white"><p className="text-sm font-bold">View analytics</p><p className="text-xs text-zinc-500">Revenue & students</p></Link>
-            </div>
+            </Panel>
+
+            <Panel flush>
+              <PanelHeader className="border-b border-rule px-5 py-3" title="Next actions" />
+              <ul className="divide-y divide-rule">
+                {[
+                  {
+                    to: "/courses/create",
+                    title: "Create a course",
+                    body: "Start from a blank outline",
+                  },
+                  {
+                    to: "/assignments",
+                    title: "Build an assignment",
+                    body: "Upload a PDF, generate questions",
+                  },
+                  {
+                    to: "/packs",
+                    title: "Bundle a question pack",
+                    body: "Reuse questions across courses",
+                  },
+                  {
+                    to: "/analytics",
+                    title: "Read your analytics",
+                    body: "Drop-off by lesson, revenue over time",
+                  },
+                ].map((a) => (
+                  <li key={a.to}>
+                    <Link
+                      to={a.to}
+                      className="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-slate-sunk"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-ink">{a.title}</p>
+                        <p className="mt-0.5 text-xs text-ink-faint">{a.body}</p>
+                      </div>
+                      <ArrowRight
+                        size={15}
+                        strokeWidth={2.25}
+                        aria-hidden
+                        className="shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5 group-hover:text-ink"
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
           </div>
         </div>
+      </PageShell>
+    </div>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  caption,
+  dominant = false,
+  Icon,
+}: {
+  label: string;
+  value: string;
+  caption?: string;
+  dominant?: boolean;
+  Icon: typeof Users;
+}) {
+  return (
+    <div className={cn("bg-slate-panel p-5", dominant && "sm:col-span-2")}>
+      <div className="flex items-start justify-between gap-2">
+        <Eyebrow>{label}</Eyebrow>
+        <Icon size={15} strokeWidth={2.2} aria-hidden className="shrink-0 text-ink-faint" />
       </div>
+      <p
+        className={cn(
+          "tnum mt-2.5 font-semibold tracking-tight text-ink",
+          dominant ? "text-4xl" : "text-3xl",
+        )}
+      >
+        {value}
+      </p>
+      {caption && <p className="mt-1.5 truncate text-xs text-ink-muted">{caption}</p>}
     </div>
   );
 }

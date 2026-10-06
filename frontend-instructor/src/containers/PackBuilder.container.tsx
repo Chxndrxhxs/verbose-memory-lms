@@ -439,8 +439,8 @@ export function PackBuilderContainer({ existingId }: { existingId?: string }) {
               disabled={saving || Boolean(blocker)}
               title={blocker ?? "Save and continue"}
               className={cn(
-                "inline-flex h-12 items-center rounded-full bg-[#0f172a] px-6 text-sm font-semibold",
-                "text-white hover:bg-black disabled:opacity-40",
+                "inline-flex h-12 items-center rounded-sm bg-ink px-6 text-sm font-semibold",
+                "text-ink-inverse hover:bg-ink/88 disabled:opacity-40",
               )}
             >
               {saving ? "Saving…" : "Save & continue"}
@@ -449,8 +449,8 @@ export function PackBuilderContainer({ existingId }: { existingId?: string }) {
             <button
               onClick={() => navigate("/packs")}
               className={cn(
-                "inline-flex h-12 items-center rounded-full bg-[#0f172a] px-6 text-sm font-semibold",
-                "text-white hover:bg-black",
+                "inline-flex h-12 items-center rounded-sm bg-ink px-6 text-sm font-semibold",
+                "text-ink-inverse hover:bg-ink/88",
               )}
             >
               Done

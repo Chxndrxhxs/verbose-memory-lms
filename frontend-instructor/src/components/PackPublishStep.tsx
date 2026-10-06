@@ -64,41 +64,41 @@ export function PackPublishStep({
             <img
               src={info.cover.trim()}
               alt=""
-              className="h-36 w-28 shrink-0 rounded-xl border border-zinc-200 object-cover"
+              className="h-36 w-28 shrink-0 border border-rule object-cover"
             />
           ) : (
             <div
               className={cn(
-                "flex h-36 w-28 shrink-0 items-center justify-center rounded-xl",
-                "bg-zinc-100 text-xs font-semibold text-zinc-400",
+                "flex h-36 w-28 shrink-0 items-center justify-center border border-rule",
+                "bg-slate-sunk text-xs font-semibold text-ink-faint",
               )}
             >
               No cover
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold tracking-wide text-zinc-400 uppercase">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint tnum">
               {status === "published" ? "Live in store" : "Draft"} ·{" "}
               {info.max_attempts > 0
                 ? `${info.max_attempts} shared attempts`
                 : "Unlimited attempts"}
             </p>
-            <h2 className="mt-1 text-xl font-bold text-zinc-900">
+            <h2 className="mt-1 text-xl font-semibold text-ink">
               {info.title || "Untitled pack"}
             </h2>
             {info.description && (
-              <p className="mt-1 line-clamp-2 text-sm text-zinc-500">{info.description}</p>
+              <p className="mt-1 line-clamp-2 text-sm text-ink-muted">{info.description}</p>
             )}
-            <p className="mt-2 flex flex-wrap items-baseline gap-2">
-              <span className="text-lg font-bold text-zinc-900">
+            <p className="mt-2 flex flex-wrap items-baseline gap-2 tnum">
+              <span className="text-lg font-semibold text-ink">
                 {formatPackPrice(info.price)}
               </span>
               {mrp > price && mrp > 0 && (
-                <span className="text-sm text-zinc-400 line-through">
+                <span className="text-sm text-ink-faint line-through">
                   ₹{mrp.toLocaleString("en-IN")}
                 </span>
               )}
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-ink-muted">
                 · {questions.length} question{questions.length === 1 ? "" : "s"} ·{" "}
                 {totalPackMarks(questions)} marks · pass {info.passing_percentage || 50}%
               </span>
@@ -107,15 +107,15 @@ export function PackPublishStep({
         </div>
 
         {breakdown.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 border-t border-zinc-100 px-6 py-3">
+          <div className="flex flex-wrap gap-2 border-t border-rule px-6 py-3">
             {breakdown.map(([topic, n]) => (
               <span
                 key={topic}
                 className={cn(
-                  "rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                  "rounded-sm border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] tnum",
                   topic === "Untagged"
-                    ? "bg-amber-100 text-amber-800"
-                    : "bg-zinc-100 text-zinc-600",
+                    ? "border-hold/30 bg-hold-soft text-hold"
+                    : "border-rule bg-slate-sunk text-ink-muted",
                 )}
               >
                 {topic} · {n}
@@ -126,15 +126,15 @@ export function PackPublishStep({
       </div>
 
       <div className={builderCardClass}>
-        <h3 className="text-[15px] font-bold text-zinc-900">What learners get</h3>
+        <h3 className="text-[15px] font-semibold text-ink">What learners get</h3>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {plans.map((plan) => {
             const meta = EXAM_MODULE_META[plan.module];
             return (
-              <div key={plan.module} className="rounded-2xl border border-zinc-200/70 bg-zinc-50/70 p-4">
-                <p className="text-[15px] font-bold">{meta.label}</p>
-                <p className="mt-1.5 text-sm text-zinc-600">{plan.summary}</p>
-                <p className="mt-2 text-xs font-semibold text-zinc-400">
+              <div key={plan.module} className="border border-rule bg-slate-sunk p-4">
+                <p className="text-[15px] font-semibold text-ink">{meta.label}</p>
+                <p className="mt-1.5 text-sm text-ink-muted">{plan.summary}</p>
+                <p className="mt-2 text-xs font-semibold text-ink-faint">
                   {meta.proctored ? "Proctored" : "No proctoring"} ·{" "}
                   {meta.untimed ? "Untimed" : "Timed"}
                 </p>
@@ -142,32 +142,34 @@ export function PackPublishStep({
             );
           })}
           {plans.length === 0 && (
-            <p className="text-sm text-red-600">No exam format enabled.</p>
+            <p className="text-sm text-halt">No exam format enabled.</p>
           )}
         </div>
       </div>
 
       <div className={builderCardClass}>
-        <h3 className="text-[15px] font-bold text-zinc-900">Pre-publish check</h3>
-        <ul className="mt-4 space-y-2.5">
+        <h3 className="text-[15px] font-semibold text-ink">Pre-publish check</h3>
+        <ul className="mt-4 space-y-2">
           {checks.map((check) => (
-            <li key={check.label} className="flex items-center gap-2.5 text-[15px]">
+            <li key={check.label} className="flex items-center gap-2 text-[15px]">
               <span
                 className={cn(
-                  "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold",
-                  check.ok ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-400",
+                  "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold",
+                  check.ok
+                    ? "bg-live-soft text-live"
+                    : "bg-slate-sunk text-ink-faint",
                 )}
               >
                 {check.ok ? "✓" : "·"}
               </span>
-              <span className={check.ok ? "text-zinc-800" : "text-zinc-400"}>
+              <span className={check.ok ? "text-ink" : "text-ink-faint"}>
                 {check.label}
               </span>
             </li>
           ))}
         </ul>
         {warnings.map((warning) => (
-          <p key={warning} className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          <p key={warning} className="mt-3 border border-hold/30 bg-hold-soft p-4 text-sm text-hold">
             {warning}
           </p>
         ))}
@@ -176,38 +178,40 @@ export function PackPublishStep({
           {status === "published" ? (
             <div>
               <button
+                type="button"
                 onClick={onUnpublish}
                 disabled={saving}
                 className={cn(
-                  "h-12 rounded-full border border-zinc-300 px-6",
-                  "text-sm font-semibold hover:bg-zinc-50 disabled:opacity-50",
+                  "h-12 rounded-sm border border-rule-strong px-6",
+                  "text-sm font-semibold text-ink hover:bg-slate-sunk disabled:opacity-50",
                 )}
               >
                 {saving ? "Working…" : "Unpublish"}
               </button>
-              <p className="mt-2.5 text-sm text-zinc-500">
+              <p className="mt-2 text-sm text-ink-muted">
                 Unpublishing hides the pack from the store. Past buyers keep their history.
               </p>
             </div>
           ) : (
             <div>
               <button
+                type="button"
                 onClick={onPublish}
                 disabled={saving || !allValid}
                 className={cn(
-                  "h-12 rounded-full bg-emerald-600 px-6 text-sm font-semibold",
-                  "text-white hover:bg-emerald-700 disabled:opacity-50",
+                  "h-12 rounded-sm border border-live bg-live px-6 text-sm font-semibold",
+                  "text-ink-inverse hover:bg-live/88 disabled:opacity-50",
                 )}
               >
                 {saving ? "Publishing…" : "Publish pack"}
               </button>
               {!allValid && (
-                <p className="mt-2.5 text-sm text-zinc-500">
+                <p className="mt-2 text-sm text-ink-muted">
                   Finish the checks above to publish.
                 </p>
               )}
               {allValid && (
-                <p className="mt-2.5 text-sm text-zinc-500">
+                <p className="mt-2 text-sm text-ink-muted">
                   Publishing builds the hidden exams — learners can buy it right away.
                 </p>
               )}

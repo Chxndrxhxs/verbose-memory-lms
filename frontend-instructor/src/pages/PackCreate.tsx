@@ -1,14 +1,14 @@
 import { InstructorHeader } from "../components/InstructorHeader";
 import { PackBuilderContainer } from "../containers/PackBuilder.container";
-import { builderPageClass } from "../lib/builder";
+import { PageShell } from "../components/Panel";
 
 export default function PackCreate() {
   return (
-    <div className="min-h-screen bg-[#f6f5f1]">
+    <div className="min-h-screen bg-slate-ground">
       <InstructorHeader />
-      <div className={builderPageClass}>
+      <PageShell>
         <PackBuilderContainer />
-      </div>
+      </PageShell>
     </div>
   );
 }

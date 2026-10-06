@@ -41,28 +41,30 @@ type Props = {
 
 type OptionList = BankQuestion["options"];
 
-const editorInput = cn(builderFieldClass, "!py-2.5 !text-sm");
+const editorInput = cn(builderFieldClass);
 
 const filterInput = cn(
-  "h-12 rounded-xl border border-zinc-200 bg-white px-4",
-  "text-sm outline-none focus:border-zinc-900",
+  "h-12 rounded-sm border border-rule bg-slate-panel px-4",
+  "text-sm text-ink focus:border-ink",
 );
 
 const darkButton = cn(
-  "inline-flex h-12 items-center rounded-full bg-[#0f172a] px-5 text-sm font-semibold text-white",
-  "hover:bg-black disabled:opacity-50",
+  "inline-flex h-12 items-center rounded-sm bg-ink px-5 text-sm font-semibold text-ink-inverse",
+  "hover:opacity-90 disabled:opacity-50",
 );
 
-const genField = cn(builderFieldClass, "!py-2.5 !text-sm");
+const genField = cn(builderFieldClass);
 
-const iconButton = "shrink-0 rounded-xl p-2.5 text-zinc-400 hover:bg-zinc-100";
+const iconButton = "shrink-0 rounded-sm p-3 text-ink-faint hover:bg-slate-sunk hover:text-ink";
 
 function CategoryBadge({ topic }: { topic: string }) {
   return (
     <span
       className={cn(
-        "rounded-full px-2.5 py-1 text-[11px] font-bold",
-        topic ? "bg-sky-100 text-sky-700" : "bg-zinc-100 text-zinc-400",
+        "rounded-sm border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em]",
+        topic
+          ? "border-flight/25 bg-flight-soft text-flight"
+          : "border-rule bg-slate-sunk text-ink-faint",
       )}
     >
       {topic || "Untagged"}
@@ -77,17 +79,17 @@ function OptionPreview({ options, correct }: { options: OptionList; correct: num
         <li
           key={i}
           className={cn(
-            "flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-sm",
+            "flex items-center gap-2 rounded-sm border px-3 py-2 text-sm",
             i === correct
-              ? "border-emerald-200 bg-emerald-50 font-medium text-emerald-800"
-              : "border-zinc-100 text-zinc-600",
+              ? "border-live/25 bg-live-soft font-medium text-live"
+              : "border-rule text-ink-muted",
           )}
         >
           <span
             className={cn(
-              "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-              "text-[10px] font-bold",
-              i === correct ? "bg-emerald-500 text-white" : "bg-zinc-100 text-zinc-500",
+              "flex h-5 w-5 shrink-0 items-center justify-center rounded-full tnum",
+              "text-[10px] font-semibold",
+              i === correct ? "bg-live text-ink-inverse" : "bg-slate-sunk text-ink-muted",
             )}
           >
             {i === correct ? <Check size={11} /> : String.fromCharCode(65 + i)}
@@ -96,7 +98,7 @@ function OptionPreview({ options, correct }: { options: OptionList; correct: num
             <img
               src={optionImage(opt)}
               alt=""
-              className="h-10 w-16 shrink-0 rounded border border-zinc-200 bg-white object-contain"
+              className="h-10 w-16 shrink-0 border border-rule bg-slate-panel object-contain"
             />
           )}
           <span className="min-w-0 truncate">{optionText(opt) || "(empty)"}</span>
@@ -117,14 +119,15 @@ function BankRow({
 }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div className="rounded-2xl border border-zinc-200/70 p-4 sm:p-5">
+    <div className="border border-rule p-4 sm:p-5">
       <div className="flex items-start gap-3">
         <button
+          type="button"
           onClick={() => setExpanded((v) => !v)}
           className="min-w-0 flex-1 text-left"
         >
-          <span className="block truncate text-[15px] font-medium">{bank.question}</span>
-          <span className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+          <span className="block truncate text-[15px] font-medium text-ink">{bank.question}</span>
+          <span className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-ink-muted tnum">
             <CategoryBadge topic={bank.topic} />
             <span>
               {bank.assignment_title} · {bank.difficulty} · {bank.marks}{" "}
@@ -133,6 +136,7 @@ function BankRow({
           </span>
         </button>
         <button
+          type="button"
           onClick={() => setExpanded((v) => !v)}
           className={iconButton}
           title={expanded ? "Collapse" : "Preview"}
@@ -140,24 +144,25 @@ function BankRow({
           {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
         <button
+          type="button"
           onClick={onAdd}
           disabled={added}
           className={cn(
-            "h-11 shrink-0 rounded-full px-4 text-sm font-semibold",
+            "h-11 shrink-0 rounded-sm px-4 text-sm font-semibold",
             added
-              ? "bg-zinc-100 text-zinc-400"
-              : "bg-[#0f172a] text-white hover:bg-black",
+              ? "bg-slate-sunk text-ink-faint"
+              : "bg-ink text-ink-inverse hover:opacity-90",
           )}
         >
           {added ? "Added" : "Add"}
         </button>
       </div>
       {expanded && (
-        <div className="mt-2 border-t border-zinc-100 pt-2">
+        <div className="mt-2 border-t border-rule pt-2">
           <OptionPreview options={bank.options} correct={bank.correct_answer} />
           {bank.explanation && (
-            <p className="mt-2.5 text-sm text-zinc-500">
-              <span className="font-semibold text-zinc-600">Why:</span> {bank.explanation}
+            <p className="mt-2 text-sm text-ink-muted">
+              <span className="font-semibold text-ink">Why:</span> {bank.explanation}
             </p>
           )}
         </div>
@@ -211,26 +216,26 @@ function AddedRow({
   return (
     <div
       className={cn(
-        "rounded-2xl border bg-white p-4 sm:p-5",
-        isEmpty ? "border-amber-300" : "border-zinc-200/70",
+        "border bg-slate-panel p-4 sm:p-5",
+        isEmpty ? "border-hold/40" : "border-rule",
       )}
     >
       <div className="flex items-start gap-3">
         <span
           className={cn(
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
-            "bg-zinc-100 text-xs font-bold text-zinc-600",
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full tnum",
+            "bg-slate-sunk text-xs font-semibold text-ink-muted",
           )}
         >
           {index + 1}
         </span>
-        <button onClick={() => setExpanded((v) => !v)} className="min-w-0 flex-1 text-left">
-          <span className="block truncate text-[15px] font-medium">
+        <button type="button" onClick={() => setExpanded((v) => !v)} className="min-w-0 flex-1 text-left">
+          <span className="block truncate text-[15px] font-medium text-ink">
             {question.question || (
-              <span className="italic text-amber-600">Empty — expand to write</span>
+              <span className="italic text-hold">Empty, expand to write</span>
             )}
           </span>
-          <span className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+          <span className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-ink-muted tnum">
             <CategoryBadge topic={question.topic} />
             <span>
               {question.options.map(draftOptionText).filter(Boolean).length} options ·{" "}
@@ -242,6 +247,7 @@ function AddedRow({
         {!locked && (
           <span className="flex shrink-0 items-center">
             <button
+              type="button"
               onClick={() => onMove("up")}
               disabled={index === 0}
               className={cn(iconButton, "disabled:opacity-30")}
@@ -250,6 +256,7 @@ function AddedRow({
               <ChevronUp size={14} />
             </button>
             <button
+              type="button"
               onClick={() => onMove("down")}
               disabled={index === total - 1}
               className={cn(iconButton, "disabled:opacity-30")}
@@ -258,8 +265,9 @@ function AddedRow({
               <ChevronDown size={14} />
             </button>
             <button
+              type="button"
               onClick={onRemove}
-              className="shrink-0 rounded-lg p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600"
+              className="shrink-0 rounded-sm p-2 text-halt hover:bg-halt-soft hover:text-halt"
               title="Remove"
             >
               <Trash2 size={14} />
@@ -269,7 +277,7 @@ function AddedRow({
       </div>
 
       {expanded && (
-        <div className="mt-4 space-y-4 border-t border-zinc-100 pt-4">
+        <div className="mt-4 space-y-4 border-t border-rule pt-4">
           <textarea
             value={question.question}
             onChange={(e) => onUpdate({ question: e.target.value })}
@@ -280,16 +288,17 @@ function AddedRow({
           />
           <div className="space-y-2">
             {question.options.map((opt, i) => (
-              <div key={i} className="flex items-center gap-2.5">
+              <div key={i} className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => onUpdate({ correctAnswer: i })}
                   disabled={locked}
                   className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                    "border-2 text-xs font-bold",
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full tnum",
+                    "border-2 text-xs font-semibold",
                     question.correctAnswer === i
-                      ? "border-emerald-500 bg-emerald-500 text-white"
-                      : "border-zinc-300 text-zinc-500",
+                      ? "border-live bg-live text-ink-inverse"
+                      : "border-rule-strong text-ink-muted",
                   )}
                   title="Mark as correct"
                 >
@@ -308,10 +317,11 @@ function AddedRow({
                 />
                 {!locked && question.options.length > 2 && (
                   <button
+                    type="button"
                     onClick={() => removeOption(i)}
                     className={cn(
-                      "shrink-0 rounded-xl p-2 text-zinc-400",
-                      "hover:bg-red-50 hover:text-red-500",
+                      "shrink-0 rounded-sm p-2 text-ink-faint",
+                      "hover:bg-halt-soft hover:text-halt",
                     )}
                   >
                     <Trash2 size={13} />
@@ -321,10 +331,11 @@ function AddedRow({
             ))}
             {!locked && question.options.length < 6 && (
               <button
+                type="button"
                 onClick={() => onUpdate({ options: [...question.options, ""] })}
                 className={cn(
-                  "inline-flex items-center gap-1.5 text-sm font-semibold",
-                  "text-zinc-500 hover:text-zinc-800",
+                  "inline-flex items-center gap-2 text-sm font-semibold",
+                  "text-ink-muted hover:text-ink",
                 )}
               >
                 <Plus size={13} /> Add option
@@ -332,7 +343,7 @@ function AddedRow({
             )}
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
-            <label className="block text-xs font-semibold text-zinc-500">
+            <label className="block text-xs font-semibold text-ink-muted">
               Category
               <input
                 value={question.topic}
@@ -342,20 +353,20 @@ function AddedRow({
                 className={cn(editorInput)}
               />
             </label>
-            <label className="block text-xs font-semibold text-zinc-500">
+            <label className="block text-xs font-semibold text-ink-muted">
               Difficulty
               <select
                 value={question.difficulty}
                 onChange={(e) => onUpdate({ difficulty: e.target.value })}
                 disabled={locked}
-                className={cn(editorInput, "bg-white")}
+                className={cn(editorInput)}
               >
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
                 <option value="hard">Hard</option>
               </select>
             </label>
-            <label className="block text-xs font-semibold text-zinc-500">
+            <label className="block text-xs font-semibold text-ink-muted">
               Marks
               <input
                 type="number"
@@ -366,7 +377,7 @@ function AddedRow({
                   onUpdate({ marks: Math.max(0.5, Number(e.target.value) || 1) })
                 }
                 disabled={locked}
-                className={cn(editorInput)}
+                className={cn(editorInput, "tnum")}
               />
             </label>
           </div>
@@ -414,11 +425,11 @@ export function PackQuestionsStep(props: Props) {
       <div className={builderCardClass}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
               Step 2 of 4 · Build
             </p>
-            <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">Questions</h2>
-            <p className="mt-1.5 text-[15px] text-zinc-500">
+            <h2 className="mt-1 text-xl font-semibold text-ink">Questions</h2>
+            <p className="mt-1.5 text-[15px] text-ink-muted tnum">
               {questions.length === 0
                 ? "Import from your bank, generate, or write your own."
                 : summary}
@@ -426,10 +437,11 @@ export function PackQuestionsStep(props: Props) {
           </div>
           {!locked && (
             <button
+              type="button"
               onClick={onAddCustom}
               className={cn(
-                "inline-flex h-12 items-center gap-1.5 rounded-full border",
-                "border-zinc-300 px-5 text-sm font-semibold hover:bg-zinc-50",
+                "inline-flex h-12 items-center gap-2 rounded-sm border",
+                "border-rule-strong px-5 text-sm font-semibold hover:bg-slate-sunk",
               )}
             >
               <Plus size={14} /> Blank question
@@ -443,8 +455,8 @@ export function PackQuestionsStep(props: Props) {
               <span
                 key={topic}
                 className={cn(
-                  "rounded-full bg-zinc-100 px-3 py-1.5 text-xs",
-                  "font-semibold text-zinc-600",
+                  "rounded-sm border border-rule bg-slate-sunk px-3 py-1.5 text-xs tnum",
+                  "font-semibold text-ink-muted",
                 )}
               >
                 {topic} · {n}
@@ -454,7 +466,7 @@ export function PackQuestionsStep(props: Props) {
         )}
 
         {locked && (
-          <p className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          <p className="mt-5 border border-hold/30 bg-hold-soft p-4 text-sm text-hold">
             This pack is published — unpublish it to change questions.
           </p>
         )}
@@ -475,8 +487,8 @@ export function PackQuestionsStep(props: Props) {
           {questions.length === 0 && (
             <p
               className={cn(
-                "rounded-2xl border border-dashed border-zinc-300 p-8",
-                "text-center text-sm text-zinc-500",
+                "border border-dashed border-rule-strong p-8",
+                "text-center text-sm text-ink-muted",
               )}
             >
               No questions yet — use the bank, the generator, or a blank question below.
@@ -489,21 +501,22 @@ export function PackQuestionsStep(props: Props) {
         <div className={builderCardClass}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.08em] text-zinc-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
                 Add more
               </p>
-              <h2 className="mt-1 text-xl font-bold tracking-tight text-zinc-900">Add questions</h2>
+              <h2 className="mt-1 text-xl font-semibold text-ink">Add questions</h2>
             </div>
-            <div className="flex gap-1 rounded-full bg-zinc-100 p-1 text-sm font-semibold">
+            <div className="flex rounded-sm border border-rule bg-slate-sunk p-0.5 text-sm font-semibold">
               {(["bank", "generate"] as const).map((t) => (
                 <button
                   key={t}
+                  type="button"
                   onClick={() => setTab(t)}
                   className={cn(
-                    "h-11 rounded-full px-5 capitalize",
+                    "h-10 rounded-sm px-4 capitalize",
                     tab === t
-                      ? "bg-white text-zinc-900 shadow-sm"
-                      : "text-zinc-500",
+                      ? "bg-slate-panel text-ink"
+                      : "text-ink-muted hover:text-ink",
                   )}
                 >
                   {t === "bank" ? "Question bank" : "Generate"}
@@ -514,7 +527,7 @@ export function PackQuestionsStep(props: Props) {
 
           {tab === "bank" && (
             <div className="mt-6">
-              <div className="flex flex-wrap gap-2.5">
+              <div className="flex flex-wrap gap-2">
                 <input
                   value={bankQuery}
                   onChange={(e) => onBankQuery(e.target.value)}
@@ -548,25 +561,26 @@ export function PackQuestionsStep(props: Props) {
               </div>
               {addable.length > 0 && (
                 <div className="mt-3 flex items-center justify-between">
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-ink-muted tnum">
                     {addable.length} result{addable.length === 1 ? "" : "s"} you
                     haven&apos;t added
                   </p>
                   <button
+                    type="button"
                     onClick={() => onAddFromBank(addable.map((b) => b.id))}
                     className={cn(
-                      "h-11 rounded-full bg-zinc-100 px-4",
-                      "text-sm font-semibold hover:bg-zinc-200",
+                      "h-11 rounded-sm border border-rule px-4",
+                      "text-sm font-semibold text-ink-muted hover:bg-slate-sunk",
                     )}
                   >
                     Add all visible
                   </button>
                 </div>
               )}
-              <div className="mt-4 space-y-2.5">
-                {bankLoading && <p className="text-sm text-zinc-500">Searching…</p>}
+              <div className="mt-4 space-y-2">
+                {bankLoading && <p className="text-sm text-ink-muted">Searching…</p>}
                 {!bankLoading && bankResults.length === 0 && (
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-ink-muted">
                     No saved questions match. Create an assignment first — its questions
                     land here automatically.
                   </p>
@@ -584,7 +598,7 @@ export function PackQuestionsStep(props: Props) {
           )}
 
           {tab === "generate" && (
-            <div className="mt-6 rounded-2xl border border-zinc-200/70 bg-zinc-50/70 p-5 sm:p-6">
+            <div className="mt-6 border border-rule bg-slate-sunk p-5 sm:p-6">
               <div className="flex flex-wrap items-end gap-4">
                 <label className={builderLabelClass}>
                   Count
@@ -594,7 +608,7 @@ export function PackQuestionsStep(props: Props) {
                     max={50}
                     value={count}
                     onChange={(e) => setCount(Number(e.target.value))}
-                    className={cn(genField, "w-28")}
+                    className={cn(genField, "w-28 tnum")}
                   />
                 </label>
                 <label className={builderLabelClass}>
@@ -619,6 +633,7 @@ export function PackQuestionsStep(props: Props) {
                   />
                 </label>
                 <button
+                  type="button"
                   onClick={() => onGenerate(count, difficulty, genTopic.trim())}
                   disabled={generating}
                   className={darkButton}
@@ -626,7 +641,7 @@ export function PackQuestionsStep(props: Props) {
                   {generating ? "Generating…" : "Generate & add"}
                 </button>
               </div>
-              <p className="mt-3 text-xs text-zinc-500">
+              <p className="mt-3 text-xs text-ink-muted">
                 AI-written from the model&apos;s own subject knowledge. Give a
                 category so they arrive tagged instead of random.
               </p>

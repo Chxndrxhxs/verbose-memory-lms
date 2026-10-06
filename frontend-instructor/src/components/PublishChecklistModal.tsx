@@ -1,5 +1,6 @@
 import { Check, X } from "@masterlms/shared";
 import { cn } from "../lib/utils";
+import { Modal } from "./Modal";
 
 export type PublishCheck = { label: string; ok: boolean; hint?: string };
 
@@ -16,63 +17,58 @@ export function PublishChecklistModal({
 }) {
   const allOk = checks.every((c) => c.ok);
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center">
-      <div className="w-full max-w-md rounded-[20px] bg-white p-6 shadow-xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-base font-extrabold tracking-tight">Publish course?</h2>
-            <p className="mt-1 text-xs text-zinc-500">
-              Learners will see it immediately. Fix red items first.
-            </p>
-          </div>
+    <Modal
+      open
+      onClose={onClose}
+      title="Publish course?"
+      description="Learners will see it immediately. Fix red items first."
+      size="sm"
+      footer={
+        <div className="flex gap-2">
           <button
+            type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-zinc-100"
-            aria-label="Close"
-          >
-            <X size={16} />
-          </button>
-        </div>
-        <ul className="mt-4 space-y-2">
-          {checks.map((c) => (
-            <li
-              key={c.label}
-              className={cn(
-                "flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm",
-                c.ok ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"
-              )}
-            >
-              <span
-                className={cn(
-                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white",
-                  c.ok ? "bg-emerald-500" : "bg-red-500"
-                )}
-              >
-                {c.ok ? <Check size={12} strokeWidth={3} /> : <X size={12} strokeWidth={3} />}
-              </span>
-              <span className="min-w-0">
-                <span className="block font-semibold text-zinc-900">{c.label}</span>
-                {c.hint && !c.ok && <span className="block text-xs text-zinc-500">{c.hint}</span>}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-5 flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-full border py-2.5 text-sm font-semibold hover:bg-zinc-50"
+            className="flex-1 rounded-sm border border-rule py-2 text-sm font-semibold text-ink-muted hover:bg-slate-sunk"
           >
             Keep editing
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             disabled={!allOk || publishing}
-            className="flex-1 rounded-full bg-[#0f172a] py-2.5 text-sm font-bold text-white hover:bg-black disabled:opacity-40"
+            className="flex-1 rounded-sm bg-ink py-2 text-sm font-semibold text-ink-inverse hover:opacity-90 disabled:opacity-40"
           >
             {publishing ? "Publishing…" : "Publish to learners"}
           </button>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <ul className="space-y-2">
+        {checks.map((c) => (
+          <li
+            key={c.label}
+            className={cn(
+              "flex items-center gap-2 rounded-sm border px-3 py-2 text-sm",
+              c.ok
+                ? "border-live/25 bg-live-soft"
+                : "border-halt/25 bg-halt-soft"
+            )}
+          >
+            <span
+              className={cn(
+                "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-ink-inverse",
+                c.ok ? "bg-live" : "bg-halt"
+              )}
+            >
+              {c.ok ? <Check size={12} strokeWidth={3} /> : <X size={12} strokeWidth={3} />}
+            </span>
+            <span className="min-w-0">
+              <span className="block font-semibold text-ink">{c.label}</span>
+              {c.hint && !c.ok && <span className="block text-xs text-ink-muted">{c.hint}</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Modal>
   );
 }

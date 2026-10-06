@@ -1,18 +1,152 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/*
+ * QTNXT Teach — "studio slate".
+ *
+ * An instructor's job is authoring and publishing, so the product surface is
+ * calm slate + paper. The ONLY saturated colour in the app is signal yellow,
+ * and it means exactly one thing: an instructor's own mark (Teach badge,
+ * top rank, their own row). Everything else is semantic state.
+ *
+ * Edge language is squared. Containers are near-square; pills are reserved
+ * for genuine capsules (avatar, dot, status tag).
+ */
+
 @theme {
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-display: "Instrument Sans", system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Instrument Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Instrument Serif", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Slate: the working surface instructors look at all day. Cool and low-glare. */
+  --color-slate-ground: oklch(0.968 0.005 250);
+  --color-slate-panel: oklch(0.995 0.002 250);
+  --color-slate-sunk: oklch(0.945 0.007 250);
+  --color-slate-deep: oklch(0.205 0.018 255);
+
+  /* Ink */
+  --color-ink: oklch(0.215 0.018 255);
+  --color-ink-muted: oklch(0.495 0.014 255);
+  --color-ink-faint: oklch(0.655 0.012 255);
+  --color-ink-inverse: oklch(0.985 0.002 250);
+
+  /* Rule: the only separator in the system. */
+  --color-rule: oklch(0.895 0.007 250);
+  --color-rule-strong: oklch(0.83 0.009 250);
+
+  /* Signal: reserved. Marks an instructor's identity and rank. Never decoration. */
+  --color-signal: oklch(0.855 0.175 92);
+  --color-signal-deep: oklch(0.62 0.145 78);
+  --color-signal-wash: oklch(0.965 0.045 95);
+
+  /* Semantic state. Each pairs with an icon or word, never colour alone. */
+  --color-live: oklch(0.55 0.115 158); /* published, active, correct */
+  --color-live-soft: oklch(0.945 0.032 158);
+  --color-hold: oklch(0.63 0.125 75); /* draft, pending, needs review */
+  --color-hold-soft: oklch(0.952 0.04 82);
+  --color-halt: oklch(0.552 0.185 25); /* failed, destructive */
+  --color-halt-soft: oklch(0.95 0.032 25);
+  --color-flight: oklch(0.5 0.105 245); /* in-flight, informational */
+  --color-flight-soft: oklch(0.945 0.03 245);
 }
 
-* { font-family: var(--font-sans); }
-h1,h2,h3 { font-family: var(--font-display); }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 999px; }
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-rule);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-slate-ground);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  /*
+   * ONE focus treatment for the entire app. The old build had 53 outline-none
+   * and a single focus-visible; this replaces the platform ring rather than
+   * erasing it.
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: var(--color-signal);
+    color: var(--color-ink);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-slate-sunk);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-rule-strong);
+    border: 3px solid var(--color-slate-sunk);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-faint);
+  }
+}
+
+@layer components {
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  .row-hover {
+    transition: background-color 120ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  .row-hover:hover {
+    background-color: var(--color-slate-sunk);
+  }
+}
 
 /* Clearance for the bottom tab bar (rendered below lg) */
 @media (max-width: 1023.5px) {
-  body { padding-bottom: 68px; }
+  body {
+    padding-bottom: 68px;
+  }
+}
+
+/* iOS Safari zooms any input under 16px and breaks the layout. */
+@media (max-width: 639px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
