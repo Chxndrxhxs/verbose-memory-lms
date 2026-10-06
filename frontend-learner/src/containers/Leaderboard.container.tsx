@@ -10,7 +10,7 @@ export function LeaderboardContainer() {
   const ordering = sp.get("ordering") ?? "rank";
   const page = Math.max(1, Number(sp.get("page") ?? "1") || 1);
 
-  const { data, isLoading } = useLeaderboard({ city, category, season, ordering, page });
+  const { data, isLoading, isError } = useLeaderboard({ city, category, season, ordering, page });
 
   function setParam(key: string, value: string) {
     const next = new URLSearchParams(sp);
@@ -24,6 +24,7 @@ export function LeaderboardContainer() {
     <LeaderboardView
       data={data?.data ?? []}
       isLoading={isLoading}
+      isError={isError}
       params={{ city, category, season, ordering, page }}
       meta={data?.meta}
       me={data?.me ?? null}

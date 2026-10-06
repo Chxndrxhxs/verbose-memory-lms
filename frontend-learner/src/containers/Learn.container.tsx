@@ -149,7 +149,7 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
       queryClient.invalidateQueries({ queryKey: ["rating", courseId] });
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
       setShowRating(false);
-      setToast("Thanks for your rating! Certificate issued ★");
+      setToast("Thanks for your rating");
       setTimeout(() => setToast(null), 2600);
     },
     onError: (e) => {

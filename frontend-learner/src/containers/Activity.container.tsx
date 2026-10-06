@@ -5,7 +5,7 @@ import { api } from "../lib/api";
 export type ActivityDay = { date: string; count: number };
 
 export function ActivityContainer() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["me", "activity"],
     queryFn: async () => {
       const res = await api<ActivityDay[] | { data: ActivityDay[] }>("/me/activity/" as never);
@@ -16,5 +16,5 @@ export function ActivityContainer() {
     },
   });
 
-  return <ActivityView activity={data ?? []} isLoading={isLoading} />;
+  return <ActivityView activity={data ?? []} isLoading={isLoading} isError={isError} />;
 }

@@ -50,6 +50,7 @@ function RightCell({ e, ordering }: { e: LeaderboardEntry; ordering: string }) {
 export function LeaderboardView({
   data,
   isLoading,
+  isError,
   params,
   meta,
   me,
@@ -61,6 +62,7 @@ export function LeaderboardView({
 }: {
   data: LeaderboardEntry[];
   isLoading: boolean;
+  isError: boolean;
   params: { city: string; category: string; season: string; ordering: string; page: number };
   meta: LeaderboardResponse["meta"] | undefined;
   me: LeaderboardEntry | null | undefined;
@@ -110,6 +112,12 @@ export function LeaderboardView({
 
       {isLoading ? (
         <SkeletonRows rows={6} className="border border-rule bg-room-raised" />
+      ) : isError ? (
+        <Panel>
+          <p role="alert" className="p-4 text-sm text-halt">
+            Couldn't load the leaderboard. Try again in a moment.
+          </p>
+        </Panel>
       ) : data.length === 0 ? (
         <Panel>
           <ListMessage

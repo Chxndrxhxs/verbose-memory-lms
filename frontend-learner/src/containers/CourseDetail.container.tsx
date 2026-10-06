@@ -92,7 +92,7 @@ export function CourseDetailContainer() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["enrollment", id] });
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
-      showToast("Successfully enrolled! Start learning now.");
+      showToast("Enrolled. Start learning now.");
     },
     onError: (e) => showToast(String(e)),
   });
@@ -165,7 +165,7 @@ export function CourseDetailContainer() {
 
     if (res.free) {
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
-      showToast("Gift sent! The recipient will be enrolled automatically.");
+      showToast("Gift sent. The recipient will be enrolled automatically.");
       return {
         giftCode: res.gift.code,
         free: true,
@@ -220,7 +220,7 @@ export function CourseDetailContainer() {
         }) => {
           try {
             const verified = await api<GiftVerify>("/payments/verify", verifyBody({ ...r }));
-            showToast("Gift payment successful! Your gift code is ready.");
+            showToast("Gift payment successful. Your gift code is ready.");
             resolve({
               giftCode: verified.gift_code ?? res.gift.code,
               free: false,
@@ -306,7 +306,7 @@ export function CourseDetailContainer() {
               queryClient.invalidateQueries({ queryKey: ["enrollment", id] });
               queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
               setCoupon(null);
-              showToast("Payment successful! You're enrolled.");
+              showToast("Payment successful. You're enrolled.");
               resolve();
             } catch (e) {
               showToast(String(e));

@@ -15,9 +15,11 @@ function levelFromCount(count: number, max: number): number {
 export function ActivityView({
   activity,
   isLoading,
+  isError,
 }: {
   activity: ActivityDay[];
   isLoading: boolean;
+  isError?: boolean;
 }) {
   const total = activity.reduce((s, d) => s + d.count, 0);
   const maxCount = activity.reduce((m, d) => (d.count > m ? d.count : m), 0);
@@ -35,6 +37,12 @@ export function ActivityView({
           <h1 className="text-2xl font-semibold text-ink">Activity</h1>
           <p className="measure mt-1 text-sm text-ink-muted">GitHub-style tracker of every lesson you marked as done — including quizzes.</p>
 
+          {isError ? (
+            <p role="alert" className="mt-6 border border-halt/25 bg-halt-soft p-4 text-sm text-halt">
+              Couldn't load your activity. Try again in a moment.
+            </p>
+          ) : (
+            <>
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <div className="border border-rule bg-room-sunk p-4"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">Lessons done</p><p className="tnum mt-1 text-2xl font-semibold text-ink">{total}</p><p className="text-xs text-ink-muted">marked as done (all kinds)</p></div>
             <div className="border border-rule bg-room-sunk p-4"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">Active days</p><p className="tnum mt-1 text-2xl font-semibold text-ink">{activeDays}</p><p className="text-xs text-ink-muted">days with at least one completion</p></div>
@@ -50,11 +58,13 @@ export function ActivityView({
             <div className="mt-5 border border-rule bg-room-sunk p-4 sm:p-6">
               {isLoading ? <p className="text-sm text-ink-muted">Loading…</p> : <ActivityHeatmap cells={cells} weeks={26} />}
             </div>
-            <div className="mt-3 flex items-center justify-between">
-              <p className="text-[11px] text-ink-faint">Sun / Wed / Fri on the left • months on top</p>
-              <HeatmapLegend />
-            </div>
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-[11px] text-ink-faint">Sun / Wed / Fri on the left • months on top</p>
+            <HeatmapLegend />
           </div>
+        </div>
+          </>
+        )}
       </PageShell>
     </div>
   );
