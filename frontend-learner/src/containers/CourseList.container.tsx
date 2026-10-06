@@ -7,6 +7,7 @@ import { CourseCard } from "../components/CourseCard";
 import { api } from "../lib/api";
 import { useMyCourses } from "../hooks/useMyCourses";
 import type { Course } from "../types/course";
+import { Badge } from "../components/Badge";
 import { Button, Segmented } from "../components/Button";
 import { ListMessage } from "../components/DataGrid";
 import { SearchInput, Select } from "../components/Controls";
@@ -256,12 +257,16 @@ export function CourseListContainer() {
             const enrolled = enrolledIds.has(c.id);
             const pct = progressById.get(c.id) ?? 0;
             const to = enrolled ? `/learn/${c.id}` : `/courses/${c.id}`;
-            const label = pct >= 100 ? "Review →" : pct > 0 ? `Continue ${pct}% →` : "Go to course →";
+            const label = pct >= 100 ? "Review →" : pct > 0 ? `Continue ${pct}% →` : "Start course →";
             return (
               <Link key={c.id} to={to} className="flex items-center gap-3 border border-rule bg-room-raised p-3 transition-colors hover:bg-room-sunk">
-                <div className={`flex h-12 w-12 shrink-0 items-center justify-center ${c.accent} text-ink-inverse`}>
-                  <c.icon size={18} strokeWidth={2} aria-hidden />
-                </div>
+                {c.img ? (
+                  <img src={c.img} alt="" className="h-12 w-16 shrink-0 border border-rule object-cover" />
+                ) : (
+                  <div className={`flex h-12 w-16 shrink-0 items-center justify-center ${c.accent} text-ink-inverse`}>
+                    <c.icon size={18} strokeWidth={2} aria-hidden />
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold leading-tight text-ink">{c.title}</p>
                   <p className="tnum truncate text-xs text-ink-muted">
@@ -270,7 +275,10 @@ export function CourseListContainer() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {enrolled ? (
-                    <span className="tnum border border-ink bg-ink px-3 py-1 text-xs font-semibold text-ink-inverse">{label}</span>
+                    <>
+                      <Badge tone="live" showIcon={false}>Enrolled</Badge>
+                      <span className="tnum border border-ink bg-ink px-3 py-1 text-xs font-semibold text-ink-inverse">{label}</span>
+                    </>
                   ) : (
                     <>
                       {c.originalPrice && <span className="tnum hidden text-xs text-ink-faint line-through sm:inline">₹{c.originalPrice.toLocaleString("en-IN")}</span>}

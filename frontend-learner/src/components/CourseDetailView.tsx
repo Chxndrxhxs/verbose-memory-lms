@@ -259,7 +259,7 @@ export function CourseDetailView({
                 <button type="button" onClick={onRemoveCoupon} className="ml-1.5 font-semibold underline">Remove</button>
               </p>
             )}
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 grid grid-cols-3 gap-2">
               <Button variant="secondary" size="sm" block onClick={handleShare}>Share</Button>
               <Button variant="secondary" size="sm" block onClick={() => setDialog("gift")}>Gift</Button>
               <Button variant="secondary" size="sm" block onClick={() => setDialog("coupon")}>Coupon</Button>
@@ -365,7 +365,7 @@ export function CourseDetailView({
               </ul>
             </div>
 
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 grid grid-cols-3 gap-2">
               <Button variant="secondary" size="sm" block onClick={handleShare}>Share</Button>
               <Button variant="secondary" size="sm" block onClick={() => setDialog("gift")}>Gift</Button>
               <Button variant="secondary" size="sm" block onClick={() => setDialog("coupon")}>Coupon</Button>
