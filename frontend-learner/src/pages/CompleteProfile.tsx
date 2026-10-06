@@ -94,7 +94,7 @@ export default function CompleteProfile() {
           <span className="text-sm font-semibold text-ink">QTNXT</span>
         </Link>
 
-        <div className="flex flex-1 items-center">
+        <main id="main" className="flex flex-1 items-center">
           <div className="mx-auto w-full max-w-md">
             <h1 className="text-2xl font-semibold text-ink">Complete your profile</h1>
             <p className="mt-2 text-sm text-ink-muted">Tell us a bit about you — helps personalize your learning.</p>
@@ -144,7 +144,7 @@ export default function CompleteProfile() {
               </Button>
             </form>
           </div>
-        </div>
+        </main>
       </div>
 
       <div className="relative hidden h-screen lg:block">

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Outlet, RouterProvider, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import About from "./pages/About";
@@ -23,7 +23,48 @@ import { useAuth } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
 
+/* Client-side navigation changes the screen and tells nobody; the
+   document title is how a screen-reader user hears the new page. */
+const ROUTE_TITLES: [RegExp, string][] = [
+  [/^\/$/, "QTNXT — Learn the thing, properly"],
+  [/^\/login$/, "Sign in · QTNXT"],
+  [/^\/complete-profile$/, "Complete your profile · QTNXT"],
+  [/^\/courses$/, "All courses · QTNXT"],
+  [/^\/courses\/\d+$/, "Course · QTNXT"],
+  [/^\/wishlist$/, "Wishlist · QTNXT"],
+  [/^\/learn\/\d+$/, "Lesson player · QTNXT"],
+  [/^\/activity$/, "Activity · QTNXT"],
+  [/^\/leaderboard$/, "Leaderboard · QTNXT"],
+  [/^\/assignments$/, "Assignments · QTNXT"],
+  [/^\/assignments\/take\//, "Take test · QTNXT"],
+  [/^\/assignments\/transcript\//, "Test transcript · QTNXT"],
+  [/^\/assignments\/\d+$/, "Test · QTNXT"],
+  [/^\/packs\/\d+$/, "Test package · QTNXT"],
+  [/^\/profile$/, "Profile · QTNXT"],
+  [/^\/about$/, "About · QTNXT"],
+];
+
+function DocumentTitle() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    document.title = ROUTE_TITLES.find(([re]) => re.test(pathname))?.[1] ?? "QTNXT";
+  }, [pathname]);
+  return null;
+}
+
+function RootLayout() {
+  return (
+    <>
+      <DocumentTitle />
+      <Outlet />
+    </>
+  );
+}
+
 const router = createBrowserRouter([
+  {
+    element: <RootLayout />,
+    children: [
   { path: "/", element: <Landing /> },
   { path: "/login", element: <Login /> },
   { path: "/complete-profile", element: <CompleteProfile /> },
@@ -40,6 +81,8 @@ const router = createBrowserRouter([
   { path: "/assignments/transcript/:assignmentId", element: <Protected><AssignmentResult /></Protected> },
   { path: "/profile", element: <Protected><Profile /></Protected> },
   { path: "/about", element: <About /> },
+    ],
+  },
 ], { basename: "/" });
 
 export default function App() {

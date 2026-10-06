@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Play,
   Star,
   LESSON_KIND_BADGE,
   quizOption,
@@ -58,6 +57,7 @@ type Props = {
   quizSubmitted: boolean;
   quizVerdict: QuizVerdict;
   quizGrading: boolean;
+  quizError: Error | null;
   quizAttempt: number | null;
   quizBest: number | null;
   showRating: boolean;
@@ -81,7 +81,7 @@ export function LearnView(p: Props) {
   const {
     courseId, title, progress, active, activeLesson, embedUrl, textBody,
     pdfUrl, audioUrl, sections, completed, openSections, tab, note,
-    quizAnswers, quizSubmitted, quizVerdict, quizGrading, quizAttempt, quizBest,
+    quizAnswers, quizSubmitted, quizVerdict, quizGrading, quizError, quizAttempt, quizBest,
     showRating, selectedRating, submittingRating,
     userRating, toast,
   } = p;
@@ -102,7 +102,7 @@ export function LearnView(p: Props) {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-[1280px] gap-4 px-3 pb-6 sm:px-4 lg:grid-cols-[1fr_360px]">
+      <main id="main" className="mx-auto grid max-w-[1280px] gap-4 px-3 pb-6 sm:px-4 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0">
           <div className="overflow-hidden border border-rule bg-room-raised">
             {activeLesson?.kind === "video" && embedUrl ? (
@@ -129,13 +129,13 @@ export function LearnView(p: Props) {
                 <p className="text-sm font-semibold text-ink">External resource</p>
                 <a href={activeLesson.resource_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 border border-ink bg-ink px-5 py-2 text-xs font-semibold text-ink-inverse">Open link <ArrowUpRight size={12} strokeWidth={2.5} aria-hidden /></a>
               </div>
-            ) : activeLesson?.kind === "quiz" && activeLesson.quiz_data ? (
+            ) : activeLesson?.kind === "quiz" && activeLesson.quiz_data?.length ? (
               <div className="aspect-video w-full bg-room-raised p-6 overflow-auto">
                 <h3 className="text-sm font-semibold text-ink">Quiz — {activeLesson.title}</h3>
                 <div className="mt-4 space-y-4">
                   {activeLesson.quiz_data.map((q, qi)=> (
                     <div key={q.id} className="border border-rule bg-room-sunk p-3">
-                      <p className="text-sm font-semibold text-ink">Q{qi+1}. {q.question}</p>
+                          <p id={`quiz-q-${q.id}-label`} className="text-sm font-semibold text-ink">Q{qi+1}. {q.question}</p>
                       {q.prompt && <p className="mt-1 text-xs text-ink-muted">{q.prompt}</p>}
                       {(q.type === "image" || q.type === "video") && q.media_url && (() => {
                         const raw = q.media_url!.trim();
@@ -154,7 +154,7 @@ export function LearnView(p: Props) {
                               <iframe src={src} title={`Q${qi + 1} media`} className="mt-2 aspect-video w-full border" allowFullScreen />
                             )
                           ) : (
-                            <img src={src} alt="" className="mt-2 max-h-40 w-full border object-contain bg-room-raised" />
+                            <img src={src} alt={`Figure for question ${qi + 1}`} className="mt-2 max-h-40 w-full border object-contain bg-room-raised" />
                           )
                         ) : null;
                       })()}
@@ -165,6 +165,7 @@ export function LearnView(p: Props) {
                             value={typeof quizAnswers[qi] === "string" ? (quizAnswers[qi] as string) : ""}
                             onChange={(e) => p.onAnswer(qi, e.target.value)}
                             disabled={quizSubmitted}
+                            aria-labelledby={`quiz-q-${q.id}-label`}
                             placeholder="Type your answer…"
                             className={cn("w-full border border-rule bg-room-raised px-3 py-2 text-sm text-ink", quizSubmitted ? (quizCorrect(q, quizAnswers[qi]) ? "border-live/40 bg-live-soft" : "border-halt/40 bg-halt-soft") : "focus:border-ink")}
                           />
@@ -185,7 +186,7 @@ export function LearnView(p: Props) {
                                 />
                                 <span className="min-w-0 flex-1">
                                   {opt.type === "image" && opt.media_url && (
-                                    <img src={absoluteMediaUrl(opt.media_url) ?? opt.media_url} alt="" onError={(e) => { const el = e.target as HTMLImageElement; el.parentElement!.style.display = "none"; }} className="mb-1 max-h-28 w-full border object-contain bg-room-sunk" />
+                                    <img src={absoluteMediaUrl(opt.media_url) ?? opt.media_url} alt={opt.text || `Option ${oi + 1} media`} onError={(e) => { const el = e.target as HTMLImageElement; el.parentElement!.style.display = "none"; }} className="mb-1 max-h-28 w-full border object-contain bg-room-sunk" />
                                   )}
                                   {opt.type === "video" && opt.media_url && oSrc && (
                                     oMp4 ? (
@@ -208,6 +209,11 @@ export function LearnView(p: Props) {
                       )}
                     </div>
                   ))}
+                  {quizError && (
+                    <p role="alert" className="border border-halt/25 bg-halt-soft p-3 text-xs text-halt">
+                      Couldn't submit your answers. Your responses are kept — try again.
+                    </p>
+                  )}
                     {!quizSubmitted ? (
                     <Button variant="primary" size="md" onClick={p.onSubmitQuiz}>Submit quiz</Button>
                   ) : quizVerdict == null ? (
@@ -225,18 +231,15 @@ export function LearnView(p: Props) {
                   )}
                 </div>
               </div>
+            ) : activeLesson ? (
+              <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 bg-room-raised p-6 text-center">
+                <p className="text-sm font-semibold text-ink">No content set for this lesson</p>
+                <p className="max-w-sm text-xs leading-relaxed text-ink-muted">This {activeLesson.kind} lesson has no resource attached yet.</p>
+              </div>
             ) : (
-              <div className="aspect-video w-full bg-room-deep flex flex-col items-center justify-center text-ink-inverse relative">
-                <img src="https://images.unsplash.com/photo-1558655146-d09347e92766?w=1200&auto=format&fit=crop&q=80" alt="" className="absolute inset-0 h-full w-full object-cover opacity-40" />
-                 <div className="relative flex flex-col items-center gap-3">
-                   <button type="button" className="flex h-14 w-14 items-center justify-center bg-room-raised text-ink shadow-lg"><Play size={24} strokeWidth={2.5} className="ml-0.5" aria-hidden /></button>
-                   <p className="text-sm font-semibold">{activeLesson?.title ?? "Pick a lesson"}</p>
-                   <p className="tnum text-xs text-ink-inverse/70">{activeLesson?.duration}</p>
-                 </div>
-                <div className="absolute bottom-0 left-0 right-0 p-3">
-                  <div className="h-1 overflow-hidden bg-ink-inverse/20"><div className="h-full w-[42%] bg-gold" /></div>
-                  <div className="tnum mt-2 flex items-center justify-between text-[11px] text-ink-inverse/80"><span>02:14 / {activeLesson?.duration}</span><span className="flex gap-2"><button type="button" className="border border-ink-inverse/25 px-2 py-1">1x</button><button type="button" className="border border-ink-inverse/25 px-2 py-1">⛶</button></span></div>
-                </div>
+              <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 bg-room-raised p-6 text-center">
+                <p className="text-sm font-semibold text-ink">Pick a lesson</p>
+                <p className="max-w-sm text-xs leading-relaxed text-ink-muted">Choose a lesson from the course content panel to start learning.</p>
               </div>
             )}
           </div>
@@ -249,7 +252,7 @@ export function LearnView(p: Props) {
             ] as const).map(([k, label]) => (
               <button key={k} type="button" onClick={() => p.onTab(k)} className={cn("border-b-2 px-3 py-2 text-sm font-semibold transition-colors", tab === k ? "border-ink text-ink" : "border-transparent text-ink-muted hover:text-ink")}>{label}</button>
             ))}
-            <button type="button" onClick={p.onMarkComplete} className={cn("ml-auto mb-2 hidden items-center gap-1.5 border px-3 py-1 text-xs font-semibold transition-colors sm:inline-flex", active != null && completed.has(active) ? "border-live/25 bg-live-soft text-live" : "border-rule bg-room-raised text-ink hover:bg-room-sunk")}>{active != null && completed.has(active) ? "✓ Completed" : "Mark complete"}</button>
+            <button type="button" onClick={p.onMarkComplete} disabled={active != null && completed.has(active)} className={cn("ml-auto mb-2 hidden items-center gap-1.5 border px-3 py-1 text-xs font-semibold transition-colors sm:inline-flex", active != null && completed.has(active) ? "border-live/25 bg-live-soft text-live" : "border-rule bg-room-raised text-ink hover:bg-room-sunk")}>{active != null && completed.has(active) ? "✓ Completed" : "Mark complete"}</button>
           </div>
 
           {tab === "overview" && (
@@ -260,7 +263,7 @@ export function LearnView(p: Props) {
                 <Badge tone="muted" showIcon={false} className="bg-ink text-ink-inverse">Calm pace</Badge>
                 <Badge tone="gold" showIcon={false}>Hands-on</Badge>
               </div>
-              <Button variant="primary" block onClick={p.onMarkComplete} className="mt-4 sm:hidden">{active != null && completed.has(active) ? "✓ Completed" : "Mark complete"}</Button>
+              <Button variant="primary" block onClick={p.onMarkComplete} disabled={active != null && completed.has(active)} className="mt-4 sm:hidden">{active != null && completed.has(active) ? "✓ Completed" : "Mark complete"}</Button>
             </Panel>
           )}
           {tab === "notes" && (
@@ -273,8 +276,7 @@ export function LearnView(p: Props) {
           {tab === "qna" && (
             <Panel className="mt-4">
               <h3 className="text-sm font-semibold text-ink">Q&A</h3>
-              <p className="mt-2 text-sm text-ink-muted">Ask a question — the instructor or community will reply.</p>
-              <div className="mt-3 border border-rule bg-room-sunk p-3 text-sm"><p className="font-semibold text-ink">Maya • 2h ago</p><p className="text-ink-muted">How do I export the wireframe?</p></div>
+              <p className="mt-2 text-sm text-ink-muted">No questions for this lesson yet.</p>
             </Panel>
           )}
         </div>
@@ -298,8 +300,8 @@ export function LearnView(p: Props) {
                       <li key={l.id}>
                         <button type="button" onClick={() => p.onSelectLesson(l.id)} className={cn("flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-room-sunk", active === l.id && "bg-room-sunk")}>
                           <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center", completed.has(l.id) ? "bg-live text-ink-inverse" : active === l.id ? "bg-ink text-ink-inverse" : LESSON_KIND_BADGE[l.kind].badge)}>{completed.has(l.id) ? <CheckCircle2 size={12} strokeWidth={2.5} aria-hidden /> : (() => { const Icon = LESSON_KIND_BADGE[l.kind].Icon; return <Icon size={11} strokeWidth={2.5} aria-hidden />; })()}</span>
-                          <span className={cn("text-sm", active === l.id ? "font-semibold text-ink" : "text-ink-muted")}>{l.title}</span>
-                          <span className="tnum ml-auto flex items-center gap-1 text-xs text-ink-muted">{l.kind === "quiz" && <Badge tone="gold" showIcon={false} className="px-1.5 text-[10px]">Quiz</Badge>}{l.duration}</span>
+                          <span className={cn("min-w-0 flex-1 truncate text-sm", active === l.id ? "font-semibold text-ink" : "text-ink-muted")}>{l.title}</span>
+                          <span className="tnum ml-auto flex shrink-0 items-center gap-1 text-xs text-ink-muted">{l.kind === "quiz" && <Badge tone="gold" showIcon={false} className="px-1.5 text-[10px]">Quiz</Badge>}{l.duration}</span>
                         </button>
                       </li>
                     ))}
@@ -316,13 +318,35 @@ export function LearnView(p: Props) {
                 <div className="mt-3 border border-rule bg-room-raised p-4">
                   <h4 className="text-sm font-semibold text-ink">Rate this course</h4>
                   <p className="mt-1 text-xs text-ink-muted">How was your experience?</p>
-                  <div className="mt-3 flex gap-1">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <button key={n} type="button" onClick={() => p.onSelectRating(n)} className={`flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${n <= selectedRating ? "border-gold-deep bg-gold text-gold-deep" : "bg-room-raised text-ink-faint hover:bg-room-sunk"}`}>
-                        <Star size={16} strokeWidth={2.5} fill={n <= selectedRating ? "currentColor" : "none"} aria-hidden />
-                      </button>
-                    ))}
-                  </div>
+                  <fieldset>
+                    <legend className="sr-only">Rate this course</legend>
+                    <div className="mt-3 flex gap-1">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <label
+                          key={n}
+                          className="relative flex h-8 w-8 cursor-pointer items-center justify-center before:absolute before:-inset-1.5 before:content-['']"
+                        >
+                          <span className="sr-only">Rate {n} of 5</span>
+                          <input
+                            type="radio"
+                            name="course-rating"
+                            value={n}
+                            checked={selectedRating === n}
+                            onChange={() => p.onSelectRating(n)}
+                            className="peer sr-only"
+                          />
+                          <span
+                            className={cn(
+                              "flex h-8 w-8 items-center justify-center rounded-full border transition-colors peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink",
+                              n <= selectedRating ? "border-gold-deep bg-gold text-gold-deep" : "bg-room-raised text-ink-faint hover:bg-room-sunk",
+                            )}
+                          >
+                            <Star size={16} strokeWidth={2.5} fill={n <= selectedRating ? "currentColor" : "none"} aria-hidden />
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
                   <Button variant="primary" block size="sm" onClick={p.onSubmitRating} disabled={!selectedRating || submittingRating} className="mt-3">{submittingRating ? "Submitting…" : "Submit rating"}</Button>
                 </div>
               )}
@@ -336,7 +360,7 @@ export function LearnView(p: Props) {
            </div>
          </div>
        {toast && <div role="status" className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 border border-ink bg-ink px-5 py-2.5 text-sm text-ink-inverse shadow-xl">{toast}</div>}
-     </div>
+     </main>
    </div>
  );
  }

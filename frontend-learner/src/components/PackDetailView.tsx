@@ -48,7 +48,7 @@ export function PackDetailView({
   return (
     <div className="min-h-screen bg-room">
       <TopNav />
-      <div className="mx-auto w-full max-w-3xl px-4 pb-12 pt-6 sm:px-6 sm:pt-8">
+      <main id="main" className="mx-auto w-full max-w-3xl px-4 pb-12 pt-6 sm:px-6 sm:pt-8">
         {isLoading && (
           <Panel className="p-10 text-sm text-ink-muted">Loading package…</Panel>
         )}
@@ -212,7 +212,7 @@ export function PackDetailView({
             </Panel>
           </div>
         )}
-      </div>
+      </main>
 
       {toast && (
         <div role="status" className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 border border-ink bg-ink px-5 py-2.5 text-sm text-ink-inverse shadow-xl">

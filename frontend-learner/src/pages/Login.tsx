@@ -107,7 +107,7 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center bg-room">
-      <div className="mx-auto w-full max-w-[420px] px-4 py-8">
+      <main id="main" className="mx-auto w-full max-w-[420px] px-4 py-8">
         <div className="flex items-center justify-between gap-3">
           <Link to="/" className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center bg-ink text-[13px] font-bold text-ink-inverse">
@@ -225,7 +225,7 @@ export default function Login() {
         <p className="text-xs leading-relaxed text-ink-faint">
           By continuing you agree to the QTNXT terms and privacy policy.
         </p>
-      </div>
+      </main>
 
       <div aria-live="polite" aria-atomic="true">
         {toast && (

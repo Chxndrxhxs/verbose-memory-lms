@@ -52,7 +52,7 @@ export function AssignmentDetailView({
   return (
     <div className="min-h-screen bg-room">
       <TopNav />
-      <div className="mx-auto w-full max-w-3xl px-4 pb-12 pt-6 sm:px-6 sm:pt-8">
+      <main id="main" className="mx-auto w-full max-w-3xl px-4 pb-12 pt-6 sm:px-6 sm:pt-8">
         {isLoading && (
           <Panel className="p-10 text-sm text-ink-muted">
             Loading assignment…
@@ -214,7 +214,7 @@ export function AssignmentDetailView({
             </>
           )}
         </Modal>
-      </div>
+      </main>
     </div>
   );
 }

@@ -204,7 +204,7 @@ export function ProfileContainer() {
       <TopNav />
       <div className="min-h-screen bg-room">
         <div className="px-4 pt-6 sm:px-6">
-        <div className="mx-auto max-w-[1100px]">
+        <main id="main" className="mx-auto max-w-[1100px]">
           <div className="relative overflow-hidden border border-ink bg-room-deep p-6 text-ink-inverse sm:p-8">
             <div className="absolute inset-0">
               <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-ink-inverse/[0.05] blur-[50px]" />
@@ -417,7 +417,7 @@ export function ProfileContainer() {
               </div>
             )}
           </Panel>
-        </div>
+        </main>
       </div>
       {viewCert && (
         <CertificateView

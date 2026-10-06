@@ -79,6 +79,7 @@ export function LandingView({ courses }: { courses: Course[] }) {
   return (
     <div className="min-h-screen bg-room">
       <Header />
+      <main id="main">
 
       {/*
         Hero: asymmetric editorial split. The promise leads from the left; the
@@ -352,6 +353,8 @@ export function LandingView({ courses }: { courses: Course[] }) {
           })}
         </div>
       </section>
+
+      </main>
 
       <footer className="border-t border-rule bg-room-raised">
         <div className="mx-auto w-full max-w-[1200px] px-4 py-12 sm:px-6">

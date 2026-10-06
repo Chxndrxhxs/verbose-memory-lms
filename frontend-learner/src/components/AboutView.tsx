@@ -92,7 +92,7 @@ export function AboutView() {
   return (
     <div className="min-h-screen bg-room">
       <TopNav />
-      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <main id="main" className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
         <section className="relative overflow-hidden border border-ink bg-room-deep px-6 py-14 text-center text-ink-inverse sm:px-10 sm:py-20">
           <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-ink-inverse/[0.04] blur-[80px]" />
           <div className="absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-gold/10 blur-[90px]" />
@@ -267,7 +267,7 @@ export function AboutView() {
         <p className="mt-8 text-center text-xs text-ink-faint">
           © 2026 QTNXT. All rights reserved.
         </p>
-      </div>
+      </main>
     </div>
   );
 }

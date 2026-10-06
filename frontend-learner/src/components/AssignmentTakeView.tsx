@@ -210,7 +210,7 @@ export function AssignmentTakeView({
         />
       )}
 
-      <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6">
+      <main id="main" className="mx-auto max-w-7xl px-3 py-4 sm:px-6">
         {sections.length > 1 && (
           <SectionTabs
             sections={sections}
@@ -467,7 +467,7 @@ export function AssignmentTakeView({
             </div>
           </aside>
         </div>
-      </div>
+      </main>
 
       {!practice && secondsLeft <= 300 && !submitting && (
         <div role="status" className="tnum fixed bottom-4 left-1/2 z-40 -translate-x-1/2 border border-halt bg-halt px-4 py-2 text-xs font-semibold text-ink-inverse shadow-lg">

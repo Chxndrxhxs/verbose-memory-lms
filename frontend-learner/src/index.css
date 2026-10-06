@@ -138,6 +138,28 @@
   .measure {
     max-width: 68ch;
   }
+
+  /* Skip link: off-screen until focused, then the first stop. */
+  .skip-link {
+    position: absolute;
+    inset-inline-start: -999px;
+    top: 12px;
+    z-index: 60;
+    border-radius: 2px;
+    background: var(--color-ink);
+    color: var(--color-ink-inverse);
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .skip-link:focus {
+    inset-inline-start: 16px;
+  }
+
+  /* Anchor targets clear the sticky header. */
+  #main {
+    scroll-margin-top: 4.5rem;
+  }
 }
 
 /* Clearance for the mobile bottom tab bar (rendered only below sm) */

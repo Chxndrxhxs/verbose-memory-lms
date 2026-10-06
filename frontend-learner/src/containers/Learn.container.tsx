@@ -103,6 +103,15 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
       queryClient.invalidateQueries({ queryKey: ["me", "activity"] });
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
     },
+    onError: (e, lessonId) => {
+      setCompleted((prev) => {
+        const next = new Set(prev);
+        next.delete(lessonId);
+        return next;
+      });
+      setToast(String(e));
+      setTimeout(() => setToast(null), 2200);
+    },
   });
 
   const [quizResult, setQuizResult] = useState<{
@@ -156,6 +165,7 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
     setQuizSubmitted(false);
     setQuizResult(null);
     setQuizScore(null);
+    quizMutation.reset();
     try {
       localStorage.setItem(lastKey, String(lessonId));
     } catch { /* storage unavailable */ }
@@ -220,6 +230,7 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
       quizSubmitted={quizSubmitted}
       quizVerdict={quizScore}
       quizGrading={quizMutation.isPending}
+      quizError={quizMutation.error}
       quizAttempt={quizResult?.attempt ?? null}
       quizBest={quizResult?.best ?? null}
       showRating={showRating}

@@ -5,7 +5,7 @@ import { cn } from "../lib/utils";
 const TABS = [
   { to: "/", label: "Home", Icon: Home },
   { to: "/courses", label: "Courses", Icon: BookOpen },
-  { to: "/assignments", label: "Tests", Icon: FileText },
+  { to: "/assignments", label: "Assignments", Icon: FileText },
   { to: "/activity", label: "Activity", Icon: Activity },
   { to: "/leaderboard", label: "Ranks", Icon: Trophy },
 ];

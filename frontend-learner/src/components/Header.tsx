@@ -23,6 +23,7 @@ export function Header() {
       */}
       <header className="sticky top-0 z-40 border-b border-rule bg-room-raised/95 backdrop-blur supports-[backdrop-filter]:bg-room-raised/80">
         <div className="mx-auto flex h-14 w-full max-w-[1560px] items-center justify-between gap-4 px-4 sm:px-6">
+          <a href="#main" className="skip-link">Skip to content</a>
           <Link to="/" className="flex shrink-0 items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center bg-ink text-[13px] font-bold text-ink-inverse">
               Q

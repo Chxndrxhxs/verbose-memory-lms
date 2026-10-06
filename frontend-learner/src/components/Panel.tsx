@@ -118,7 +118,8 @@ export function PageShell({
 }) {
   return (
     <div className="min-h-screen bg-room">
-      <div
+      <main
+        id="main"
         className={cn(
           "mx-auto w-full px-4 pb-12 pt-6 sm:px-6 sm:pt-8",
           wide ? "max-w-[1560px]" : "max-w-[1200px]",
@@ -126,7 +127,7 @@ export function PageShell({
         )}
       >
         {children}
-      </div>
+      </main>
     </div>
   );
 }
