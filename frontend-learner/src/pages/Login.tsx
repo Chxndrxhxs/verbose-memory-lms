@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,6 +31,8 @@ export default function Login() {
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [toast, setToast] = useState<string | null>(null);
   const verifyDone = useRef(false);
+  // Seconds until "Resend code" unlocks, so OTP requests stay spaced out.
+  const [cooldown, setCooldown] = useState(0);
 
   const phoneForm = useForm<z.infer<typeof phoneSchema>>({
     resolver: zodResolver(phoneSchema),
@@ -46,6 +48,12 @@ export default function Login() {
     setTimeout(() => setToast(null), ms);
   };
 
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
   const sendOtp = useMutation({
     mutationFn: (mobile: string) =>
       api<{ message: string; mock_code: string }>("/auth/send-otp", {
@@ -54,6 +62,7 @@ export default function Login() {
       }),
     onSuccess: (res) => {
       verifyDone.current = false;
+      setCooldown(30);
       showToast(`OTP sent: ${res.mock_code}`, 4000);
       setStep("otp");
     },
@@ -84,6 +93,13 @@ export default function Login() {
   const onVerifySubmit = (v: z.infer<typeof otpSchema>) => {
     if (verifyDone.current || verify.isPending) return;
     verify.mutate({ mobile: phone, code: v.otp });
+  };
+
+  // send-otp doubles as the resend: a fresh code invalidates the old one.
+  const resend = () => {
+    if (cooldown > 0 || sendOtp.isPending || verify.isPending) return;
+    otpForm.setValue("otp", "");
+    sendOtp.mutate(phone);
   };
 
   const phone = phoneForm.watch("phone");
@@ -185,8 +201,18 @@ export default function Login() {
                 type="button"
                 variant="ghost"
                 block
+                disabled={cooldown > 0 || loading}
+                onClick={resend}
+              >
+                {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                block
                 onClick={() => {
                   verifyDone.current = false;
+                  setCooldown(0);
                   setStep("phone");
                 }}
               >

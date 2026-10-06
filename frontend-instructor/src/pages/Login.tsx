@@ -37,6 +37,8 @@ export default function Login() {
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [toast, setToast] = useState<string | null>(null);
   const verifyDone = useRef(false);
+  // Seconds until "Resend code" unlocks, so OTP requests stay spaced out.
+  const [cooldown, setCooldown] = useState(0);
 
   const phoneForm = useForm<z.infer<typeof phoneSchema>>({
     resolver: zodResolver(phoneSchema),
@@ -51,6 +53,12 @@ export default function Login() {
     setToast(msg);
     setTimeout(() => setToast(null), ms);
   };
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
   // Arrived here because a learner session hit an instructor-only route
   // (auth cookies are shared across apps on one host).
@@ -71,6 +79,7 @@ export default function Login() {
       }),
     onSuccess: (res) => {
       verifyDone.current = false;
+      setCooldown(30);
       showToast(`OTP sent: ${res.mock_code}`, 4000);
       setStep("otp");
     },
@@ -129,6 +138,13 @@ export default function Login() {
 
   const phone = phoneForm.watch("phone");
   const loading = sendOtp.isPending || verify.isPending;
+
+  // send-otp doubles as the resend: a fresh code invalidates the old one.
+  const resend = () => {
+    if (cooldown > 0 || loading) return;
+    otpForm.setValue("otp", "");
+    sendOtp.mutate(phone);
+  };
 
   return (
     <div className="min-h-screen bg-slate-ground">
@@ -241,8 +257,18 @@ export default function Login() {
                   type="button"
                   variant="ghost"
                   block
+                  disabled={cooldown > 0 || loading}
+                  onClick={resend}
+                >
+                  {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  block
                   onClick={() => {
                     verifyDone.current = false;
+                    setCooldown(0);
                     setStep("phone");
                   }}
                 >
