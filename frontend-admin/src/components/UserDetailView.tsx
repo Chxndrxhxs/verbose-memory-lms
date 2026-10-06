@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
   ageField,
@@ -16,9 +15,20 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import type { AdminRole, AdminUserDetail } from "../types/admin";
-import { cn } from "../lib/utils";
-import { Card, CardHeader } from "./Card";
+import type { AdminUserDetail } from "../types/admin";
+import { Panel, PanelHeader } from "./Panel";
+import { Badge, RoleBadge, statusTone } from "./Badge";
+import { Button } from "./Button";
+import { DefinitionList, Field, Input, Select } from "./Controls";
+import {
+  GridHead,
+  GridMessage,
+  GridPanel,
+  GridScroll,
+  Td,
+  Th,
+  Tr,
+} from "./DataGrid";
 import { ConfirmDialog } from "./ConfirmDialog";
 import type { UserEditValues } from "../containers/UserDetail.container";
 
@@ -37,23 +47,12 @@ const schema = z.object({
   is_mobile_verified: z.boolean(),
 });
 
-const ROLE_STYLES: Record<AdminRole, string> = {
-  admin: "bg-[#0f172a] text-white",
-  instructor: "bg-violet-100 text-violet-700",
-  learner: "bg-emerald-100 text-emerald-700",
-};
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="text-xs font-semibold text-zinc-600">{label}</span>
-      <div className="mt-1.5">{children}</div>
-    </label>
-  );
-}
-
-const inputCls =
-  "w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-zinc-900";
+const FLAGS = [
+  ["is_active", "Active, can sign in"],
+  ["is_staff", "Staff"],
+  ["is_superuser", "Superuser"],
+  ["is_mobile_verified", "Mobile verified"],
+] as const;
 
 export function UserDetailView({
   data,
@@ -85,8 +84,26 @@ export function UserDetailView({
     if (initial) form.reset(initial);
   }, [initial, form]);
 
-  if (loading) return <div className="animate-pulse space-y-4"><div className="h-6 w-40 rounded bg-zinc-200" /><div className="h-48 rounded-2xl bg-zinc-100" /></div>;
-  if (error || !data) return <div className="text-sm text-red-600">{error}</div>;
+  if (loading)
+    return (
+      <div className="space-y-4" aria-busy="true" aria-label="Loading user">
+        <div className="h-4 w-28 animate-pulse bg-paper-sunk" />
+        <div className="h-16 w-80 animate-pulse bg-paper-sunk" />
+        <div className="h-96 animate-pulse border border-rule bg-paper-raised" />
+      </div>
+    );
+
+  if (error || !data)
+    return (
+      <Panel>
+        <GridMessage
+          kind="error"
+          title="Could not load this user"
+          body={error ?? "No user data was returned."}
+        />
+      </Panel>
+    );
+
   const u = data.user;
 
   const submit = form.handleSubmit(async (v) => {
@@ -119,197 +136,247 @@ export function UserDetailView({
 
   return (
     <div className="space-y-6">
-      <Link to="/users" className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900">
-        <ArrowLeft size={15} strokeWidth={2.5} /> Back to users
+      <Link
+        to="/users"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+      >
+        <ArrowLeft size={15} strokeWidth={2.5} aria-hidden /> Back to users
       </Link>
 
-      <div className="flex flex-wrap items-center gap-4">
+      <header className="flex flex-wrap items-center gap-4 border-b border-rule-strong pb-4">
         {u.avatar ? (
-          <img src={u.avatar} alt="" className="h-14 w-14 rounded-2xl bg-zinc-200" />
+          <img src={u.avatar} alt="" className="h-14 w-14 shrink-0 object-cover" />
         ) : (
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-400">
-            <User size={24} strokeWidth={2} />
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center bg-paper-sunk text-ink-faint">
+            <User size={22} strokeWidth={2} aria-hidden />
           </span>
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-extrabold tracking-tight">{u.name || u.username}</h1>
-            <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase", ROLE_STYLES[u.role])}>{u.role}</span>
+            <h1 className="text-2xl font-semibold text-ink">{u.name || u.username}</h1>
+            <RoleBadge role={u.role} />
+            {!u.is_active && <Badge tone="muted">inactive</Badge>}
           </div>
-          <p className="text-sm text-zinc-500">
+          <p className="tnum mt-1 text-sm text-ink-muted">
             @{u.username} · +91 {u.mobile} · {u.email || "No email"}
           </p>
         </div>
-        <button onClick={() => setConfirmDelete(true)} className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100">
-          <span className="inline-flex items-center gap-1.5"><Trash2 size={14} strokeWidth={2.5} /> Delete user</span>
-        </button>
-      </div>
+        <Button variant="danger" onClick={() => setConfirmDelete(true)}>
+          <Trash2 size={14} strokeWidth={2.5} aria-hidden /> Delete user
+        </Button>
+      </header>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader
+      <div className="grid gap-6 lg:grid-cols-5">
+        <Panel className="lg:col-span-3">
+          <PanelHeader
             title="Edit profile"
-            subtitle="Role, contact and status flags."
+            meta="Role, contact and status"
             action={
-              <button onClick={() => form.reset()} className="text-xs font-semibold text-zinc-500 hover:text-zinc-900">
+              <button
+                onClick={() => form.reset()}
+                className="text-xs font-semibold text-ink-muted transition-colors hover:text-ink"
+              >
                 Reset
               </button>
             }
           />
-          <form onSubmit={submit} className="grid grid-cols-2 gap-4">
-            <div>
-              <Field label="First name"><input className={inputCls} {...form.register("first_name")} /></Field>
-              {form.formState.errors.first_name && <p className="mt-1 text-xs text-red-600">{form.formState.errors.first_name.message}</p>}
-            </div>
-            <div>
-              <Field label="Last name"><input className={inputCls} {...form.register("last_name")} /></Field>
-              {form.formState.errors.last_name && <p className="mt-1 text-xs text-red-600">{form.formState.errors.last_name.message}</p>}
-            </div>
-            <div className="col-span-2">
-              <Field label="Email"><input className={inputCls} placeholder="user@example.com" {...form.register("email")} /></Field>
-              {form.formState.errors.email && <p className="mt-1 text-xs text-red-600">{form.formState.errors.email.message}</p>}
-            </div>
-            <Field label="Role">
-              <select className={inputCls} {...form.register("role")}>
+          <form onSubmit={submit} className="grid gap-4 p-5 sm:grid-cols-2">
+            <Field label="First name" error={form.formState.errors.first_name?.message}>
+              <Input {...form.register("first_name")} />
+            </Field>
+            <Field label="Last name" error={form.formState.errors.last_name?.message}>
+              <Input {...form.register("last_name")} />
+            </Field>
+            <Field
+              label="Email"
+              className="sm:col-span-2"
+              error={form.formState.errors.email?.message}
+            >
+              <Input placeholder="user@example.com" {...form.register("email")} />
+            </Field>
+            <Field label="Role" error={form.formState.errors.role?.message}>
+              <Select {...form.register("role")}>
                 <option value="learner">Learner</option>
                 <option value="instructor">Instructor</option>
                 <option value="admin">Admin</option>
-              </select>
+              </Select>
             </Field>
-            <div>
-              <Field label="City"><input className={inputCls} {...form.register("city")} /></Field>
-              {form.formState.errors.city && <p className="mt-1 text-xs text-red-600">{form.formState.errors.city.message}</p>}
-            </div>
-            <div className="col-span-2">
-              <Field label="Age"><input className={inputCls} inputMode="numeric" placeholder={`e.g. 25 (${MIN_AGE}–${MAX_AGE})`} {...form.register("age")} /></Field>
-              <p className="mt-1 text-xs text-zinc-500">Required. Allowed range: {MIN_AGE}–{MAX_AGE} years.</p>
-              {form.formState.errors.age && <p className="mt-1 text-xs text-red-600">{form.formState.errors.age.message}</p>}
-            </div>
+            <Field label="City" error={form.formState.errors.city?.message}>
+              <Input {...form.register("city")} />
+            </Field>
+            <Field
+              label="Age"
+              className="sm:col-span-2"
+              hint={`Required. Allowed range: ${MIN_AGE} to ${MAX_AGE} years.`}
+              error={form.formState.errors.age?.message}
+            >
+              <Input
+                inputMode="numeric"
+                placeholder={`e.g. ${25}`}
+                {...form.register("age")}
+              />
+            </Field>
 
-            {([
-              ["is_active", "Active (can log in)"],
-              ["is_staff", "Staff"],
-              ["is_superuser", "Superuser"],
-              ["is_mobile_verified", "Mobile verified"],
-            ] as const).map(([key, label]) => (
-              <label key={key} className="col-span-2 flex items-center justify-between rounded-xl border border-zinc-200 px-3 py-2.5">
-                <span className="text-sm text-zinc-700">{label}</span>
-                <input type="checkbox" {...form.register(key)} className="h-4 w-4 accent-[#0f172a]" />
+            {FLAGS.map(([key, label]) => (
+              <label
+                key={key}
+                className="flex items-center justify-between gap-3 border border-rule bg-paper px-3 py-2.5 sm:col-span-2"
+              >
+                <span className="text-sm text-ink">{label}</span>
+                <input
+                  type="checkbox"
+                  {...form.register(key)}
+                  className="h-4 w-4 shrink-0 accent-[var(--color-ink)]"
+                />
               </label>
             ))}
 
-            <div className="col-span-2 flex items-center gap-3 pt-1">
-              <button type="submit" disabled={saving || saved} className="rounded-full bg-[#0f172a] px-5 py-2.5 text-sm font-bold text-white hover:bg-zinc-800 disabled:opacity-60">
+            <div className="flex flex-wrap items-center gap-3 border-t border-rule pt-4 sm:col-span-2">
+              <Button type="submit" variant="primary" disabled={saving || saved}>
                 {saving ? "Saving…" : "Save changes"}
-              </button>
+              </Button>
               {saved && (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                  <Check size={14} strokeWidth={3} /> Saved
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-live">
+                  <Check size={14} strokeWidth={3} aria-hidden /> Saved
                 </span>
               )}
               {noChanges && (
-                <span className="text-xs font-semibold text-amber-600">No changes made.</span>
+                <span className="text-xs font-semibold text-hold">No changes made.</span>
               )}
-              {saveError && <span className="text-xs font-semibold text-red-600">{saveError}</span>}
+              {saveError && <span className="text-xs font-semibold text-halt">{saveError}</span>}
             </div>
           </form>
-        </Card>
+        </Panel>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader title="Account info" />
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-              {[
-                ["Username", `@${u.username}`],
-                ["City", u.city || "—"],
-                ["Age", u.age === null ? "—" : String(u.age)],
-                ["Joined", new Date(u.date_joined).toDateString()],
-                ["Created", new Date(u.date_joined).toLocaleTimeString()],
-                ["ID", `#${u.id}`],
-              ].map(([k, v]) => (
-                <div key={k} className="border-b border-zinc-100 pb-2">
-                  <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-400">{k}</dt>
-                  <dd className="mt-0.5 font-medium text-zinc-800">{v}</dd>
-                </div>
-              ))}
-            </dl>
-          </Card>
+        <div className="lg:col-span-2">
+          <Panel flush>
+            <PanelHeader title="Account info" />
+            <div className="p-5">
+              <DefinitionList
+                items={[
+                  ["Username", `@${u.username}`],
+                  ["City", u.city || "—"],
+                  ["Age", u.age === null ? "—" : <span className="tnum">{u.age}</span>],
+                  [
+                    "Joined",
+                    new Date(u.date_joined).toLocaleDateString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    }),
+                  ],
+                  ["User ID", <span className="tnum">#{u.id}</span>],
+                ]}
+              />
+            </div>
+          </Panel>
         </div>
       </div>
 
-      <Card>
-        <CardHeader title={`Enrollments (${data.enrollments.length})`} />
+      <GridPanel>
+        <div className="border-b border-rule bg-paper px-5 py-3">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink">
+            Enrollments
+            <span className="tnum ml-2 font-normal text-ink-faint">{data.enrollments.length}</span>
+          </h2>
+        </div>
         {data.enrollments.length === 0 ? (
-          <p className="py-4 text-sm text-zinc-400">No enrollments.</p>
+          <GridMessage
+            kind="empty"
+            title="No enrollments"
+            body="This account has not joined any courses yet. Enrollments appear here the moment a learner starts one."
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b text-[11px] uppercase tracking-wider text-zinc-400">
-                  <th className="py-2 pr-4 font-semibold">Course</th>
-                  <th className="py-2 pr-4 font-semibold">Instructor</th>
-                  <th className="py-2 pr-4 font-semibold">Status</th>
-                  <th className="py-2 pr-4 font-semibold">Progress</th>
-                  <th className="py-2 font-semibold">Enrolled</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {data.enrollments.map((e) => (
-                  <tr key={e.id}>
-                    <td className="py-2.5 pr-4">
-                      <Link to={`/courses/${e.course_id}`} className="font-semibold text-zinc-800 hover:underline">{e.course_title}</Link>
-                    </td>
-                    <td className="py-2.5 pr-4 text-zinc-600">{e.instructor}</td>
-                    <td className="py-2.5 pr-4">
-                      <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold uppercase", e.course_status === "published" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
-                        {e.course_status}
-                      </span>
-                    </td>
-                    <td className="py-2.5 pr-4 font-semibold text-zinc-600">{e.progress}%</td>
-                    <td className="py-2.5 text-zinc-500">{new Date(e.enrolled_at).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <GridScroll>
+            <GridHead>
+              <Th>Course</Th>
+              <Th>Instructor</Th>
+              <Th>Status</Th>
+              <Th align="right">Progress</Th>
+              <Th>Enrolled</Th>
+            </GridHead>
+            <tbody>
+              {data.enrollments.map((e) => (
+                <Tr key={e.id}>
+                  <Td>
+                    <Link
+                      to={`/courses/${e.course_id}`}
+                      className="block max-w-[280px] truncate text-sm font-medium text-ink hover:underline"
+                    >
+                      {e.course_title}
+                    </Link>
+                  </Td>
+                  <Td className="text-ink-muted">{e.instructor}</Td>
+                  <Td>
+                    <Badge tone={statusTone(e.course_status)}>{e.course_status}</Badge>
+                  </Td>
+                  <Td align="right" className="tnum text-ink">
+                    {e.progress}%
+                  </Td>
+                  <Td className="tnum whitespace-nowrap text-ink-muted">
+                    {new Date(e.enrolled_at).toLocaleDateString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "2-digit",
+                    })}
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </GridScroll>
         )}
-      </Card>
+      </GridPanel>
 
-      <Card>
-        <CardHeader title={`Payments (${data.payments.length})`} />
+      <GridPanel>
+        <div className="border-b border-rule bg-paper px-5 py-3">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink">
+            Payments
+            <span className="tnum ml-2 font-normal text-ink-faint">{data.payments.length}</span>
+          </h2>
+        </div>
         {data.payments.length === 0 ? (
-          <p className="py-4 text-sm text-zinc-400">No payments.</p>
+          <GridMessage
+            kind="empty"
+            title="No payments"
+            body="Nothing has been paid for by this account. Completed Razorpay orders appear here."
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b text-[11px] uppercase tracking-wider text-zinc-400">
-                  <th className="py-2 pr-4 font-semibold">Course</th>
-                  <th className="py-2 pr-4 font-semibold">Amount</th>
-                  <th className="py-2 pr-4 font-semibold">Status</th>
-                  <th className="py-2 pr-4 font-semibold">Order</th>
-                  <th className="py-2 font-semibold">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {data.payments.map((p) => (
-                  <tr key={p.id}>
-                    <td className="py-2.5 pr-4 font-semibold text-zinc-800">{p.course_title}</td>
-                    <td className="py-2.5 pr-4 font-semibold text-zinc-700">₹{p.amount_inr.toLocaleString("en-IN")}</td>
-                    <td className="py-2.5 pr-4">
-                      <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold uppercase", p.status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-500")}>
-                        {p.status}
-                      </span>
-                    </td>
-                    <td className="py-2.5 pr-4 text-zinc-500 font-mono">{p.razorpay_order_id || "—"}</td>
-                    <td className="py-2.5 text-zinc-500">{new Date(p.created_at).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <GridScroll>
+            <GridHead>
+              <Th>Course</Th>
+              <Th align="right">Amount</Th>
+              <Th>Status</Th>
+              <Th>Order</Th>
+              <Th>Date</Th>
+            </GridHead>
+            <tbody>
+              {data.payments.map((p) => (
+                <Tr key={p.id}>
+                  <Td className="max-w-[280px] truncate text-sm font-medium text-ink">
+                    {p.course_title}
+                  </Td>
+                  <Td align="right" className="tnum whitespace-nowrap text-ink">
+                    ₹{p.amount_inr.toLocaleString("en-IN")}
+                  </Td>
+                  <Td>
+                    <Badge tone={statusTone(p.status)}>{p.status}</Badge>
+                  </Td>
+                  <Td className="font-mono text-xs text-ink-muted">
+                    {p.razorpay_order_id || "—"}
+                  </Td>
+                  <Td className="tnum whitespace-nowrap text-ink-muted">
+                    {new Date(p.created_at).toLocaleDateString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "2-digit",
+                    })}
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </GridScroll>
         )}
-      </Card>
+      </GridPanel>
 
       <ConfirmDialog
         open={confirmDelete}

@@ -1,24 +1,19 @@
 import { useState } from "react";
+import { Archive, Check, Copy, Trash2, type AssignmentDetail } from "@masterlms/shared";
+import { PageHeader } from "./Panel";
+import { Badge, statusTone } from "./Badge";
+import { Button } from "./Button";
 import {
-  Archive,
-  Check,
-  Copy,
-  Trash2,
-  type AssignmentDetail,
-} from "@masterlms/shared";
-import { Card } from "./Card";
+  GridHead,
+  GridMessage,
+  GridPanel,
+  GridScroll,
+  GridSkeleton,
+  Td,
+  Th,
+  Tr,
+} from "./DataGrid";
 import { ConfirmDialog } from "./ConfirmDialog";
-
-type Props = {
-  assignments: AssignmentDetail[];
-  loading: boolean;
-  error: string | null;
-  busy: boolean;
-  onPublish: (id: number) => void;
-  onUnpublish: (id: number) => void;
-  onDuplicate: (id: number) => void;
-  onDelete: (id: number) => void;
-};
 
 export function AssignmentsView({
   assignments,
@@ -29,120 +24,122 @@ export function AssignmentsView({
   onUnpublish,
   onDuplicate,
   onDelete,
-}: Props) {
+}: {
+  assignments: AssignmentDetail[];
+  loading: boolean;
+  error: string | null;
+  busy: boolean;
+  onPublish: (id: number) => void;
+  onUnpublish: (id: number) => void;
+  onDuplicate: (id: number) => void;
+  onDelete: (id: number) => void;
+}) {
   const [target, setTarget] = useState<AssignmentDetail | null>(null);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-extrabold tracking-tight">Assignments</h1>
-        <p className="text-sm text-zinc-500">
-          Manage published assessments across categories.
-        </p>
-      </div>
+      <PageHeader
+        title="Assignments"
+        description="Manage published assessments across categories."
+      />
 
-      <Card className="overflow-hidden p-0">
+      <GridPanel>
         {loading ? (
-          <div className="divide-y">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex animate-pulse items-center gap-3 px-5 py-4">
-                <div className="h-4 w-40 rounded bg-zinc-200" />
-                <div className="ml-auto h-4 w-24 rounded bg-zinc-200" />
-              </div>
-            ))}
-          </div>
+          <GridSkeleton rows={5} cells={6} />
         ) : error ? (
-          <p className="px-5 py-8 text-center text-sm text-red-600">{error}</p>
+          <GridMessage kind="error" title="Could not load assignments" body={error} />
         ) : assignments.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-zinc-400">
-            No assignments yet. Create one in the instructor console.
-          </p>
+          <GridMessage
+            kind="empty"
+            title="No assignments yet"
+            body="Create an assignment in the instructor console, then publish it here to make it visible to learners."
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b text-[11px] uppercase tracking-wider text-zinc-400">
-                  <th className="px-5 py-3 font-semibold">Assignment</th>
-                  <th className="px-5 py-3 font-semibold">Category</th>
-                  <th className="px-5 py-3 font-semibold">Models</th>
-                  <th className="px-5 py-3 font-semibold">Duration</th>
-                  <th className="px-5 py-3 font-semibold">Status</th>
-                  <th className="px-5 py-3 text-right font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {assignments.map((a) => (
-                  <tr key={a.id} className="hover:bg-zinc-50/60">
-                    <td className="px-5 py-3">
-                      <p className="font-semibold text-zinc-800">{a.title}</p>
-                      <p className="text-xs text-zinc-400">
-                        {a.questions_count} questions
-                      </p>
-                    </td>
-                    <td className="px-5 py-3 text-zinc-600">
-                      {a.inter_category ? categoryLabel(a.inter_category) : "—"}
-                    </td>
-                    <td className="px-5 py-3 text-zinc-600">
-                      {(a.models?.length ?? a.models_preview.length) || 0}
-                    </td>
-                    <td className="px-5 py-3 text-zinc-600 tabular-nums">{a.duration_label}</td>
-                    <td className="px-5 py-3">
-                      <span
-                        className={
-                          a.status === "published"
-                            ? "rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700"
-                            : "rounded-full bg-zinc-100 px-2.5 py-0.5 text-[11px] font-bold text-zinc-500"
-                        }
+          <GridScroll>
+            <GridHead>
+              <Th>Assignment</Th>
+              <Th>Category</Th>
+              <Th align="right">Models</Th>
+              <Th align="right">Duration</Th>
+              <Th>Status</Th>
+              <Th align="right">Actions</Th>
+            </GridHead>
+            <tbody>
+              {assignments.map((a) => (
+                <Tr key={a.id}>
+                  <Td>
+                    <p className="max-w-[280px] truncate text-sm font-medium text-ink">{a.title}</p>
+                    <p className="tnum text-xs text-ink-faint">
+                      {a.questions_count} questions
+                    </p>
+                  </Td>
+                  <Td className="text-ink-muted">
+                    {a.inter_category ? categoryLabel(a.inter_category) : "—"}
+                  </Td>
+                  <Td align="right" className="tnum text-ink-muted">
+                    {(a.models?.length ?? a.models_preview.length) || 0}
+                  </Td>
+                  <Td align="right" className="tnum whitespace-nowrap text-ink-muted">
+                    {a.duration_label}
+                  </Td>
+                  <Td>
+                    <Badge tone={statusTone(a.status)}>{a.status}</Badge>
+                  </Td>
+                  <Td align="right">
+                    <div className="flex justify-end gap-1">
+                      {a.status === "published" ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          iconOnly
+                          onClick={() => onUnpublish(a.id)}
+                          disabled={busy}
+                          aria-label={`Unpublish ${a.title}`}
+                        >
+                          <Archive size={15} strokeWidth={2.2} aria-hidden />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          iconOnly
+                          onClick={() => onPublish(a.id)}
+                          disabled={busy}
+                          aria-label={`Publish ${a.title}`}
+                          className="text-live hover:bg-live-soft"
+                        >
+                          <Check size={15} strokeWidth={2.5} aria-hidden />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        onClick={() => onDuplicate(a.id)}
+                        disabled={busy}
+                        aria-label={`Duplicate ${a.title}`}
                       >
-                        {a.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        {a.status === "published" ? (
-                          <button
-                            onClick={() => onUnpublish(a.id)}
-                            disabled={busy}
-                            title="Unpublish"
-                            className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 disabled:opacity-50"
-                          >
-                            <Archive size={16} strokeWidth={2.5} />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => onPublish(a.id)}
-                            disabled={busy}
-                            title="Publish"
-                            className="rounded-lg p-2 text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
-                          >
-                            <Check size={16} strokeWidth={2.5} />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => onDuplicate(a.id)}
-                          disabled={busy}
-                          title="Duplicate"
-                          className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 disabled:opacity-50"
-                        >
-                          <Copy size={16} strokeWidth={2.5} />
-                        </button>
-                        <button
-                          onClick={() => setTarget(a)}
-                          disabled={busy}
-                          title="Delete"
-                          className="rounded-lg p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
-                        >
-                          <Trash2 size={16} strokeWidth={2.5} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        <Copy size={15} strokeWidth={2.2} aria-hidden />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        onClick={() => setTarget(a)}
+                        disabled={busy}
+                        aria-label={`Delete ${a.title}`}
+                        className="text-halt hover:bg-halt-soft"
+                      >
+                        <Trash2 size={15} strokeWidth={2.2} aria-hidden />
+                      </Button>
+                    </div>
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </GridScroll>
         )}
-      </Card>
+      </GridPanel>
 
       <ConfirmDialog
         open={target !== null}

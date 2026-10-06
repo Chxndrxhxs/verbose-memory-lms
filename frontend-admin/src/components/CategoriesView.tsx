@@ -4,9 +4,14 @@ import {
   ChevronRight,
   Plus,
   Trash2,
+  X,
   type AssignmentHierarchyNode,
 } from "@masterlms/shared";
-import { Card } from "./Card";
+import { PageHeader, Panel } from "./Panel";
+import { Badge } from "./Badge";
+import { Button } from "./Button";
+import { Input } from "./Controls";
+import { GridMessage } from "./DataGrid";
 import { ConfirmDialog } from "./ConfirmDialog";
 
 type Props = {
@@ -35,25 +40,27 @@ type ConfirmState = {
   name: string;
 } | null;
 
-export function CategoriesView({
-  categories,
-  subcategories,
-  intercategories,
-  loading,
-  error,
-  busy,
-  expandedCategory,
-  onToggleCategory,
-  expandedSubCategory,
-  onToggleSubCategory,
-  onCreateCategory,
-  onToggleActive,
-  onDeleteCategory,
-  onCreateSubCategory,
-  onDeleteSubCategory,
-  onCreateInterCategory,
-  onDeleteInterCategory,
-}: Props) {
+export function CategoriesView(props: Props) {
+  const {
+    categories,
+    subcategories,
+    intercategories,
+    loading,
+    error,
+    busy,
+    expandedCategory,
+    onToggleCategory,
+    expandedSubCategory,
+    onToggleSubCategory,
+    onCreateCategory,
+    onToggleActive,
+    onDeleteCategory,
+    onCreateSubCategory,
+    onDeleteSubCategory,
+    onCreateInterCategory,
+    onDeleteInterCategory,
+  } = props;
+
   const [categoryName, setCategoryName] = useState("");
   const [subNameFor, setSubNameFor] = useState<number | null>(null);
   const [subName, setSubName] = useState("");
@@ -61,247 +68,296 @@ export function CategoriesView({
   const [interName, setInterName] = useState("");
   const [confirm, setConfirm] = useState<ConfirmState>(null);
 
+  const addCategory = () => {
+    const v = categoryName.trim();
+    if (!v) return;
+    onCreateCategory(v);
+    setCategoryName("");
+  };
+
+  const addSub = (categoryId: number) => {
+    const v = subName.trim();
+    if (!v) return;
+    onCreateSubCategory(v, categoryId);
+    setSubName("");
+    setSubNameFor(null);
+  };
+
+  const addInter = (subId: number) => {
+    const v = interName.trim();
+    if (!v) return;
+    onCreateInterCategory(v, subId);
+    setInterName("");
+    setInterNameFor(null);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-extrabold tracking-tight">Assignment categories</h1>
-          <p className="text-sm text-zinc-500">
-            Category → Sub-category → Inter-category tree for published assignments.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Assignment categories"
+        description="Category, then sub-category, then inter-category. Assignments are filed against the deepest level."
+      />
 
-      <Card>
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            value={categoryName}
-            onChange={(e) => setCategoryName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && categoryName.trim()) {
-                onCreateCategory(categoryName.trim());
-                setCategoryName("");
-              }
-            }}
-            placeholder="New category name…"
-            className="min-w-[220px] flex-1 rounded-xl border bg-zinc-50 px-3 py-2.5 text-sm outline-none focus:border-zinc-900"
-          />
-          <button
-            disabled={!categoryName.trim() || busy}
-            onClick={() => {
-              onCreateCategory(categoryName.trim());
-              setCategoryName("");
-            }}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#0f172a] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50"
-          >
-            <Plus size={15} strokeWidth={2.5} /> Add category
-          </button>
-        </div>
-      </Card>
+      <Panel>
+        <form
+          className="flex flex-wrap items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            addCategory();
+          }}
+        >
+          <label className="min-w-[220px] flex-1">
+            <span className="block text-xs font-semibold text-ink-muted">New category</span>
+            <Input
+              value={categoryName}
+              onChange={(e) => setCategoryName(e.target.value)}
+              placeholder="e.g. Electronics"
+              className="mt-1.5"
+            />
+          </label>
+          <Button type="submit" variant="primary" disabled={!categoryName.trim() || busy}>
+            <Plus size={15} strokeWidth={2.5} aria-hidden /> Add category
+          </Button>
+        </form>
+      </Panel>
 
-      <Card className="overflow-hidden p-0">
+      <Panel flush>
         {loading ? (
-          <div className="divide-y">
-            {[0, 1].map((i) => (
-              <div key={i} className="animate-pulse px-5 py-4">
-                <div className="h-4 w-40 rounded bg-zinc-200" />
+          <div className="divide-y divide-rule">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="px-5 py-4">
+                <div className="h-3 w-40 animate-pulse bg-paper-sunk" />
               </div>
             ))}
           </div>
         ) : error ? (
-          <p className="px-5 py-8 text-center text-sm text-red-600">{error}</p>
+          <GridMessage kind="error" title="Could not load categories" body={error} />
         ) : categories.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-zinc-400">
-            No categories yet. Create one above.
-          </p>
+          <GridMessage
+            kind="empty"
+            title="No categories yet"
+            body="Add your first category above. Sub-categories and inter-categories hang off it, and every published assignment must land on one."
+          />
         ) : (
-          <div className="divide-y">
+          <ul className="divide-y divide-rule">
             {categories.map((category) => {
               const areaSubs = subcategories.filter((s) => s.category_id === category.id);
               const expanded = expandedCategory === category.id;
               return (
-                <div key={category.id}>
-                  <div className="flex items-center gap-2 px-5 py-3">
+                <li key={category.id}>
+                  <div className="flex items-center gap-2 px-4 py-3">
                     <button
                       onClick={() => onToggleCategory(category.id)}
-                      className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100"
+                      aria-expanded={expanded}
+                      aria-label={`${expanded ? "Collapse" : "Expand"} ${category.name}`}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center text-ink-faint transition-colors hover:bg-paper-sunk hover:text-ink"
                     >
-                      {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      {expanded ? (
+                        <ChevronDown size={15} strokeWidth={2.5} aria-hidden />
+                      ) : (
+                        <ChevronRight size={15} strokeWidth={2.5} aria-hidden />
+                      )}
                     </button>
+
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-zinc-800">
-                        {category.name}
-                        {!category.is_active && (
-                          <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-bold uppercase text-zinc-400">
-                            Inactive
-                          </span>
-                        )}
+                      <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
+                        <span className="truncate">{category.name}</span>
+                        <Badge tone={category.is_active ? "live" : "muted"}>
+                          {category.is_active ? "active" : "inactive"}
+                        </Badge>
                       </p>
-                      <p className="text-xs text-zinc-400">
-                        {areaSubs.length} sub-categories ·{" "}
-                        {category.assignments_count ?? 0} assignments
+                      <p className="tnum text-xs text-ink-faint">
+                        {areaSubs.length} sub-categories · {category.assignments_count ?? 0} assignments
                       </p>
                     </div>
-                    <button
+
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={() => onToggleActive(category)}
                       disabled={busy}
-                      className="rounded-full border px-3 py-1 text-[11px] font-semibold text-zinc-500 hover:border-zinc-400 disabled:opacity-50"
                     >
                       {category.is_active ? "Deactivate" : "Activate"}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      iconOnly
                       onClick={() =>
                         setConfirm({ kind: "category", id: category.id, name: category.name })
                       }
                       disabled={busy}
-                      className="rounded-lg p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      aria-label={`Delete ${category.name}`}
+                      className="text-halt hover:bg-halt-soft"
                     >
-                      <Trash2 size={16} strokeWidth={2.5} />
-                    </button>
+                      <Trash2 size={15} strokeWidth={2.2} aria-hidden />
+                    </Button>
                   </div>
 
                   {expanded && (
-                    <div className="border-t bg-zinc-50/50 py-3 pl-10 pr-5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <input
-                          value={subNameFor === category.id ? subName : ""}
-                          onChange={(e) => {
-                            setSubNameFor(category.id);
-                            setSubName(e.target.value);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && subName.trim() && subNameFor === category.id) {
-                              onCreateSubCategory(subName.trim(), category.id);
-                              setSubName("");
-                              setSubNameFor(null);
-                            }
-                          }}
-                          placeholder="New sub-category name…"
-                          className="min-w-[200px] flex-1 rounded-lg border bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-                        />
-                        <button
+                    <div className="border-t border-rule bg-paper px-4 py-4 sm:pl-11">
+                      <form
+                        className="flex flex-wrap items-end gap-2"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          addSub(category.id);
+                        }}
+                      >
+                        <label className="min-w-[200px] flex-1">
+                          <span className="block text-xs font-semibold text-ink-muted">
+                            New sub-category in {category.name}
+                          </span>
+                          <Input
+                            value={subNameFor === category.id ? subName : ""}
+                            onChange={(e) => {
+                              setSubNameFor(category.id);
+                              setSubName(e.target.value);
+                            }}
+                            placeholder="e.g. Smartphones"
+                            className="mt-1.5"
+                          />
+                        </label>
+                        <Button
+                          type="submit"
+                          variant="primary"
+                          size="sm"
                           disabled={!subName.trim() || subNameFor !== category.id || busy}
-                          onClick={() => {
-                            onCreateSubCategory(subName.trim(), category.id);
-                            setSubName("");
-                            setSubNameFor(null);
-                          }}
-                          className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
                         >
-                          <Plus size={13} /> Add
-                        </button>
-                      </div>
+                          <Plus size={13} strokeWidth={2.5} aria-hidden /> Add
+                        </Button>
+                      </form>
 
-                      {areaSubs.map((sub) => {
-                        const areaInters = intercategories.filter(
-                          (i) => i.sub_category_id === sub.id,
-                        );
-                        const subExpanded = expandedSubCategory === sub.id;
-                        return (
-                          <div key={sub.id} className="mt-3">
-                            <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2">
-                              <button
-                                onClick={() => onToggleSubCategory(sub.id)}
-                                className="rounded p-0.5 text-zinc-400 hover:bg-zinc-100"
+                      {areaSubs.length === 0 ? (
+                        <p className="mt-4 text-xs text-ink-faint">
+                          No sub-categories yet. Add one to start filing assignments.
+                        </p>
+                      ) : (
+                        <ul className="mt-4 space-y-2">
+                          {areaSubs.map((sub) => {
+                            const areaInters = intercategories.filter(
+                              (i) => i.sub_category_id === sub.id,
+                            );
+                            const subExpanded = expandedSubCategory === sub.id;
+                            return (
+                              <li
+                                key={sub.id}
+                                className="border border-rule bg-paper-raised"
                               >
-                                {subExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                              </button>
-                              <p className="flex-1 text-sm font-medium text-zinc-700">{sub.name}</p>
-                              <button
-                                onClick={() =>
-                                  setConfirm({
-                                    kind: "subcategory",
-                                    id: sub.id,
-                                    name: sub.name,
-                                  })
-                                }
-                                disabled={busy}
-                                className="rounded-lg p-1.5 text-red-600 hover:bg-red-50 disabled:opacity-50"
-                              >
-                                <Trash2 size={14} strokeWidth={2.5} />
-                              </button>
-                            </div>
-
-                            {subExpanded && (
-                              <div className="mt-2 pl-6">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <input
-                                    value={interNameFor === sub.id ? interName : ""}
-                                    onChange={(e) => {
-                                      setInterNameFor(sub.id);
-                                      setInterName(e.target.value);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (
-                                        e.key === "Enter" &&
-                                        interName.trim() &&
-                                        interNameFor === sub.id
-                                      ) {
-                                        onCreateInterCategory(interName.trim(), sub.id);
-                                        setInterName("");
-                                        setInterNameFor(null);
-                                      }
-                                    }}
-                                    placeholder="New inter-category name…"
-                                    className="min-w-[180px] flex-1 rounded-lg border bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-                                  />
+                                <div className="flex items-center gap-2 px-3 py-2">
                                   <button
-                                    disabled={!interName.trim() || interNameFor !== sub.id || busy}
-                                    onClick={() => {
-                                      onCreateInterCategory(interName.trim(), sub.id);
-                                      setInterName("");
-                                      setInterNameFor(null);
-                                    }}
-                                    className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                                    onClick={() => onToggleSubCategory(sub.id)}
+                                    aria-expanded={subExpanded}
+                                    aria-label={`${subExpanded ? "Collapse" : "Expand"} ${sub.name}`}
+                                    className="flex h-6 w-6 shrink-0 items-center justify-center text-ink-faint transition-colors hover:bg-paper-sunk hover:text-ink"
                                   >
-                                    <Plus size={13} /> Add
+                                    {subExpanded ? (
+                                      <ChevronDown size={14} strokeWidth={2.5} aria-hidden />
+                                    ) : (
+                                      <ChevronRight size={14} strokeWidth={2.5} aria-hidden />
+                                    )}
                                   </button>
+                                  <p className="flex-1 truncate text-sm text-ink">{sub.name}</p>
+                                  <span className="tnum shrink-0 text-xs text-ink-faint">
+                                    {areaInters.length}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    iconOnly
+                                    onClick={() =>
+                                      setConfirm({
+                                        kind: "subcategory",
+                                        id: sub.id,
+                                        name: sub.name,
+                                      })
+                                    }
+                                    disabled={busy}
+                                    aria-label={`Delete ${sub.name}`}
+                                    className="text-halt hover:bg-halt-soft"
+                                  >
+                                    <Trash2 size={14} strokeWidth={2.2} aria-hidden />
+                                  </Button>
                                 </div>
 
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                  {areaInters.map((inter) => (
-                                    <div
-                                      key={inter.id}
-                                      className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white py-1 pl-3 pr-1 text-xs font-medium text-zinc-700"
+                                {subExpanded && (
+                                  <div className="border-t border-rule px-3 py-3 sm:pl-8">
+                                    <form
+                                      className="flex flex-wrap items-end gap-2"
+                                      onSubmit={(e) => {
+                                        e.preventDefault();
+                                        addInter(sub.id);
+                                      }}
                                     >
-                                      {inter.name}
-                                      <button
-                                        onClick={() =>
-                                          setConfirm({
-                                            kind: "intercategory",
-                                            id: inter.id,
-                                            name: inter.name,
-                                          })
+                                      <label className="min-w-[180px] flex-1">
+                                        <span className="sr-only">
+                                          New inter-category in {sub.name}
+                                        </span>
+                                        <Input
+                                          value={interNameFor === sub.id ? interName : ""}
+                                          onChange={(e) => {
+                                            setInterNameFor(sub.id);
+                                            setInterName(e.target.value);
+                                          }}
+                                          placeholder="New inter-category name"
+                                          className="py-2 text-sm"
+                                        />
+                                      </label>
+                                      <Button
+                                        type="submit"
+                                        variant="primary"
+                                        size="sm"
+                                        disabled={
+                                          !interName.trim() || interNameFor !== sub.id || busy
                                         }
-                                        disabled={busy}
-                                        className="rounded-full p-1 text-red-600 hover:bg-red-50 disabled:opacity-50"
                                       >
-                                        <Trash2 size={12} strokeWidth={2.5} />
-                                      </button>
+                                        <Plus size={13} strokeWidth={2.5} aria-hidden /> Add
+                                      </Button>
+                                    </form>
+
+                                    <div className="mt-3 flex flex-wrap gap-1.5">
+                                      {areaInters.map((inter) => (
+                                        <span
+                                          key={inter.id}
+                                          className="inline-flex items-center gap-1 border border-rule bg-paper px-2.5 py-1 text-xs text-ink"
+                                        >
+                                          {inter.name}
+                                          <button
+                                            onClick={() =>
+                                              setConfirm({
+                                                kind: "intercategory",
+                                                id: inter.id,
+                                                name: inter.name,
+                                              })
+                                            }
+                                            disabled={busy}
+                                            aria-label={`Delete ${inter.name}`}
+                                            className="flex h-4 w-4 items-center justify-center text-ink-faint transition-colors hover:text-halt disabled:opacity-50"
+                                          >
+                                            <X size={12} strokeWidth={2.5} aria-hidden />
+                                          </button>
+                                        </span>
+                                      ))}
+                                      {areaInters.length === 0 && (
+                                        <p className="text-xs text-ink-faint">
+                                          No inter-categories yet.
+                                        </p>
+                                      )}
                                     </div>
-                                  ))}
-                                  {areaInters.length === 0 && (
-                                    <p className="text-xs text-zinc-400">
-                                      No inter-categories yet.
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                      {areaSubs.length === 0 && (
-                        <p className="mt-2 text-xs text-zinc-400">No sub-categories yet.</p>
+                                  </div>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
                       )}
                     </div>
                   )}
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
-      </Card>
+      </Panel>
 
       <ConfirmDialog
         open={confirm !== null}

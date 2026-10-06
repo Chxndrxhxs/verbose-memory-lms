@@ -1,13 +1,24 @@
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Check, Eye, EyeOff, Play, Trash2, hasReadableTitle, isImageUrl } from "@masterlms/shared";
+import {
+  ArrowLeft,
+  Check,
+  Eye,
+  EyeOff,
+  Play,
+  Trash2,
+  hasReadableTitle,
+  isImageUrl,
+} from "@masterlms/shared";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import type { AdminCourseDetailResponse } from "../types/admin";
-import { cn } from "../lib/utils";
-import { Card, CardHeader } from "./Card";
+import { Panel, PanelHeader } from "./Panel";
+import { Badge, statusTone } from "./Badge";
+import { Button } from "./Button";
+import { DefinitionList, Field, Input, Select, Textarea } from "./Controls";
+import { GridMessage } from "./DataGrid";
 import { ConfirmDialog } from "./ConfirmDialog";
 import type { CourseEditValues } from "../containers/CourseDetail.container";
 
@@ -39,22 +50,10 @@ const schema = z.object({
   what_you_will_learn: z.string(),
 });
 
-const inputCls =
-  "w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-zinc-900";
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="text-xs font-semibold text-zinc-600">{label}</span>
-      <div className="mt-1.5">{children}</div>
-    </label>
-  );
-}
-
-const kindStyles: Record<string, string> = {
-  video: "bg-violet-100 text-violet-700",
-  resource: "bg-blue-100 text-blue-700",
-  quiz: "bg-amber-100 text-amber-700",
+const LESSON_TONE: Record<string, "flight" | "live" | "hold"> = {
+  video: "flight",
+  resource: "live",
+  quiz: "hold",
 };
 
 export function CourseDetailView({
@@ -92,8 +91,26 @@ export function CourseDetailView({
     if (initial) form.reset(initial);
   }, [initial, form]);
 
-  if (loading) return <div className="animate-pulse space-y-4"><div className="h-6 w-40 rounded bg-zinc-200" /><div className="h-48 rounded-2xl bg-zinc-100" /></div>;
-  if (error || !data) return <div className="text-sm text-red-600">{error}</div>;
+  if (loading)
+    return (
+      <div className="space-y-4" aria-busy="true" aria-label="Loading course">
+        <div className="h-4 w-28 animate-pulse bg-paper-sunk" />
+        <div className="h-10 w-72 animate-pulse bg-paper-sunk" />
+        <div className="h-96 animate-pulse border border-rule bg-paper-raised" />
+      </div>
+    );
+
+  if (error || !data)
+    return (
+      <Panel>
+        <GridMessage
+          kind="error"
+          title="Could not load this course"
+          body={error ?? `No course was returned for id ${id}.`}
+        />
+      </Panel>
+    );
+
   const c = data.course;
   const sections = data.sections;
 
@@ -107,157 +124,216 @@ export function CourseDetailView({
 
   return (
     <div className="space-y-6">
-      <Link to="/courses" className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900">
-        <ArrowLeft size={15} strokeWidth={2.5} /> Back to courses
+      <Link
+        to="/courses"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+      >
+        <ArrowLeft size={15} strokeWidth={2.5} aria-hidden /> Back to courses
       </Link>
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-rule-strong pb-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-extrabold tracking-tight">{c.title}</h1>
-            <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase", c.status === "published" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
-              {c.status}
-            </span>
+            <h1 className="text-2xl font-semibold text-ink">{c.title}</h1>
+            <Badge tone={statusTone(c.status)}>{c.status}</Badge>
           </div>
-          <p className="mt-0.5 text-sm text-zinc-500">
-            #{id} · by {c.instructor_name} · {c.category} · {c.level}
+          <p className="tnum mt-1 text-sm text-ink-muted">
+            #{id} · {c.instructor_name} · {c.category} · {c.level}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
+          <Button
+            variant="primary"
             onClick={() => onToggle(c.status === "published" ? "draft" : "published")}
             disabled={toggling}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#0f172a] px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-60"
           >
-            {c.status === "published" ? <EyeOff size={14} strokeWidth={2.5} /> : <Eye size={14} strokeWidth={2.5} />}
+            {c.status === "published" ? (
+              <EyeOff size={14} strokeWidth={2.5} aria-hidden />
+            ) : (
+              <Eye size={14} strokeWidth={2.5} aria-hidden />
+            )}
             {c.status === "published" ? "Unpublish" : "Publish"}
-          </button>
-          <button onClick={() => setConfirmDelete(true)} className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100">
-            <Trash2 size={14} strokeWidth={2.5} /> Delete
-          </button>
+          </Button>
+          <Button variant="danger" onClick={() => setConfirmDelete(true)}>
+            <Trash2 size={14} strokeWidth={2.5} aria-hidden /> Delete
+          </Button>
         </div>
-      </div>
+      </header>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader
+      <div className="grid gap-6 lg:grid-cols-5">
+        <Panel className="lg:col-span-3">
+          <PanelHeader
             title="Edit course"
-            subtitle="Content, pricing and visibility."
+            meta="Content, pricing and visibility"
             action={
-              <button onClick={() => form.reset()} className="text-xs font-semibold text-zinc-500 hover:text-zinc-900">Reset</button>
+              <button
+                onClick={() => form.reset()}
+                className="text-xs font-semibold text-ink-muted transition-colors hover:text-ink"
+              >
+                Reset
+              </button>
             }
           />
-          <form onSubmit={submit} className="space-y-4">
-            <Field label="Title"><input className={inputCls} {...form.register("title")} /></Field>
-            {form.formState.errors.title && <p className="-mt-3 text-xs text-red-600">{form.formState.errors.title.message}</p>}
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Subtitle"><input className={inputCls} {...form.register("subtitle")} /></Field>
-              <Field label="Category"><input className={inputCls} placeholder="e.g. Programming" {...form.register("category")} /></Field>
+          <form onSubmit={submit} className="space-y-4 p-5">
+            <Field label="Title" error={form.formState.errors.title?.message}>
+              <Input {...form.register("title")} />
+            </Field>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Subtitle" error={form.formState.errors.subtitle?.message}>
+                <Input {...form.register("subtitle")} />
+              </Field>
+              <Field label="Category" error={form.formState.errors.category?.message}>
+                <Input placeholder="e.g. Programming" {...form.register("category")} />
+              </Field>
             </div>
-            {form.formState.errors.category && <p className="-mt-3 text-xs text-red-600">{form.formState.errors.category.message}</p>}
-            <Field label="Description"><textarea rows={3} className={inputCls} {...form.register("description")} /></Field>
-            <div className="grid grid-cols-2 gap-4">
+
+            <Field label="Description" error={form.formState.errors.description?.message}>
+              <Textarea rows={3} {...form.register("description")} />
+            </Field>
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Pricing type">
-                <select className={inputCls} {...form.register("pricing_type")}>
+                <Select {...form.register("pricing_type")}>
                   <option value="free">Free</option>
                   <option value="one_time">One-time paid</option>
-                </select>
+                </Select>
               </Field>
-              <Field label={`Price (₹)${pricing === "free" ? " — free" : ""}`}>
-                <input className={inputCls} inputMode="decimal" placeholder="499" {...form.register("price")} />
+              <Field
+                label="Price (₹)"
+                hint={pricing === "free" ? "Not charged while the course is free" : undefined}
+                error={form.formState.errors.price?.message}
+              >
+                <Input
+                  inputMode="decimal"
+                  placeholder="499"
+                  disabled={pricing === "free"}
+                  {...form.register("price")}
+                />
               </Field>
             </div>
-            {form.formState.errors.price && <p className="-mt-3 text-xs text-red-600">{form.formState.errors.price.message}</p>}
-            <div className="grid grid-cols-2 gap-4">
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Level">
-                <select className={inputCls} {...form.register("level")}>
+                <Select {...form.register("level")}>
                   <option value="beginner">Beginner</option>
                   <option value="intermediate">Intermediate</option>
                   <option value="advanced">Advanced</option>
-                </select>
+                </Select>
               </Field>
               <Field label="Status">
-                <select className={inputCls} {...form.register("status")}>
+                <Select {...form.register("status")}>
                   <option value="draft">Draft</option>
                   <option value="published">Published</option>
-                </select>
+                </Select>
               </Field>
             </div>
-            <Field label="Cover image URL"><input className={inputCls} placeholder="https://…" {...form.register("cover_image")} /></Field>
-            {form.formState.errors.cover_image && <p className="-mt-3 text-xs text-red-600">{form.formState.errors.cover_image.message}</p>}
-            <Field label="What you will learn (one per line)">
-              <textarea rows={4} className={inputCls} {...form.register("what_you_will_learn")} />
+
+            <Field
+              label="Cover image URL"
+              hint="A direct image link, 16:9 works best"
+              error={form.formState.errors.cover_image?.message}
+            >
+              <Input placeholder="https://…" {...form.register("cover_image")} />
+            </Field>
+
+            <Field
+              label="What you will learn"
+              hint="One outcome per line"
+              error={form.formState.errors.what_you_will_learn?.message}
+            >
+              <Textarea rows={4} {...form.register("what_you_will_learn")} />
             </Field>
 
             {c.cover_image && (
-              <div className="flex items-center gap-3 rounded-xl bg-zinc-50 p-2">
-                <img src={c.cover_image} alt="" className="h-12 w-20 rounded-lg object-cover" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
-                <p className="truncate text-xs text-zinc-400">Current cover</p>
+              <div className="flex items-center gap-3 border border-rule bg-paper p-2">
+                <img
+                  src={c.cover_image}
+                  alt=""
+                  className="h-11 w-20 shrink-0 object-cover"
+                  onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+                />
+                <p className="truncate text-xs text-ink-faint">Current cover</p>
               </div>
             )}
 
-            <div className="flex items-center gap-3 pt-1">
-              <button type="submit" disabled={saving || saved} className="rounded-full bg-[#0f172a] px-5 py-2.5 text-sm font-bold text-white hover:bg-zinc-800 disabled:opacity-60">
+            <div className="flex flex-wrap items-center gap-3 border-t border-rule pt-4">
+              <Button type="submit" variant="primary" disabled={saving || saved}>
                 {saving ? "Saving…" : "Save changes"}
-              </button>
-              {saved && <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600"><Check size={14} strokeWidth={3} /> Saved</span>}
-              {saveError && <span className="text-xs font-semibold text-red-600">{saveError}</span>}
+              </Button>
+              {saved && (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-live">
+                  <Check size={14} strokeWidth={3} aria-hidden /> Saved
+                </span>
+              )}
+              {saveError && <span className="text-xs font-semibold text-halt">{saveError}</span>}
             </div>
           </form>
-        </Card>
+        </Panel>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader title="Stats" />
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                ["Students", c.student_count],
-                ["Sections", c.section_count],
-                ["Lessons", c.lesson_count],
-                ["Rating", `${Number(c.average_rating).toFixed(1)} ★ (${c.rating_count ?? 0})`],
-                ["Instructor", c.instructor_name],
-                ["ID", `#${id}`],
-              ].map(([k, v]) => (
-                <div key={k} className="border-b border-zinc-100 pb-2">
-                  <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-400">{k}</dt>
-                  <dd className="mt-0.5 truncate font-medium text-zinc-800">{String(v)}</dd>
-                </div>
-              ))}
+        <div className="space-y-6 lg:col-span-2">
+          <Panel flush>
+            <PanelHeader title="At a glance" />
+            <div className="p-5">
+              <DefinitionList
+                items={[
+                  ["Students", <span className="tnum">{c.student_count}</span>],
+                  ["Sections", <span className="tnum">{c.section_count}</span>],
+                  ["Lessons", <span className="tnum">{c.lesson_count}</span>],
+                  [
+                    "Rating",
+                    <span className="tnum">
+                      {Number(c.average_rating).toFixed(1)} ({c.rating_count ?? 0})
+                    </span>,
+                  ],
+                  ["Slug", `/${c.slug}`],
+                ]}
+              />
             </div>
-            <p className="mt-3 truncate rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-400">/{c.slug}</p>
-          </Card>
+          </Panel>
 
-          <Card>
-            <CardHeader title={`Content · ${sections.length} sections`} />
+          <Panel flush>
+            <PanelHeader
+              title="Content"
+              meta={`${sections.length} sections`}
+            />
             {sections.length === 0 ? (
-              <p className="py-4 text-sm text-zinc-400">No sections yet.</p>
+              <GridMessage
+                kind="empty"
+                title="No sections yet"
+                body="Sections and lessons are authored in the instructor console, and appear here once saved."
+              />
             ) : (
-              <div className="space-y-3">
+              <ul className="divide-y divide-rule">
                 {sections.map((s) => (
-                  <div key={s.id} className="rounded-xl border border-zinc-100">
-                    <div className="flex items-center justify-between px-3 py-2">
-                      <p className="text-sm font-semibold text-zinc-800">
-                        <span className="mr-1.5 text-xs text-zinc-400">{s.order}.</span>
+                  <li key={s.id} className="px-5 py-3">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="min-w-0 truncate text-sm font-medium text-ink">
+                        <span className="tnum mr-1.5 text-xs text-ink-faint">{s.order}.</span>
                         {s.title}
                       </p>
-                      <span className="text-xs text-zinc-400">{s.lessons.length} lesson{s.lessons.length === 1 ? "" : "s"}</span>
+                      <span className="tnum shrink-0 text-xs text-ink-faint">
+                        {s.lessons.length}
+                      </span>
                     </div>
-                    <div className="divide-y border-t">
+                    <ul className="mt-2 space-y-1.5">
                       {s.lessons.map((l) => (
-                        <div key={l.id} className="flex items-center gap-2.5 px-3 py-1.5">
-                          <Play size={12} className="text-zinc-300" strokeWidth={2.5} />
-                          <p className="flex-1 truncate text-xs text-zinc-600">{l.title}</p>
-                          <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold uppercase", kindStyles[l.kind] ?? "bg-zinc-100 text-zinc-500")}>
-                            {l.kind}
+                        <li key={l.id} className="flex items-center gap-2.5">
+                          <Play size={11} className="shrink-0 text-ink-faint" strokeWidth={2.5} aria-hidden />
+                          <span className="min-w-0 flex-1 truncate text-xs text-ink-muted">
+                            {l.title}
                           </span>
-                        </div>
+                          <Badge tone={LESSON_TONE[l.kind] ?? "muted"} showIcon={false}>
+                            {l.kind}
+                          </Badge>
+                        </li>
                       ))}
-                    </div>
-                  </div>
+                    </ul>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
-          </Card>
+          </Panel>
         </div>
       </div>
 
