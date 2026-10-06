@@ -7,6 +7,10 @@ import {
 } from "@masterlms/shared";
 import { cn } from "../lib/utils";
 import { TopNav } from "./TopNav";
+import { Badge } from "./Badge";
+import { Button } from "./Button";
+import { Select } from "./Controls";
+import { PageShell } from "./Panel";
 
 type Props = {
   boards: ExamBoard[];
@@ -20,29 +24,24 @@ type Props = {
   onReset: () => void;
 };
 
-const selectClass = cn(
-  "rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none",
-  "focus:border-zinc-900 disabled:opacity-40",
-);
-
 const backLink = cn(
   "inline-flex items-center gap-1.5 text-xs font-semibold",
-  "text-zinc-500 hover:text-zinc-900",
+  "text-ink-muted hover:text-ink transition-colors",
 );
 
 const rowCard = cn(
-  "group flex items-center gap-4 rounded-2xl border bg-white p-4",
-  "transition hover:border-zinc-400 hover:shadow-sm",
+  "group flex items-center gap-4 border border-rule bg-room-raised p-4",
+  "transition-colors hover:border-rule-strong hover:bg-room-sunk",
 );
 
 function SkeletonCard() {
   return (
-    <div className="flex animate-pulse items-center gap-4 rounded-2xl border bg-white p-4">
+    <div className="flex animate-pulse items-center gap-4 border border-rule bg-room-raised p-4">
       <div className="min-w-0 flex-1 space-y-2">
-        <div className="h-4 w-2/3 rounded bg-zinc-100" />
-        <div className="h-3 w-1/3 rounded bg-zinc-100" />
+        <div className="h-4 w-2/3 bg-room-sunk" />
+        <div className="h-3 w-1/3 bg-room-sunk" />
       </div>
-      <div className="h-8 w-20 shrink-0 rounded-full bg-zinc-100" />
+      <div className="h-8 w-20 shrink-0 bg-room-sunk" />
     </div>
   );
 }
@@ -62,44 +61,42 @@ export function AssignmentCatalog({
   const myTests = assignments.length + ownedPacks.length;
 
   return (
-    <div className="min-h-screen bg-[#f6f5f1]">
+    <div className="min-h-screen bg-room">
       <TopNav />
-      <div className="w-full px-3 py-6 sm:px-4">
-        <div className="rounded-[28px] bg-white p-8 shadow-sm sm:p-10">
+      <PageShell>
           <Link to="/" className={backLink}>
-            <ArrowLeft size={14} strokeWidth={2.5} /> Back to home
+            <ArrowLeft size={14} strokeWidth={2.5} aria-hidden /> Back to home
           </Link>
           <div className="mt-3 flex flex-wrap items-end justify-between gap-2">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Tests</h1>
-              <p className="mt-1 text-sm text-zinc-500">
+              <h1 className="text-2xl font-semibold text-ink">Tests</h1>
+              <p className="tnum mt-1 text-sm text-ink-muted">
                 {myTests === 0
                   ? "Pick a subject to find something to take."
                   : `${myTests} test${myTests === 1 ? "" : "s"} ready for you.`}
               </p>
             </div>
             {filtered && (
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={onReset}
-                className={cn(
-                  "rounded-full bg-zinc-100 px-3.5 py-1.5 text-xs font-semibold",
-                  "text-zinc-600 hover:bg-zinc-200",
-                )}
               >
                 Clear filters
-              </button>
+              </Button>
             )}
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
-            <label className="min-w-52 flex-1 text-xs font-semibold text-zinc-500">
+            <label className="min-w-52 flex-1 text-xs font-semibold text-ink-muted">
               Exam board
-              <select
+              <Select
                 value={boardId ?? ""}
                 onChange={(e) =>
                   e.target.value ? onSelectBoard(Number(e.target.value)) : onReset()
                 }
-                className={cn(selectClass, "mt-1 w-full")}
+                className="mt-1 w-full"
               >
                 <option value="">All boards</option>
                 {boards.map((b) => (
@@ -107,13 +104,13 @@ export function AssignmentCatalog({
                     {b.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           </div>
 
-          <h2 className="mt-8 text-sm font-bold">
+          <h2 className="mt-8 text-sm font-semibold text-ink">
             My tests{" "}
-            <span className="font-normal text-zinc-400">
+            <span className="tnum font-normal text-ink-faint">
               · {assignments.length + ownedPacks.length}
             </span>
           </h2>
@@ -126,15 +123,15 @@ export function AssignmentCatalog({
             </div>
           )}
           {error && (
-            <p className="mt-4 text-sm text-red-600">
+            <p role="alert" className="mt-4 text-sm text-halt">
               Unable to load tests: {error.message}
             </p>
           )}
           {!isLoading && !error && myTests === 0 && (
             <p
               className={cn(
-                "mt-4 rounded-2xl border border-dashed border-zinc-300 p-8",
-                "text-center text-sm text-zinc-500",
+                "mt-4 border border-dashed border-rule-strong p-8",
+                "text-center text-sm text-ink-muted",
               )}
             >
               Nothing here yet
@@ -150,21 +147,21 @@ export function AssignmentCatalog({
                   className={rowCard}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold group-hover:underline">
+                    <p className="truncate text-sm font-semibold text-ink group-hover:underline">
                       {assignment.title}
                     </p>
                     <p
                       className={cn(
-                        "mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5",
-                        "text-xs text-zinc-500",
+                        "tnum mt-1 flex flex-wrap items-center gap-x-3 gap-y-1",
+                        "text-xs text-ink-muted",
                       )}
                     >
                       <span className="inline-flex items-center gap-1">
-                        <HelpCircle size={12} /> {assignment.questions_count}{" "}
+                        <HelpCircle size={12} aria-hidden /> {assignment.questions_count}{" "}
                         questions
                       </span>
                       <span className="inline-flex items-center gap-1">
-                        <Clock size={12} /> {assignment.duration_label}
+                        <Clock size={12} aria-hidden /> {assignment.duration_label}
                       </span>
                       {assignment.models_preview.length > 0 && (
                         <span>
@@ -175,11 +172,11 @@ export function AssignmentCatalog({
                   </div>
                   <span
                     className={cn(
-                      "inline-flex shrink-0 items-center gap-1 rounded-full",
-                      "bg-zinc-900 px-3.5 py-1.5 text-xs font-semibold text-white",
+                      "inline-flex shrink-0 items-center gap-1 border border-ink bg-ink",
+                      "px-3 py-1.5 text-xs font-semibold text-ink-inverse",
                     )}
                   >
-                    Start <ArrowRight size={13} />
+                    Start <ArrowRight size={13} aria-hidden />
                   </span>
                 </Link>
               ))}
@@ -190,23 +187,16 @@ export function AssignmentCatalog({
                   className={rowCard}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold group-hover:underline">
+                    <p className="truncate text-sm font-semibold text-ink group-hover:underline">
                       {pack.title}
                     </p>
-                    <p className="mt-0.5 text-xs text-zinc-500">
+                    <p className="tnum mt-1 text-xs text-ink-muted">
                       {pack.question_count} questions
                       {pack.attempts_left != null &&
                         ` · ${pack.attempts_left} attempts left`}
                     </p>
                   </div>
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-full bg-emerald-100 px-3 py-1.5",
-                      "text-xs font-bold text-emerald-800",
-                    )}
-                  >
-                    Owned
-                  </span>
+                  <Badge tone="live" showIcon={false}>Owned</Badge>
                 </Link>
               ))}
             </div>
@@ -214,13 +204,13 @@ export function AssignmentCatalog({
 
           {!isLoading && !error && packsForSale.length > 0 && (
             <div className="mt-10">
-              <h2 className="text-sm font-bold">
+              <h2 className="text-sm font-semibold text-ink">
                 Test packages{" "}
-                <span className="font-normal text-zinc-400">
+                <span className="tnum font-normal text-ink-faint">
                   · {packsForSale.length}
                 </span>
               </h2>
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className="mt-1 text-xs text-ink-muted">
                 Curated question bundles — buy once, take in any enabled module.
               </p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -229,8 +219,8 @@ export function AssignmentCatalog({
                     key={pack.id}
                     to={`/packs/${pack.id}`}
                     className={cn(
-                      "flex items-center gap-4 rounded-2xl border bg-[#fbfaf7] p-4",
-                      "transition hover:border-zinc-400 hover:shadow-sm",
+                      "flex items-center gap-4 border border-rule bg-room-sunk p-4",
+                      "transition-colors hover:border-rule-strong hover:bg-room-raised",
                     )}
                   >
                     {pack.cover ? (
@@ -238,33 +228,26 @@ export function AssignmentCatalog({
                         src={pack.cover}
                         alt=""
                         className={cn(
-                          "h-14 w-11 shrink-0 rounded-lg border border-zinc-200",
+                          "h-14 w-11 shrink-0 border border-rule",
                           "object-cover",
                         )}
                       />
                     ) : null}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{pack.title}</p>
-                      <p className="mt-0.5 text-xs text-zinc-500">
+                      <p className="truncate text-sm font-semibold text-ink">{pack.title}</p>
+                      <p className="tnum mt-1 text-xs text-ink-muted">
                         {pack.question_count} questions ·{" "}
                         {pack.allowed_modules.length}{" "}
                         {pack.allowed_modules.length === 1 ? "module" : "modules"}
                       </p>
                     </div>
                     {pack.is_free ? (
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-full bg-emerald-100 px-3 py-1",
-                          "text-xs font-bold text-emerald-800",
-                        )}
-                      >
-                        Free
-                      </span>
+                      <Badge tone="live" showIcon={false}>Free</Badge>
                     ) : (
                       <span
                         className={cn(
-                          "shrink-0 rounded-full bg-[#0f172a] px-3 py-1",
-                          "text-xs font-bold text-white",
+                          "tnum shrink-0 border border-ink bg-ink px-3 py-1",
+                          "text-xs font-semibold text-ink-inverse",
                         )}
                       >
                         ₹{Number(pack.price).toLocaleString("en-IN")}
@@ -275,8 +258,7 @@ export function AssignmentCatalog({
               </div>
             </div>
           )}
-        </div>
-      </div>
+      </PageShell>
     </div>
   );
 }

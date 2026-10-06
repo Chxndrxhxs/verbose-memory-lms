@@ -44,7 +44,7 @@ export function AssignmentTakeContainer({ attemptId }: { attemptId: string }) {
   }
   if (query.error || !query.data || !("structure" in query.data)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f6f5f1] text-sm text-red-600">
+      <div className="flex min-h-screen items-center justify-center bg-room text-sm text-halt">
         {(query.error as Error | null)?.message ?? "Attempt not found or already submitted"}
       </div>
     );
@@ -264,8 +264,8 @@ function useExamLockdown(enabled: boolean) {
 
 function TakeLoading() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f6f5f1] text-sm text-zinc-500">
-      Loading attempt…
+    <div className="flex min-h-screen items-center justify-center bg-room text-sm text-ink-muted">
+      Loading your attempt…
     </div>
   );
 }

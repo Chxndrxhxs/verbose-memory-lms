@@ -7,6 +7,9 @@ import { CourseCard } from "../components/CourseCard";
 import { api } from "../lib/api";
 import { useMyCourses } from "../hooks/useMyCourses";
 import type { Course } from "../types/course";
+import { Button, Segmented } from "../components/Button";
+import { ListMessage } from "../components/DataGrid";
+import { SearchInput, Select } from "../components/Controls";
 
 type ApiCourse = {
   id: number;
@@ -30,10 +33,10 @@ type ApiCourse = {
 };
 
 const accentMap: Record<string, string> = {
-  Design: "bg-[#3478ff]",
-  Business: "bg-[#3478ff]",
-  Engineering: "bg-[#111827]",
-  Marketing: "bg-emerald-500",
+  Design: "bg-ink",
+  Business: "bg-ink",
+  Engineering: "bg-ink",
+  Marketing: "bg-live",
 };
 const iconMap: Record<string, typeof Diamond> = {
   Design: Diamond,
@@ -57,7 +60,7 @@ function mapApi(c: ApiCourse, idx: number): Course {
     originalPrice: origNum > priceNum ? origNum : undefined,
     pricingType: c.pricing_type,
     img: c.cover_image || "",
-    accent: accentMap[c.category] ?? "bg-zinc-900",
+    accent: accentMap[c.category] ?? "bg-ink",
     icon: iconMap[c.category] ?? Target,
     rating: c.average_rating ? Number(c.average_rating).toFixed(1) : undefined,
     featured: idx === 1,
@@ -132,131 +135,113 @@ export function CourseListContainer() {
     setPrice("all");
   };
 
-  if (isLoading) return <p className="py-10 text-center text-sm text-zinc-500">Loading courses…</p>;
+  if (isLoading) return <p className="py-10 text-center text-sm text-ink-muted">Loading courses…</p>;
 
   return (
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-center gap-2 rounded-2xl border bg-white p-2 shadow-sm">
+        <div className="flex flex-1 items-center gap-2 border border-rule bg-room-raised p-2">
           <div className="relative">
-            <button
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => setFiltersOpen((v) => !v)}
               aria-expanded={filtersOpen}
               aria-haspopup="true"
-              className="inline-flex items-center gap-1.5 rounded-full border bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
             >
-              Filters{(category !== "all" || level !== "all" || price !== "all") && <span className="ml-1 rounded-full bg-zinc-900 px-1.5 text-[10px] text-white">•</span>} <span className="text-[10px]">▼</span>
-            </button>
+              Filters{(category !== "all" || level !== "all" || price !== "all") && <span className="tnum ml-1 px-1.5 text-[10px] font-semibold text-live">•</span>} <span aria-hidden className="text-[10px]">▼</span>
+            </Button>
             {filtersOpen && (
-              <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-52 rounded-2xl border bg-white p-3 shadow-lg">
-                <p className="px-1 text-[11px] font-bold uppercase tracking-wide text-zinc-400">Category</p>
-                <div className="mt-1 flex flex-wrap gap-1">
+              <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-52 border border-rule-strong bg-room-raised p-3 shadow-lg">
+                <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">Category</p>
+                <div className="mt-2 flex flex-wrap gap-1">
                   {["all", ...categories].map((cat) => (
                     <button
                       key={cat}
+                      type="button"
                       onClick={() => setCategory(cat)}
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${category === cat ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"}`}
+                      className={`border px-3 py-1 text-xs font-semibold transition-colors ${category === cat ? "border-ink bg-ink text-ink-inverse" : "border-rule bg-room-sunk text-ink-muted hover:text-ink"}`}
                     >
                       {cat === "all" ? "All" : cat}
                     </button>
                   ))}
                 </div>
-                <p className="mt-3 px-1 text-[11px] font-bold uppercase tracking-wide text-zinc-400">Level</p>
-                <div className="mt-1 flex flex-wrap gap-1">
+                <p className="mt-3 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">Level</p>
+                <div className="mt-2 flex flex-wrap gap-1">
                   {["all", ...levels].map((lv) => (
                     <button
                       key={lv}
+                      type="button"
                       onClick={() => setLevel(lv)}
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${level === lv ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"}`}
+                      className={`border px-3 py-1 text-xs font-semibold capitalize transition-colors ${level === lv ? "border-ink bg-ink text-ink-inverse" : "border-rule bg-room-sunk text-ink-muted hover:text-ink"}`}
                     >
                       {lv === "all" ? "Any" : lv}
                     </button>
                   ))}
                 </div>
-                <p className="mt-3 px-1 text-[11px] font-bold uppercase tracking-wide text-zinc-400">Price</p>
-                <div className="mt-1 flex flex-wrap gap-1">
+                <p className="mt-3 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">Price</p>
+                <div className="mt-2 flex flex-wrap gap-1">
                   {[["all", "Any"], ["free", "Free"], ["paid", "Paid"]].map(([v, label]) => (
                     <button
                       key={v}
+                      type="button"
                       onClick={() => setPrice(v)}
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${price === v ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"}`}
+                      className={`border px-3 py-1 text-xs font-semibold transition-colors ${price === v ? "border-ink bg-ink text-ink-inverse" : "border-rule bg-room-sunk text-ink-muted hover:text-ink"}`}
                     >
                       {label}
                     </button>
                   ))}
                 </div>
-                <button onClick={() => setFiltersOpen(false)} className="mt-3 w-full rounded-full bg-zinc-900 py-1.5 text-xs font-bold text-white">Done</button>
+                <Button variant="primary" size="sm" block type="button" onClick={() => setFiltersOpen(false)} className="mt-3">Done</Button>
               </div>
             )}
           </div>
-          <input
+          <SearchInput
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={setQuery}
             placeholder="Search title, instructor, category…"
-            aria-label="Search courses"
-            className="min-w-0 flex-1 rounded-full bg-zinc-50 px-3 py-2 text-sm outline-none placeholder:text-zinc-400 focus:bg-white focus:ring-1 focus:ring-zinc-200"
+            className="min-w-0"
           />
           {query && (
-            <button onClick={() => setQuery("")} aria-label="Clear search" className="shrink-0 rounded-full px-2 py-1 text-xs font-bold text-zinc-400 hover:text-zinc-900">✕</button>
+            <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="shrink-0 px-2 py-1 text-xs font-semibold text-ink-faint transition-colors hover:text-ink">✕</button>
           )}
         </div>
 
         <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
-          <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort courses" className="rounded-xl border bg-white px-3 py-2 text-xs font-semibold text-zinc-700 shadow-sm">
+          <Select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort courses" className="text-xs font-semibold">
             <option value="popular">Most popular</option>
             <option value="rating">Highest rated</option>
             <option value="priceLow">Price: low to high</option>
             <option value="priceHigh">Price: high to low</option>
-          </select>
-          <div className="flex overflow-hidden rounded-xl border bg-white shadow-sm">
-            <button
-              onClick={() => setView("list")}
-              aria-label="List view"
-              className={`px-4 py-2 ${view === "list" ? "bg-[#0f172a] text-white" : "bg-white text-zinc-600 hover:bg-zinc-50"}`}
-            >
-              <span className="flex items-center justify-center">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-                  <rect x="2" y="3" width="12" height="2" rx="1" fill="currentColor" />
-                  <rect x="2" y="7" width="12" height="2" rx="1" fill="currentColor" />
-                  <rect x="2" y="11" width="12" height="2" rx="1" fill="currentColor" />
-                </svg>
-              </span>
-            </button>
-            <button
-              onClick={() => setView("grid")}
-              aria-label="Grid view"
-              className={`px-4 py-2 ${view === "grid" ? "bg-[#3478ff] text-white" : "bg-white text-zinc-600 hover:bg-zinc-50"}`}
-            >
-              <span className="flex items-center justify-center">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-                  <rect x="2" y="2" width="4" height="4" rx="1" fill="currentColor" />
-                  <rect x="6" y="2" width="4" height="4" rx="1" fill="currentColor" />
-                  <rect x="10" y="2" width="4" height="4" rx="1" fill="currentColor" />
-                  <rect x="2" y="6" width="4" height="4" rx="1" fill="currentColor" />
-                  <rect x="6" y="6" width="4" height="4" rx="1" fill="currentColor" />
-                  <rect x="10" y="6" width="4" height="4" rx="1" fill="currentColor" />
-                  <rect x="2" y="10" width="4" height="4" rx="1" fill="currentColor" />
-                  <rect x="6" y="10" width="4" height="4" rx="1" fill="currentColor" />
-                  <rect x="10" y="10" width="4" height="4" rx="1" fill="currentColor" />
-                </svg>
-              </span>
-            </button>
-          </div>
+          </Select>
+          <Segmented
+            value={view}
+            onChange={setView}
+            ariaLabel="Course layout"
+            options={[
+              { value: "grid" as const, label: "Grid" },
+              { value: "list" as const, label: "List" },
+            ]}
+          />
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
-        <p aria-live="polite">{filtered.length} course{filtered.length === 1 ? "" : "s"}{hasFilters ? " match your filters" : ""}</p>
+      <div className="mt-3 flex items-center justify-between text-xs text-ink-muted">
+        <p aria-live="polite" className="tnum">{filtered.length} course{filtered.length === 1 ? "" : "s"}{hasFilters ? " match your filters" : ""}</p>
         {hasFilters && (
-          <button onClick={clearAll} className="font-semibold text-[#3478ff] hover:underline">Clear all</button>
+          <button type="button" onClick={clearAll} className="font-semibold text-ink underline hover:text-ink-muted">Clear all</button>
         )}
       </div>
 
       {filtered.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-dashed bg-white px-4 py-10 text-center">
-          <p className="text-sm font-bold">No courses match your filters.</p>
-          <p className="mt-1 text-xs text-zinc-500">Try a different search term or clear your filters.</p>
-          <button onClick={clearAll} className="mt-3 rounded-full bg-zinc-900 px-4 py-2 text-xs font-bold text-white">Clear all filters</button>
+        <div className="mt-8 border border-rule bg-room-raised">
+          <ListMessage
+            kind="empty"
+            title="No courses match your filters."
+            body="Try a different search term or clear your filters."
+            action={<Button variant="primary" size="sm" type="button" onClick={clearAll}>Clear all filters</Button>}
+          />
         </div>
       ) : view === "grid" ? (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -273,24 +258,24 @@ export function CourseListContainer() {
             const to = enrolled ? `/learn/${c.id}` : `/courses/${c.id}`;
             const label = pct >= 100 ? "Review →" : pct > 0 ? `Continue ${pct}% →` : "Go to course →";
             return (
-              <Link key={c.id} to={to} className="flex items-center gap-3 rounded-2xl border bg-white p-3 shadow-sm hover:bg-zinc-50">
-                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${c.accent} text-white`}>
-                  <c.icon size={18} strokeWidth={2} />
+              <Link key={c.id} to={to} className="flex items-center gap-3 border border-rule bg-room-raised p-3 transition-colors hover:bg-room-sunk">
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center ${c.accent} text-ink-inverse`}>
+                  <c.icon size={18} strokeWidth={2} aria-hidden />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold leading-tight">{c.title}</p>
-                  <p className="truncate text-xs text-zinc-500">
+                  <p className="truncate text-sm font-semibold leading-tight text-ink">{c.title}</p>
+                  <p className="tnum truncate text-xs text-ink-muted">
                     {c.subtitle ? `${c.subtitle} • ` : ""}{c.category} • {c.level} • {c.instructor} • {c.studentCount} students{c.rating ? ` • ★ ${c.rating}` : ""}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-1.5">
+                <div className="flex shrink-0 items-center gap-2">
                   {enrolled ? (
-                    <span className="rounded-full bg-[#0f172a] px-3 py-1 text-xs font-bold text-white">{label}</span>
+                    <span className="tnum border border-ink bg-ink px-3 py-1 text-xs font-semibold text-ink-inverse">{label}</span>
                   ) : (
                     <>
-                      {c.originalPrice && <span className="hidden text-xs text-zinc-400 line-through sm:inline">₹{c.originalPrice.toLocaleString("en-IN")}</span>}
-                      {disc > 0 && <span className="hidden rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold sm:inline">{disc}% off</span>}
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold text-white ${c.price === "Free" ? "bg-emerald-600" : "bg-[#3478ff]"}`}>{c.price}</span>
+                      {c.originalPrice && <span className="tnum hidden text-xs text-ink-faint line-through sm:inline">₹{c.originalPrice.toLocaleString("en-IN")}</span>}
+                      {disc > 0 && <span className="tnum hidden border border-gold-deep/35 bg-gold-wash px-1.5 py-0.5 text-[10px] font-semibold text-gold-deep sm:inline">{disc}% off</span>}
+                      <span className={`tnum border px-2.5 py-1 text-xs font-semibold ${c.price === "Free" ? "border-live/25 bg-live-soft text-live" : "border-rule bg-room-sunk text-ink"}`}>{c.price}</span>
                     </>
                   )}
                 </div>

@@ -1,6 +1,8 @@
 import { useCallback, useState } from "react";
 import { Camera, AlertCircle, ShieldCheck } from "@masterlms/shared";
 import { enterFullscreen, exitFullscreen } from "../lib/fullscreen";
+import { Button } from "./Button";
+import { Notice } from "./Controls";
 
 type Props = {
   onApproved: (stream: MediaStream) => void;
@@ -61,56 +63,69 @@ export function CameraGate({ onApproved, microphone = false }: Props) {
   }, [microphone, onApproved, secureContext]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-2xl">
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100">
-          <Camera size={28} className="text-zinc-700" />
+    // Hand-rolled, not <Modal>: this gate is non-dismissible by design, and the
+    // shared Modal always renders a close control that would be a dead button.
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-sm">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="camera-gate-title"
+        className="w-full max-w-md border border-rule-strong bg-room-raised p-8 text-center shadow-xl"
+      >
+        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center border border-rule bg-room-sunk">
+          <Camera size={26} className="text-ink" aria-hidden />
         </div>
-        <h2 className="text-lg font-bold text-zinc-900">Camera Must Be On</h2>
-        <p className="mt-2 text-sm text-zinc-500">
+        <h2 id="camera-gate-title" className="text-base font-semibold text-ink">Camera Must Be On</h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-muted">
           This exam is proctored. You must allow camera access to continue — turn your camera ON and
           click below. Your live camera feed will be shown and monitored for the whole exam.
         </p>
-        <p className="mt-2 text-xs font-semibold text-red-600">
+        <p className="mt-2 text-xs font-semibold text-halt">
           You cannot start the exam without your camera.
         </p>
 
         {!secureContext && (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-left text-sm text-amber-800">
-            <div className="flex items-start gap-2">
-              <AlertCircle size={16} className="mt-0.5 shrink-0" />
-              <span>{INSECURE_CONTEXT_ERROR}</span>
-            </div>
+          <div className="mt-4 text-left">
+            <Notice tone="warn">
+              <span className="flex items-start gap-2">
+                <AlertCircle size={16} className="mt-0.5 shrink-0" aria-hidden />
+                <span>{INSECURE_CONTEXT_ERROR}</span>
+              </span>
+            </Notice>
           </div>
         )}
 
         {error && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-left text-sm text-red-700">
-            <div className="flex items-start gap-2">
-              <AlertCircle size={16} className="mt-0.5 shrink-0" />
-              <span>{error}</span>
-            </div>
+          <div className="mt-4 text-left">
+            <Notice tone="error" role="alert">
+              <span className="flex items-start gap-2">
+                <AlertCircle size={16} className="mt-0.5 shrink-0" aria-hidden />
+                <span>{error}</span>
+              </span>
+            </Notice>
           </div>
         )}
 
         <div className="mt-6">
-          <button
+          <Button
+            variant="primary"
+            size="lg"
+            block
             onClick={requestCamera}
             disabled={status === "requesting" || !secureContext}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60"
           >
             {status === "requesting" ? (
               <>
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
                 Turning camera on…
               </>
             ) : (
               <>
-                <ShieldCheck size={16} />
+                <ShieldCheck size={16} aria-hidden />
                 Turn Camera On &amp; Start Exam
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

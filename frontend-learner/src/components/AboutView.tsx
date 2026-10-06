@@ -90,23 +90,23 @@ const FAQS = [
 
 export function AboutView() {
   return (
-    <div className="min-h-screen bg-[#f6f5f1]">
+    <div className="min-h-screen bg-room">
       <TopNav />
-      <div className="mx-auto w-full max-w-5xl px-3 py-8 sm:px-4 sm:py-12">
-        <section className="relative overflow-hidden rounded-[28px] bg-[#0f172a] px-6 py-14 text-center text-white sm:px-10 sm:py-20">
-          <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-[#1e3a5f] blur-[80px]" />
-          <div className="absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-amber-400/10 blur-[90px]" />
-          <span className="pointer-events-none absolute -right-6 top-1/2 hidden -translate-y-1/2 select-none text-[180px] font-black leading-none text-white/[0.04] sm:block">
+      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+        <section className="relative overflow-hidden border border-ink bg-room-deep px-6 py-14 text-center text-ink-inverse sm:px-10 sm:py-20">
+          <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-ink-inverse/[0.04] blur-[80px]" />
+          <div className="absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-gold/10 blur-[90px]" />
+          <span className="pointer-events-none absolute -right-6 top-1/2 hidden -translate-y-1/2 select-none text-[180px] font-semibold leading-none text-ink-inverse/[0.04] sm:block">
             Q
           </span>
           <div className="relative">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/80">
-              <Sparkles size={12} /> About QTNXT
+            <span className="inline-flex items-center gap-1.5 border border-ink-inverse/15 bg-ink-inverse/10 px-3 py-1 text-[11px] font-semibold text-ink-inverse/80">
+              <Sparkles size={12} aria-hidden /> About QTNXT
             </span>
-            <h1 className="mx-auto mt-4 max-w-2xl text-3xl font-bold leading-tight tracking-tight sm:text-5xl">
+            <h1 className="mx-auto mt-4 max-w-2xl text-3xl font-semibold leading-tight sm:text-5xl">
               Learning that respects how you actually learn.
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-sm font-light leading-relaxed text-white/70 sm:text-base">
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-ink-inverse/70 sm:text-base">
               QTNXT is a learning platform built for curious, self-driven people —
               practical courses, real assessments, and verified certificates, all at
               your own pace.
@@ -114,13 +114,13 @@ export function AboutView() {
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <Link
                 to="/courses"
-                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold text-zinc-900 transition hover:bg-zinc-100"
+                className="inline-flex items-center gap-2 border border-ink bg-ink px-6 py-2.5 text-sm font-semibold text-ink-inverse transition-colors hover:bg-ink/88"
               >
-                Browse courses <ArrowRight size={14} strokeWidth={2.5} />
+                Browse courses <ArrowRight size={14} strokeWidth={2.5} aria-hidden />
               </Link>
               <Link
                 to="/login"
-                className="inline-flex items-center gap-2 rounded-full border border-white/20 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                className="inline-flex items-center gap-2 border border-ink-inverse/25 px-6 py-2.5 text-sm font-semibold text-ink-inverse transition-colors hover:bg-ink-inverse/10"
               >
                 Get started free
               </Link>
@@ -130,51 +130,51 @@ export function AboutView() {
 
         <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {STATS.map((s) => (
-            <div key={s.label} className="rounded-2xl bg-white p-5 text-center shadow-sm">
-              <p className="text-2xl font-black tracking-tight text-zinc-900">{s.value}</p>
-              <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+            <div key={s.label} className="border border-rule bg-room-raised p-5 text-center">
+              <p className="tnum text-2xl font-semibold text-ink">{s.value}</p>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
                 {s.label}
               </p>
             </div>
           ))}
         </section>
 
-        <section className="mt-6 rounded-[28px] bg-white p-6 shadow-sm sm:p-10">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-400">
+        <section className="mt-6 border border-rule bg-room-raised p-6 sm:p-10">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
             What we believe
           </p>
-          <h2 className="mt-2 max-w-xl text-2xl font-bold tracking-tight sm:text-3xl">
+          <h2 className="mt-2 max-w-xl text-2xl font-semibold sm:text-3xl">
             Calm focus beats cramming. Proof beats promises.
           </h2>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {PILLARS.map((p) => (
-              <div key={p.title} className="rounded-2xl bg-zinc-50 p-5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0f172a] text-white">
-                  <p.Icon size={17} strokeWidth={2.25} />
+              <div key={p.title} className="border border-rule bg-room-sunk p-5">
+                <div className="flex h-9 w-9 items-center justify-center bg-ink text-ink-inverse">
+                  <p.Icon size={17} strokeWidth={2.25} aria-hidden />
                 </div>
-                <h3 className="mt-3 text-sm font-bold">{p.title}</h3>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-500">{p.desc}</p>
+                <h3 className="mt-3 text-sm font-semibold text-ink">{p.title}</h3>
+                <p className="mt-1 text-xs leading-relaxed text-ink-muted">{p.desc}</p>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="mt-6 rounded-[28px] bg-white p-6 shadow-sm sm:p-10">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-400">
+        <section className="mt-6 border border-rule bg-room-raised p-6 sm:p-10">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
             How it works
           </p>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+          <h2 className="mt-2 text-2xl font-semibold sm:text-3xl">
             Your journey on QTNXT
           </h2>
           <div className="mt-6 space-y-4">
             {JOURNEY.map((j) => (
-              <div key={j.step} className="flex gap-4 rounded-2xl border border-zinc-100 p-4 sm:p-5">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-yellow-400 text-sm font-black text-zinc-900">
+              <div key={j.step} className="flex gap-4 border border-rule p-4 sm:p-5">
+                <span className="tnum flex h-10 w-10 shrink-0 items-center justify-center border border-gold-deep/40 bg-gold text-sm font-semibold text-ink">
                   {j.step}
                 </span>
                 <div>
-                  <h3 className="text-sm font-bold">{j.title}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-zinc-500">{j.desc}</p>
+                  <h3 className="text-sm font-semibold text-ink">{j.title}</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-ink-muted">{j.desc}</p>
                 </div>
               </div>
             ))}
@@ -187,73 +187,84 @@ export function AboutView() {
             { title: "Assignments", desc: "Timed MCQ exams with figures, negative marking & review.", Icon: FileText },
             { title: "Community", desc: "Leaderboards, activity streaks & learner profiles.", Icon: Users },
           ].map((c) => (
-            <div key={c.title} className="rounded-2xl bg-white p-6 text-center shadow-sm">
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#3478ff]/10 text-[#3478ff]">
-                <c.Icon size={18} strokeWidth={2.25} />
+            <div key={c.title} className="border border-rule bg-room-raised p-6 text-center">
+              <div className="mx-auto flex h-10 w-10 items-center justify-center border border-flight/25 bg-flight-soft text-flight">
+                <c.Icon size={18} strokeWidth={2.25} aria-hidden />
               </div>
-              <h3 className="mt-3 text-sm font-bold">{c.title}</h3>
-              <p className="mt-1 text-xs leading-relaxed text-zinc-500">{c.desc}</p>
+              <h3 className="mt-3 text-sm font-semibold text-ink">{c.title}</h3>
+              <p className="mt-1 text-xs leading-relaxed text-ink-muted">{c.desc}</p>
             </div>
           ))}
         </section>
 
-        <section className="mt-6 rounded-[28px] bg-white p-6 shadow-sm sm:p-10">
+        <section className="mt-6 border border-rule bg-room-raised p-6 sm:p-10">
           <div className="flex items-center gap-2">
-            <ShieldCheck size={18} className="text-emerald-600" />
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">For learners, by learners</h2>
+            <ShieldCheck size={18} className="text-live" aria-hidden />
+            <h2 className="text-2xl font-semibold sm:text-3xl">What you get at the end</h2>
           </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl bg-zinc-50 p-5">
-              <div className="text-xs text-amber-400">★★★★★</div>
-              <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-800">
-                “QTNXT completely changed how I approach learning. I feel more focused,
-                less pressured, and I actually finish the courses I start.”
-              </p>
-              <p className="mt-3 text-xs font-semibold">Maya Chen</p>
-              <p className="text-[11px] text-zinc-500">Product Designer • Self-taught learner</p>
-            </div>
-            <div className="rounded-2xl bg-zinc-50 p-5">
-              <div className="flex items-center gap-2 text-emerald-600">
-                <GraduationCap size={16} />
-                <p className="text-xs font-bold uppercase tracking-wide">Verified certificates</p>
+            <div className="border border-rule bg-room-sunk p-5">
+              <div className="flex items-center gap-2 text-live">
+                <GraduationCap size={16} aria-hidden />
+                <p className="text-xs font-semibold uppercase tracking-[0.14em]">
+                  Verified certificates
+                </p>
               </div>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-600">
-                Finish any course to earn a certificate with a unique QTNXT ID — proof
-                of real work, not just watch time.
+              <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+                Finish every lesson in a course and the certificate unlocks, carrying
+                your name, the course and the date you completed it.
               </p>
-              <div className="mt-3 flex items-center gap-2 text-amber-500">
-                <Trophy size={14} />
-                <p className="text-xs font-semibold text-zinc-700">
+              <div className="mt-3 flex items-center gap-2 text-gold-deep">
+                <Trophy size={14} aria-hidden />
+                <p className="text-xs font-semibold text-ink">
                   Share it on LinkedIn, add it to your resume.
+                </p>
+              </div>
+            </div>
+            <div className="border border-rule bg-room-sunk p-5">
+              <div className="flex items-center gap-2 text-live">
+                <Target size={16} aria-hidden />
+                <p className="text-xs font-semibold uppercase tracking-[0.14em]">
+                  A transcript you can read
+                </p>
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+                Every assessment you sit keeps a full transcript. After submitting you
+                can see which questions you lost marks on, not just your score.
+              </p>
+              <div className="mt-3 flex items-center gap-2 text-gold-deep">
+                <BookOpen size={14} aria-hidden />
+                <p className="text-xs font-semibold text-ink">
+                  Use it to decide what to revise.
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="mt-6 rounded-[28px] bg-white p-6 shadow-sm sm:p-10">
-          <h2 className="text-center text-2xl font-bold tracking-tight">Quick answers</h2>
+        <section className="mt-6 border border-rule bg-room-raised p-6 sm:p-10">
+          <h2 className="text-center text-2xl font-semibold">Quick answers</h2>
           <div className="mx-auto mt-5 max-w-2xl space-y-3">
             {FAQS.map((f) => (
-              <div key={f.q} className="rounded-2xl bg-zinc-50 px-5 py-4">
-                <p className="flex items-center gap-2 text-sm font-semibold">
-                  <CheckCircle2 size={15} className="shrink-0 text-emerald-500" /> {f.q}
+              <div key={f.q} className="border border-rule bg-room-sunk px-5 py-4">
+                <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+                  <CheckCircle2 size={15} className="shrink-0 text-live" aria-hidden /> {f.q}
                 </p>
-                <p className="mt-1.5 pl-7 text-xs leading-relaxed text-zinc-500">{f.a}</p>
+                <p className="mt-2 pl-7 text-xs leading-relaxed text-ink-muted">{f.a}</p>
               </div>
             ))}
           </div>
           <div className="mt-6 flex justify-center">
             <Link
               to="/courses"
-              className="inline-flex items-center gap-2 rounded-full bg-[#0f172a] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-black"
+              className="inline-flex items-center gap-2 border border-ink bg-ink px-6 py-2.5 text-sm font-semibold text-ink-inverse transition-colors hover:bg-ink/88"
             >
-              Start learning <ArrowRight size={14} strokeWidth={2.5} />
+              Start learning <ArrowRight size={14} strokeWidth={2.5} aria-hidden />
             </Link>
           </div>
         </section>
 
-        <p className="mt-8 text-center text-xs text-zinc-400">
+        <p className="mt-8 text-center text-xs text-ink-faint">
           © 2026 QTNXT. All rights reserved.
         </p>
       </div>

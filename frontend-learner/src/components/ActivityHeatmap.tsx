@@ -13,7 +13,13 @@ export function ActivityHeatmap({ cells, weeks = 26 }: { cells: Cell[]; weeks?: 
   const start = new Date(today);
   start.setDate(today.getDate() - (weeks - 1) * 7 - lastColDays + 1);
 
-  const colors = ["bg-[#ebf2fa] border-[#dbe5f1]", "bg-[#cfe1f8] border-[#b6d4f2]", "bg-[#9bc1ec] border-[#7fb0e4]", "bg-[#3b82f6] border-[#2563eb]", "bg-[#0f172a] border-[#0f172a]"];
+  const colors = [
+    "bg-room-sunk border-rule",
+    "bg-gold-wash border-gold/25",
+    "bg-gold/40 border-gold/40",
+    "bg-gold/70 border-gold-deep/45",
+    "bg-gold-deep border-gold-deep",
+  ];
   const monthFmt = new Intl.DateTimeFormat("en", { month: "short" });
 
   type WeekCol = { weekIndex: number; month: number; monthLabel: string; isFirstOfMonth: boolean; isLastOfMonth: boolean };
@@ -46,7 +52,7 @@ export function ActivityHeatmap({ cells, weeks = 26 }: { cells: Cell[]; weeks?: 
             return (
               <span
                 key={d}
-                className={`text-[11px] font-semibold uppercase tracking-wider leading-none ${visible ? "text-zinc-500" : "text-transparent"}`}
+                className={`text-[11px] font-semibold uppercase tracking-wider leading-none ${visible ? "text-ink-muted" : "text-transparent"}`}
                 style={{ height: CELL }}
               >
                 {d}
@@ -68,7 +74,7 @@ export function ActivityHeatmap({ cells, weeks = 26 }: { cells: Cell[]; weeks?: 
             return (
               <div key={col.weekIndex} className="flex items-start" style={{ marginRight: nextIsNewMonth ? MONTH_GAP : GAP }}>
                 <div className="flex flex-col">
-                  <div className="h-[18px] text-[11px] font-bold uppercase tracking-[0.12em] leading-none text-zinc-500">
+                  <div className="h-[18px] text-[11px] font-semibold uppercase tracking-[0.14em] leading-none text-ink-muted">
                     {showLabel ? col.monthLabel : ""}
                   </div>
                   <div className="flex flex-col" style={{ rowGap: GAP }}>
@@ -92,7 +98,7 @@ export function ActivityHeatmap({ cells, weeks = 26 }: { cells: Cell[]; weeks?: 
                         <span
                           key={d}
                           title={label}
-                          className={`rounded-md border ${colors[level]} transition hover:brightness-110`}
+                          className={`border transition-colors hover:brightness-105 ${colors[level]}`}
                           style={{ width: CELL, height: CELL }}
                         />
                       );
@@ -110,13 +116,13 @@ export function ActivityHeatmap({ cells, weeks = 26 }: { cells: Cell[]; weeks?: 
 
 export function HeatmapLegend() {
   return (
-    <div className="flex items-center gap-2 text-[11px] font-medium text-zinc-500">
+    <div className="flex items-center gap-2 text-[11px] font-medium text-ink-muted">
       <span>Less</span>
-      <span className="h-[18px] w-[18px] rounded-md border border-[#dbe5f1] bg-[#ebf2fa]" />
-      <span className="h-[18px] w-[18px] rounded-md border border-[#b6d4f2] bg-[#cfe1f8]" />
-      <span className="h-[18px] w-[18px] rounded-md border border-[#7fb0e4] bg-[#9bc1ec]" />
-      <span className="h-[18px] w-[18px] rounded-md border border-[#2563eb] bg-[#3b82f6]" />
-      <span className="h-[18px] w-[18px] rounded-md border border-[#0f172a] bg-[#0f172a]" />
+      <span className="h-[18px] w-[18px] border border-rule bg-room-sunk" />
+      <span className="h-[18px] w-[18px] border border-gold/25 bg-gold-wash" />
+      <span className="h-[18px] w-[18px] border border-gold/40 bg-gold/40" />
+      <span className="h-[18px] w-[18px] border border-gold-deep/45 bg-gold/70" />
+      <span className="h-[18px] w-[18px] border border-gold-deep bg-gold-deep" />
       <span>More</span>
     </div>
   );

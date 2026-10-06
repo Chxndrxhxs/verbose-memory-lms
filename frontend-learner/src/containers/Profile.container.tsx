@@ -8,6 +8,11 @@ import { useAuth } from "../hooks/useAuth";
 import { absoluteMediaUrl, api, uploadFile } from "../lib/api";
 import { useMyCourses } from "../hooks/useMyCourses";
 import { buildInvoiceHtml } from "../lib/invoice";
+import { Button } from "../components/Button";
+import { Input } from "../components/Controls";
+import { Panel } from "../components/Panel";
+import { Badge } from "../components/Badge";
+import { Toast } from "../components/Toast";
 
 type Enrollment = {
   id: number;
@@ -197,158 +202,162 @@ export function ProfileContainer() {
   return (
     <>
       <TopNav />
-      <div className="min-h-screen bg-[#f6f5f1]">
-        <div className="px-3 pt-6 sm:px-4">
+      <div className="min-h-screen bg-room">
+        <div className="px-4 pt-6 sm:px-6">
         <div className="mx-auto max-w-[1100px]">
-          <div className="relative overflow-hidden rounded-[28px] bg-[#0f172a] p-6 text-white shadow-sm sm:p-8">
+          <div className="relative overflow-hidden border border-ink bg-room-deep p-6 text-ink-inverse sm:p-8">
             <div className="absolute inset-0">
-              <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-[#1e3a5f] blur-[50px] opacity-60" />
-              <div className="absolute -bottom-20 -left-16 h-64 w-64 rounded-full bg-amber-400/10 blur-[40px]" />
-              <span className="absolute -bottom-6 -right-6 select-none text-[110px] font-black leading-none text-white/[0.04]">Q</span>
+              <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-ink-inverse/[0.05] blur-[50px]" />
+              <div className="absolute -bottom-20 -left-16 h-64 w-64 rounded-full bg-gold/10 blur-[40px]" />
+              <span className="absolute -bottom-6 -right-6 select-none text-[110px] font-semibold leading-none text-ink-inverse/[0.04]">Q</span>
             </div>
             <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
               <div className="flex gap-4 sm:gap-5">
-                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[20px] bg-zinc-800 shadow-lg sm:h-24 sm:w-24">
-                  {avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-2xl font-bold">{user.name?.[0] ?? "?"}</span>}
-                  <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white shadow-md ring-2 ring-[#0f172a]">✓</span>
+                <div className="relative h-20 w-20 shrink-0 overflow-hidden border border-ink-inverse/20 bg-room-raised sm:h-24 sm:w-24">
+                  {avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-2xl font-semibold text-ink">{user.name?.[0] ?? "?"}</span>}
+                  <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center bg-live text-[10px] font-semibold text-ink-inverse ring-2 ring-room-deep">✓</span>
                 </div>
                 <div className="min-w-0">
                   <div className="inline-flex items-center gap-2">
-                    <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold tracking-widest text-zinc-900">LEARNER</span>
-                    <span className="hidden text-xs text-white/40 sm:inline">• {user.mobile.slice(-4) ? `•••• ${user.mobile.slice(-4)}` : "QTNXT"}</span>
+                    <span className="bg-gold px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink">Learner</span>
+                    <span className="tnum hidden text-xs text-ink-inverse/40 sm:inline">• {user.mobile.slice(-4) ? `•••• ${user.mobile.slice(-4)}` : "QTNXT"}</span>
                   </div>
-                  <h1 className="mt-2 text-[22px] font-black leading-tight tracking-tight sm:text-[26px]">{user.name || "Learner"}</h1>
-                  <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-white/60">
+                  <h1 className="mt-2 text-[22px] font-semibold leading-tight sm:text-[26px]">{user.name || "Learner"}</h1>
+                  <p className="tnum mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-inverse/60">
                     <span className="truncate">{user.email || user.mobile}</span>
-                    <span className="h-1 w-1 rounded-full bg-white/20" />
+                    <span className="h-1 w-1 rounded-full bg-ink-inverse/20" />
                     <span>Age {user.age ?? "—"}</span>
                   </p>
                   <div className="mt-3 flex gap-2">
-                    <button onClick={() => setEditing((v) => !v)} className="rounded-full bg-white px-4 py-1.5 text-xs font-bold text-zinc-900 shadow hover:bg-zinc-100">{editing ? "Cancel" : "Edit profile"}</button>
-                    <Link to="/activity" className="rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold text-white backdrop-blur hover:bg-white/15">View activity →</Link>
+                    <Button type="button" variant="gold" size="sm" onClick={() => setEditing((v) => !v)}>{editing ? "Cancel" : "Edit profile"}</Button>
+                    <Link to="/activity" className="inline-flex h-8 items-center border border-ink-inverse/25 bg-ink-inverse/10 px-3 text-xs font-semibold text-ink-inverse transition-colors hover:bg-ink-inverse/15">View activity →</Link>
                   </div>
                 </div>
               </div>
               <div className="hidden text-right lg:block">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/40">Member</p>
-                <p className="mt-1 font-mono text-xs text-white/70">ID {String(user.mobile).slice(-6) || "QTNXT"}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-inverse/40">Member</p>
+                <p className="tnum mt-1 font-mono text-xs text-ink-inverse/70">ID {String(user.mobile).slice(-6) || "QTNXT"}</p>
               </div>
             </div>
-            <div className="relative mt-8 grid grid-cols-3 gap-6 border-t border-white/10 pt-6">
+            <div className="relative mt-8 grid grid-cols-3 gap-6 border-t border-ink-inverse/10 pt-6">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/40">Enrolled</p>
-                <p className="mt-1 text-3xl font-black tracking-tight">{total}</p>
-                <p className="text-xs text-white/50">courses in progress</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-inverse/40">Enrolled</p>
+                <p className="tnum mt-1 text-3xl font-semibold">{total}</p>
+                <p className="text-xs text-ink-inverse/50">courses in progress</p>
               </div>
-              <div className="border-l border-white/10 pl-6">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/40">Completed</p>
-                <p className="mt-1 text-3xl font-black tracking-tight">{completed}</p>
-                <p className="text-xs text-white/50">finished</p>
+              <div className="border-l border-ink-inverse/10 pl-6">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-inverse/40">Completed</p>
+                <p className="tnum mt-1 text-3xl font-semibold">{completed}</p>
+                <p className="text-xs text-ink-inverse/50">finished</p>
               </div>
-              <div className="border-l border-white/10 pl-6">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/40">Avg. progress</p>
-                <p className="mt-1 text-3xl font-black tracking-tight">{avg}<span className="text-lg font-bold text-white/60">%</span></p>
-                <p className="text-xs text-white/50">across all</p>
+              <div className="border-l border-ink-inverse/10 pl-6">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-inverse/40">Avg. progress</p>
+                <p className="tnum mt-1 text-3xl font-semibold">{avg}<span className="text-lg font-semibold text-ink-inverse/60">%</span></p>
+                <p className="text-xs text-ink-inverse/50">across all</p>
               </div>
             </div>
           </div>
 
           {editing && (
-            <div className="mt-4 rounded-[28px] bg-white p-6 shadow-sm sm:p-8">
-              <h2 className="text-sm font-bold">Edit profile</h2>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div><label className="text-xs font-semibold">Name</label><input value={name} onChange={(e)=> setName(e.target.value)} className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" />{fieldErrors.name && <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p>}</div>
-                <div><label className="text-xs font-semibold">Email</label><input value={email} onChange={(e)=> setEmail(e.target.value)} type="email" className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" />{fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}</div>
-                <div><label className="text-xs font-semibold">Age</label><input value={age} onChange={(e)=> setAge(e.target.value)} type="number" className="mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:bg-white" />{fieldErrors.age && <p className="mt-1 text-xs text-red-600">{fieldErrors.age}</p>}</div>
+            <Panel className="mt-4 p-6 sm:p-8">
+              <h2 className="text-sm font-semibold text-ink">Edit profile</h2>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div><label htmlFor="pf-name" className="text-xs font-semibold text-ink-muted">Name</label><Input id="pf-name" value={name} onChange={(e)=> setName(e.target.value)} className="mt-1.5" />{fieldErrors.name && <p role="alert" className="mt-1 text-xs text-halt">{fieldErrors.name}</p>}</div>
+                <div><label htmlFor="pf-email" className="text-xs font-semibold text-ink-muted">Email</label><Input id="pf-email" value={email} onChange={(e)=> setEmail(e.target.value)} type="email" className="mt-1.5" />{fieldErrors.email && <p role="alert" className="mt-1 text-xs text-halt">{fieldErrors.email}</p>}</div>
+                <div><label htmlFor="pf-age" className="text-xs font-semibold text-ink-muted">Age</label><Input id="pf-age" value={age} onChange={(e)=> setAge(e.target.value)} type="number" inputMode="numeric" className="tnum mt-1.5" />{fieldErrors.age && <p role="alert" className="mt-1 text-xs text-halt">{fieldErrors.age}</p>}</div>
                 <div>
-                  <label className="text-xs font-semibold">Avatar</label>
-                  <div className="mt-1 flex items-center gap-2">
-                    <div className="h-10 w-10 overflow-hidden rounded-full bg-zinc-100">
-                      {avatar ? <img src={avatar} className="h-full w-full object-cover" alt="" /> : <span className="flex h-full w-full items-center justify-center text-xs"><User size={20} className="text-zinc-400" /></span>}
+                  <label htmlFor="pf-avatar" className="text-xs font-semibold text-ink-muted">Avatar</label>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <div className="h-10 w-10 overflow-hidden rounded-full border border-rule bg-room-sunk">
+                      {avatar ? <img src={avatar} className="h-full w-full object-cover" alt="" /> : <span className="flex h-full w-full items-center justify-center text-xs"><User size={20} className="text-ink-faint" aria-hidden /></span>}
                     </div>
-                    <label className="rounded-full border px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-zinc-50">{avatarUploading ? "Uploading…" : "Upload"}<input type="file" accept="image/*" className="hidden" onChange={onAvatarPicked} disabled={avatarUploading} /></label>
+                    <label htmlFor="pf-avatar" className="cursor-pointer border border-rule px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:bg-room-sunk">{avatarUploading ? "Uploading…" : "Upload"}<input id="pf-avatar" type="file" accept="image/*" className="hidden" onChange={onAvatarPicked} disabled={avatarUploading} /></label>
                   </div>
-                  {avatarError && <p className="mt-1 text-xs text-red-600">{avatarError}</p>}
+                  {avatarError && <p role="alert" className="mt-1 text-xs text-halt">{avatarError}</p>}
                 </div>
               </div>
-              <div className="mt-4 flex gap-3">
-                <button onClick={save} disabled={saveMut.isPending || avatarUploading} className="rounded-full bg-[#0f172a] px-5 py-2 text-xs font-bold text-white disabled:opacity-60">{saveMut.isPending || avatarUploading ? "Saving…" : "Save changes"}</button>
-                <button onClick={()=> setEditing(false)} className="rounded-full border px-5 py-2 text-xs font-medium">Cancel</button>
+              <div className="mt-4 flex gap-2">
+                <Button type="button" variant="primary" size="sm" onClick={save} disabled={saveMut.isPending || avatarUploading}>{saveMut.isPending || avatarUploading ? "Saving…" : "Save changes"}</Button>
+                <Button type="button" variant="secondary" size="sm" onClick={()=> setEditing(false)}>Cancel</Button>
               </div>
-            </div>
+            </Panel>
           )}
 
           <div className="mt-4">
-            <div className="rounded-[28px] bg-white p-6 shadow-sm">
-              <h2 className="text-sm font-bold">Account</h2>
+            <Panel className="p-6">
+              <h2 className="text-sm font-semibold text-ink">Account</h2>
               <div className="mt-3 space-y-2 text-sm">
-                <div className="rounded-xl bg-zinc-50 p-3"><p className="text-[11px] font-semibold uppercase text-zinc-500">Email</p><p className="text-sm">{user.email || "—"}</p></div>
-                <div className="rounded-xl bg-zinc-50 p-3"><p className="text-[11px] font-semibold uppercase text-zinc-500">Mobile</p><p className="text-sm">{user.mobile}</p></div>
-                <div className="rounded-xl bg-zinc-50 p-3"><p className="text-[11px] font-semibold uppercase text-zinc-500">Role</p><p className="text-sm capitalize">{user.role ?? "Learner"}</p></div>
+                <div className="border border-rule bg-room-sunk p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">Email</p><p className="text-sm text-ink">{user.email || "—"}</p></div>
+                <div className="border border-rule bg-room-sunk p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">Mobile</p><p className="tnum text-sm text-ink">{user.mobile}</p></div>
+                <div className="border border-rule bg-room-sunk p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">Role</p><p className="text-sm capitalize text-ink">{user.role ?? "Learner"}</p></div>
               </div>
-              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-red-700"><AlertTriangle size={15} /> Danger zone</div>
-                <p className="mt-1 text-xs text-red-600">Deleting your account permanently removes your profile and data from QTNXT.</p>
+              <div className="mt-4 border border-halt/25 bg-halt-soft p-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-halt"><AlertTriangle size={15} aria-hidden /> Danger zone</div>
+                <p className="mt-1 text-xs text-halt">Deleting your account permanently removes your profile and data from QTNXT.</p>
                 {confirmDelete ? (
-                  <div className="mt-3 rounded-lg bg-white p-3">
-                    <p className="text-xs font-semibold text-zinc-700">Type <span className="font-mono font-bold">delete</span> to confirm:</p>
+                  <div className="mt-3 border border-halt/25 bg-room-raised p-3">
+                    <p className="text-xs font-semibold text-ink">Type <span className="font-mono font-semibold">delete</span> to confirm:</p>
                     <div className="mt-2 flex gap-2">
-                      <input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder="delete" className="flex-1 rounded-lg border bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:bg-white" />
+                      <Input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder="delete" aria-label="Type delete to confirm" className="flex-1 text-xs" />
                     </div>
                     <div className="mt-2 flex gap-2">
-                      <button
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
                         onClick={() => { setConfirmDelete(false); setDeleteConfirmText(""); }}
-                        className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-zinc-50"
-                      >Cancel</button>
-                      <button
+                      >Cancel</Button>
+                      <Button
+                        type="button"
+                        variant="danger"
+                        size="sm"
                         onClick={() => deleteMut.mutate()}
                         disabled={deleteConfirmText !== "delete" || deleteMut.isPending}
-                        className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
                       >
                         {deleteMut.isPending ? "Deleting…" : "Delete permanently"}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
-                  <button onClick={() => setConfirmDelete(true)} className="mt-2 flex items-center gap-1.5 rounded-full border border-red-300 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100"><Trash2 size={13} /> Delete account</button>
+                  <Button type="button" variant="danger" size="sm" onClick={() => setConfirmDelete(true)} className="mt-2"><Trash2 size={13} aria-hidden /> Delete account</Button>
                 )}
               </div>
-            </div>
+            </Panel>
           </div>
 
-          <div className="mt-4 rounded-[28px] bg-white p-6 shadow-sm">
+          <Panel className="mt-4 p-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold">My courses</h2>
-              <Link to="/courses" className="inline-flex items-center gap-1 text-xs font-semibold text-[#3478ff]">Browse <ArrowRight size={12} strokeWidth={2.5} /></Link>
+              <h2 className="text-sm font-semibold text-ink">My courses</h2>
+              <Link to="/courses" className="inline-flex items-center gap-1 text-xs font-semibold text-ink underline underline-offset-4 hover:text-ink-muted">Browse <ArrowRight size={12} strokeWidth={2.5} aria-hidden /></Link>
             </div>
-            {enrollmentsQ.isLoading ? <p className="mt-3 text-sm text-zinc-500">Loading…</p> : total === 0 ? (
-              <p className="mt-3 text-sm text-zinc-500">No enrollments yet. <Link to="/courses" className="inline-flex items-center gap-1 font-semibold text-[#3478ff]">Browse courses <ArrowRight size={12} strokeWidth={2.5} /></Link></p>
+            {enrollmentsQ.isLoading ? <p className="mt-3 text-sm text-ink-muted">Loading…</p> : total === 0 ? (
+              <p className="mt-3 text-sm text-ink-muted">No enrollments yet. <Link to="/courses" className="inline-flex items-center gap-1 font-semibold text-ink underline underline-offset-4">Browse courses <ArrowRight size={12} strokeWidth={2.5} aria-hidden /></Link></p>
             ) : (
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 {enrollments.map((e) => (
-                  <Link key={e.id} to={`/courses/${e.course.id}`} className="flex gap-3 rounded-2xl border bg-zinc-50 p-3 hover:bg-zinc-100">
-                    <img src={e.course.cover_image || "https://images.unsplash.com/photo-1558655146-d09347e92766?w=200&auto=format&fit=crop&q=80"} alt="" className="h-16 w-20 rounded-xl object-cover" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold leading-tight">{e.course.title}</p>
-                      <p className="text-xs text-zinc-500">by {e.course.instructor_name}</p>
-                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-200"><div className="h-full bg-emerald-500" style={{ width: `${e.progress}%` }} /></div>
-                      <p className="mt-1 text-[10px] text-zinc-500">{e.progress}% complete</p>
+                  <Link key={e.id} to={`/courses/${e.course.id}`} className="flex gap-3 border border-rule bg-room-sunk p-3 transition-colors hover:bg-rule/40">
+                    <img src={e.course.cover_image || "https://images.unsplash.com/photo-1558655146-d09347e92766?w=200&auto=format&fit=crop&q=80"} alt="" className="h-16 w-20 border border-rule object-cover" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold leading-tight text-ink">{e.course.title}</p>
+                      <p className="text-xs text-ink-muted">by {e.course.instructor_name}</p>
+                      <div className="mt-1.5 h-1.5 overflow-hidden bg-rule/50"><div className="h-full bg-gold" style={{ width: `${e.progress}%` }} /></div>
+                      <p className="tnum mt-1 text-[10px] text-ink-muted">{e.progress}% complete</p>
                     </div>
                   </Link>
                 ))}
               </div>
             )}
-          </div>
+          </Panel>
 
-          <div className="mt-4 rounded-[28px] bg-white p-6 shadow-sm">
+          <Panel className="mt-4 p-6">
             <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-900 text-white"><Receipt size={14} strokeWidth={2.5} /></span>
-              <h2 className="text-sm font-bold">Payment activity</h2>
-              <span className="ml-auto text-xs text-zinc-500">{payments.length} invoice{payments.length === 1 ? "" : "s"}</span>
+              <span className="flex h-7 w-7 items-center justify-center bg-ink text-ink-inverse"><Receipt size={14} strokeWidth={2.5} aria-hidden /></span>
+              <h2 className="text-sm font-semibold text-ink">Payment activity</h2>
+              <span className="tnum ml-auto text-xs text-ink-muted">{payments.length} invoice{payments.length === 1 ? "" : "s"}</span>
             </div>
-            <p className="mt-1 text-xs text-zinc-500">Invoices appear here after a successful payment (paid enrollments only).</p>
-            {paymentsQ.isLoading ? <p className="mt-3 text-sm text-zinc-500">Loading…</p> : payments.length === 0 ? (
-              <div className="mt-4 rounded-2xl border bg-zinc-50 p-6 text-center text-sm text-zinc-500">No paid invoices yet — free enrollments don’t generate invoices.</div>
+            <p className="mt-1 text-xs text-ink-muted">Invoices appear here after a successful payment (paid enrollments only).</p>
+            {paymentsQ.isLoading ? <p className="mt-3 text-sm text-ink-muted">Loading…</p> : payments.length === 0 ? (
+              <div className="mt-4 border border-rule bg-room-sunk p-6 text-center text-sm text-ink-muted">No paid invoices yet — free enrollments don’t generate invoices.</div>
             ) : (
               <div className="mt-4 space-y-3">
                 {payments.map((p) => {
@@ -356,58 +365,58 @@ export function ProfileContainer() {
                   const date = new Date(p.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
                   const inv = `QTNXT-${String(p.id).padStart(6, "0")}`;
                   return (
-                    <div key={p.id} className="flex flex-wrap items-center gap-3 rounded-2xl border bg-zinc-50 p-3">
-                      <img src={p.course.cover_image || "https://images.unsplash.com/photo-1558655146-d09347e92766?w=200&auto=format&fit=crop&q=80"} alt="" className="h-12 w-16 rounded-xl object-cover" />
+                    <div key={p.id} className="flex flex-wrap items-center gap-3 border border-rule bg-room-sunk p-3">
+                      <img src={p.course.cover_image || "https://images.unsplash.com/photo-1558655146-d09347e92766?w=200&auto=format&fit=crop&q=80"} alt="" className="h-12 w-16 border border-rule object-cover" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold leading-tight">{p.course.title}</p>
-                        <p className="text-xs text-zinc-500">{inv} • {date} • <span className="font-mono text-[11px]">{p.razorpay_payment_id.slice(0, 14)}…</span> • <span className="font-semibold text-emerald-600">Paid</span></p>
+                        <p className="truncate text-sm font-semibold leading-tight text-ink">{p.course.title}</p>
+                        <p className="tnum text-xs text-ink-muted">{inv} • {date} • <span className="font-mono text-[11px]">{p.razorpay_payment_id.slice(0, 14)}…</span> • <span className="font-semibold text-live">Paid</span></p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-white border px-2.5 py-1 text-xs font-bold">{amount}</span>
-                        <button onClick={() => openInvoice(p)} className="inline-flex items-center gap-1 rounded-full bg-[#0f172a] px-3 py-1.5 text-xs font-bold text-white hover:bg-black"><Download size={12} strokeWidth={2.5} /> Invoice</button>
+                        <span className="tnum border border-rule bg-room-raised px-2.5 py-1 text-xs font-semibold text-ink">{amount}</span>
+                        <Button type="button" variant="primary" size="sm" onClick={() => openInvoice(p)}><Download size={12} strokeWidth={2.5} aria-hidden /> Invoice</Button>
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
-          </div>
+          </Panel>
 
-          <div className="mt-4 rounded-[28px] bg-white p-6 shadow-sm">
+          <Panel className="mt-4 p-6">
             <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f172a] text-white"><Award size={14} strokeWidth={2.5} /></span>
-              <h2 className="text-sm font-bold">Certificates Achieved</h2>
-              <span className="ml-auto text-xs text-zinc-500">{certs.length} certificate{certs.length === 1 ? "" : "s"}</span>
+              <span className="flex h-7 w-7 items-center justify-center bg-gold text-ink"><Award size={14} strokeWidth={2.5} aria-hidden /></span>
+              <h2 className="text-sm font-semibold text-ink">Certificates Achieved</h2>
+              <span className="tnum ml-auto text-xs text-ink-muted">{certs.length} certificate{certs.length === 1 ? "" : "s"}</span>
             </div>
-            <p className="mt-1 text-xs text-zinc-500">Professional QTNXT certificates issued after marking a course as complete and rating it.</p>
-            {certsQ.isLoading ? <p className="mt-3 text-sm text-zinc-500">Loading…</p> : certs.length === 0 ? (
-              <div className="mt-4 rounded-2xl border bg-zinc-50 p-6 text-center text-sm text-zinc-500">No certificates yet — complete a course (100%) and rate it to earn your QTNXT certificate.</div>
+            <p className="mt-1 text-xs text-ink-muted">Professional QTNXT certificates issued after marking a course as complete and rating it.</p>
+            {certsQ.isLoading ? <p className="mt-3 text-sm text-ink-muted">Loading…</p> : certs.length === 0 ? (
+              <div className="mt-4 border border-rule bg-room-sunk p-6 text-center text-sm text-ink-muted">No certificates yet — complete a course (100%) and rate it to earn your QTNXT certificate.</div>
             ) : (
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {certs.map((c) => {
                   const enrollDate = new Date(c.enrolled_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
                   const completeDate = new Date(c.issued_at).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
                   return (
-                    <div key={c.id} className="rounded-2xl border bg-zinc-50 p-4">
+                    <div key={c.id} className="border border-rule bg-room-sunk p-4">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="text-sm font-bold leading-tight">{c.course.title}</p>
-                          <p className="mt-0.5 font-mono text-[11px] text-zinc-500">{c.certificate_id}</p>
+                          <p className="text-sm font-semibold leading-tight text-ink">{c.course.title}</p>
+                          <p className="mt-1 font-mono text-[11px] text-ink-muted">{c.certificate_id}</p>
                         </div>
-                        <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white">Certified</span>
+                        <Badge tone="gold" showIcon={false} className="text-[10px]">Certified</Badge>
                       </div>
-                      <div className="mt-3 space-y-1 text-xs text-zinc-600">
-                        <p><span className="font-semibold">Learner:</span> {c.learner_name}</p>
-                        <p><span className="font-semibold">Enrolled:</span> {enrollDate}</p>
-                        <p><span className="font-semibold">Completed:</span> {completeDate}</p>
+                      <div className="tnum mt-3 space-y-1 text-xs text-ink-muted">
+                        <p><span className="font-semibold text-ink">Learner:</span> {c.learner_name}</p>
+                        <p><span className="font-semibold text-ink">Enrolled:</span> {enrollDate}</p>
+                        <p><span className="font-semibold text-ink">Completed:</span> {completeDate}</p>
                       </div>
-                      <button onClick={() => setViewCert(c)} className="mt-3 inline-flex items-center gap-1 rounded-full bg-[#0f172a] px-3 py-1.5 text-xs font-bold text-white hover:bg-black"><Eye size={12} strokeWidth={2.5} /> View certificate</button>
+                      <Button type="button" variant="primary" size="sm" onClick={() => setViewCert(c)} className="mt-3"><Eye size={12} strokeWidth={2.5} aria-hidden /> View certificate</Button>
                     </div>
                   );
                 })}
               </div>
             )}
-          </div>
+          </Panel>
         </div>
       </div>
       {viewCert && (
@@ -420,7 +429,7 @@ export function ProfileContainer() {
           onClose={() => setViewCert(null)}
         />
       )}
-        {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white shadow-xl">{toast}</div>}
+        {toast && <Toast>{toast}</Toast>}
       </div>
     </>
   );

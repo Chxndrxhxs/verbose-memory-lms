@@ -4,9 +4,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link, useNavigate } from "react-router-dom";
-import { Home } from "@masterlms/shared";
+import { ArrowLeft } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 import { api } from "../lib/api";
+import { Button } from "../components/Button";
+import { Field } from "../components/Controls";
 
 const phoneSchema = z.object({
   phone: z.string().regex(/^[6-9]\d{9}$/, "Enter valid 10-digit mobile"),
@@ -88,95 +90,127 @@ export default function Login() {
   const loading = sendOtp.isPending || verify.isPending;
 
   return (
-    <div className="min-h-screen w-full bg-[#f6f5f1] lg:grid lg:grid-cols-2">
-      <div className="relative hidden h-screen lg:block">
-        <img src="https://images.pexels.com/photos/3182812/pexels-photo-3182812.jpeg?auto=compress&cs=tinysrgb&w=1400" alt="" className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        <div className="absolute left-10 top-10 flex items-center gap-2 text-white">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-bold text-[#0f172a]">K</span>
-          <span className="text-sm font-bold tracking-wide">QTNXT</span>
-        </div>
-        <div className="absolute bottom-10 left-10 right-10 text-white">
-          <p className="text-3xl font-extrabold leading-tight tracking-tight">Learn without<br/>pressure.</p>
-          <p className="mt-3 max-w-sm text-sm text-white/80">Join 12k+ learners finishing what they start — calm, focused, on their own terms.</p>
-          <div className="mt-6 flex items-center gap-3 text-xs text-white/70">
-            <span className="h-px w-8 bg-white/40" />
-            <span>Trusted by learners across 40+ cities</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex min-h-screen flex-col bg-white px-6 py-8 sm:px-10 lg:px-16 lg:py-12">
-        <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 lg:hidden">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f172a] text-xs font-bold text-white">K</span>
-            <span className="text-sm font-bold">QTNXT</span>
-            <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white">Learn</span>
+    <div className="flex min-h-screen items-center bg-room">
+      <div className="mx-auto w-full max-w-[420px] px-4 py-8">
+        <div className="flex items-center justify-between gap-3">
+          <Link to="/" className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center bg-ink text-[13px] font-bold text-ink-inverse">
+              Q
+            </span>
+            <span className="text-sm font-semibold tracking-tight text-ink">QTNXT</span>
           </Link>
-          <span className="hidden lg:block" />
-          <Link to="/" className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 hover:text-zinc-900">
-            <Home size={12} strokeWidth={2.5} />
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-muted transition-colors hover:text-ink"
+          >
+            <ArrowLeft size={13} strokeWidth={2.5} aria-hidden />
             Home
           </Link>
         </div>
 
-        <div className="flex flex-1 items-center">
-          <div className="mx-auto w-full max-w-sm">
-            <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">Welcome back</h1>
-            <p className="mt-2 text-sm text-zinc-500">{step === "phone" ? "Enter your mobile to get an OTP" : `OTP sent to +91 ${phone}`}</p>
+        <div className="py-12">
+          <h1 className="text-2xl font-semibold text-ink">
+            {step === "phone" ? "Sign in to keep learning" : "Enter your code"}
+          </h1>
+          <p className="tnum mt-1.5 text-sm text-ink-muted">
+            {step === "phone"
+              ? "We will send a one-time code to your mobile."
+              : `Sent to +91 ${phone}.`}
+          </p>
 
-            {step === "phone" ? (
-              <form onSubmit={phoneForm.handleSubmit((v) => sendOtp.mutate(v.phone))} className="mt-8 space-y-5">
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700">Mobile number</label>
-                  <div className="mt-1.5 flex rounded-xl border border-zinc-200 bg-zinc-50 transition focus-within:border-zinc-900 focus-within:bg-white">
-                    <span className="flex items-center px-3 text-sm font-semibold text-zinc-700">+91</span>
-                    <input
-                      {...phoneForm.register("phone")}
-                      onChange={(e) => phoneForm.setValue("phone", e.target.value.replace(/\D/g, "").slice(0, 10), { shouldValidate: true })}
-                      placeholder="98765 43210"
-                      className="w-full bg-transparent px-2 py-3 text-sm outline-none"
-                    />
-                  </div>
-                  {phoneForm.formState.errors.phone && <p className="mt-1 text-xs text-red-600">{phoneForm.formState.errors.phone.message}</p>}
-                </div>
-                <button type="submit" disabled={loading} className="w-full rounded-full bg-[#0f172a] py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-60">
-                  {sendOtp.isPending ? "Sending…" : "Send OTP"}
-                </button>
-                <p className="text-center text-xs text-zinc-500">Demo: OTP will appear in the toast below</p>
-              </form>
-            ) : (
-              <form onSubmit={otpForm.handleSubmit(onVerifySubmit)} className="mt-8 space-y-5">
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700">Enter OTP</label>
+          {step === "phone" ? (
+            <form
+              onSubmit={phoneForm.handleSubmit((v) => sendOtp.mutate(v.phone))}
+              className="mt-8 space-y-5"
+            >
+              <Field
+                label="Mobile number"
+                htmlFor="login-phone"
+                error={phoneForm.formState.errors.phone?.message}
+              >
+                <div className="flex border border-rule bg-room-raised transition-colors focus-within:border-ink">
+                  <span className="flex items-center border-r border-rule px-3 text-sm font-medium text-ink-muted">
+                    +91
+                  </span>
                   <input
-                    {...otpForm.register("otp")}
-                    disabled={verify.isPending || verifyDone.current}
-                    onChange={(e) => otpForm.setValue("otp", e.target.value.replace(/\D/g, "").slice(0, 4), { shouldValidate: true })}
-                    placeholder="1 2 3 4"
-                    className="mt-1.5 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3.5 text-center text-xl tracking-[0.7em] outline-none transition focus:border-zinc-900 focus:bg-white"
+                    id="login-phone"
+                    {...phoneForm.register("phone")}
+                    onChange={(e) =>
+                      phoneForm.setValue(
+                        "phone",
+                        e.target.value.replace(/\D/g, "").slice(0, 10),
+                        { shouldValidate: true },
+                      )
+                    }
+                    placeholder="98765 43210"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    className="tnum w-full bg-transparent px-3 py-3 text-sm text-ink placeholder:text-ink-faint"
                   />
-                  {otpForm.formState.errors.otp && <p className="mt-1 text-xs text-red-600">{otpForm.formState.errors.otp.message}</p>}
                 </div>
-                <button type="submit" disabled={loading} className="w-full rounded-full bg-[#0f172a] py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-60">
-                  {verify.isPending ? "Verifying…" : "Verify OTP"}
-                </button>
-                <button type="button" onClick={() => { verifyDone.current = false; setStep("phone"); }} className="w-full rounded-full border border-zinc-200 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">Change number</button>
-              </form>
-            )}
-          </div>
+              </Field>
+
+              <Button type="submit" variant="primary" size="lg" block disabled={loading}>
+                {sendOtp.isPending ? "Sending…" : "Send code"}
+              </Button>
+
+              <p className="text-xs leading-relaxed text-ink-faint">
+                In this demo the code appears in the message below instead of being
+                sent by SMS.
+              </p>
+            </form>
+          ) : (
+            <form onSubmit={otpForm.handleSubmit(onVerifySubmit)} className="mt-8 space-y-5">
+              <Field label="One-time code" htmlFor="login-otp" error={otpForm.formState.errors.otp?.message}>
+                <input
+                  id="login-otp"
+                  {...otpForm.register("otp")}
+                  disabled={verify.isPending || verifyDone.current}
+                  onChange={(e) =>
+                    otpForm.setValue("otp", e.target.value.replace(/\D/g, "").slice(0, 4), {
+                      shouldValidate: true,
+                    })
+                  }
+                  placeholder="0000"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  className="tnum w-full border border-rule bg-room-raised px-3 py-3.5 text-center text-xl tracking-[0.5em] text-ink placeholder:text-ink-faint transition-colors focus:border-ink"
+                />
+              </Field>
+
+              <Button type="submit" variant="primary" size="lg" block disabled={loading}>
+                {verify.isPending ? "Verifying…" : "Verify and continue"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                block
+                onClick={() => {
+                  verifyDone.current = false;
+                  setStep("phone");
+                }}
+              >
+                Use a different number
+              </Button>
+            </form>
+          )}
         </div>
 
-        <div className="space-y-3 pt-8">
-          <p className="text-center text-xs text-zinc-500">By continuing you agree to our Terms • Privacy</p>
-          <Link to="/" className="flex items-center justify-center gap-2 rounded-full bg-zinc-100 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-200">
-            <Home size={14} strokeWidth={2.5} />
-            Skip — go to Home
-          </Link>
-        </div>
+        <p className="text-xs leading-relaxed text-ink-faint">
+          By continuing you agree to the QTNXT terms and privacy policy.
+        </p>
       </div>
 
-      {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white shadow-xl">{toast}</div>}
+      <div aria-live="polite" aria-atomic="true">
+        {toast && (
+          <div
+            role="status"
+            className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 border border-ink bg-ink px-5 py-2.5 text-sm text-ink-inverse shadow-[0_18px_40px_-12px_rgba(30,18,36,0.4)]"
+          >
+            {toast}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

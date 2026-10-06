@@ -23,12 +23,6 @@ type ApiCourse = {
   lesson_count: number;
 };
 
-const accentMap: Record<string, string> = {
-  Design: "bg-[#3478ff]",
-  Business: "bg-[#3478ff]",
-  Engineering: "bg-[#111827]",
-  Marketing: "bg-emerald-500",
-};
 const iconMap: Record<string, typeof Diamond> = {
   Design: Diamond,
   Business: Hexagon,
@@ -51,7 +45,7 @@ function mapApi(c: ApiCourse): Course {
     originalPrice: origNum > priceNum ? origNum : undefined,
     rating: c.average_rating ? Number(c.average_rating).toFixed(1) : undefined,
     img: c.cover_image || "",
-    accent: accentMap[c.category] ?? "bg-zinc-900",
+    accent: "bg-ink",
     icon: iconMap[c.category] ?? Target,
     category: c.category,
     level: c.level,
