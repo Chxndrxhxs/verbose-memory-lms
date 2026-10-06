@@ -71,7 +71,15 @@ def publish_course(course: Course) -> Course:
 
 
 def replace_curriculum(course: Course, sections: list) -> Course:
+    from apps.enrollments.models import Enrollment
+
+    old_ids = list(
+        Lesson.objects.filter(section__course=course)
+        .order_by("section__order", "order")
+        .values_list("id", flat=True)
+    )
     course.sections.all().delete()
+    new_ids: list[int] = []
     for si, sec in enumerate(sections or []):
         s = Section.objects.create(
             course=course,
@@ -79,7 +87,7 @@ def replace_curriculum(course: Course, sections: list) -> Course:
             order=si,
         )
         for li, les in enumerate(sec.get("lessons", [])):
-            Lesson.objects.create(
+            lesson = Lesson.objects.create(
                 section=s,
                 title=les.get("title", "Untitled"),
                 kind=les.get("kind", "video"),
@@ -88,6 +96,18 @@ def replace_curriculum(course: Course, sections: list) -> Course:
                 quiz_data=les.get("quiz_data", []),
                 order=li,
             )
+            new_ids.append(lesson.id)
+    # A re-save deletes every old lesson row, so stored completions point at dead
+    # IDs. Remap them by position so learner progress survives content edits.
+    if old_ids and new_ids:
+        old_index = {lid: i for i, lid in enumerate(old_ids)}
+        for enrollment in Enrollment.objects.filter(course=course):
+            done = sorted(
+                old_index[lid] for lid in enrollment.completed_lessons if lid in old_index
+            )
+            enrollment.completed_lessons = [new_ids[i] for i in done if i < len(new_ids)]
+            enrollment.progress = int(len(enrollment.completed_lessons) / len(new_ids) * 100)
+            enrollment.save(update_fields=["completed_lessons", "progress"])
     return course
 
 
