@@ -16,12 +16,7 @@ import {
 } from "@masterlms/shared";
 import { TopNav } from "../components/TopNav";
 
-const STATS = [
-  { value: "12+", label: "Expert instructors" },
-  { value: "100%", label: "Self-paced learning" },
-  { value: "₹0", label: "To start learning" },
-  { value: "24/7", label: "Learn anytime" },
-];
+type AboutStats = { courses: number; learners: string; free: number };
 
 const PILLARS = [
   {
@@ -41,7 +36,7 @@ const PILLARS = [
   },
   {
     title: "Learn without pressure",
-    desc: "No rigid cohorts, no attendance panic. Start free, upgrade only when a course is worth it, cancel anytime.",
+    desc: "No rigid cohorts, no attendance panic. Start free, upgrade only when a course is worth it.",
     Icon: Heart,
   },
 ];
@@ -76,7 +71,7 @@ const FAQS = [
   },
   {
     q: "How do assignments work?",
-    a: "Instructors create timed MCQ assignments from real question papers. You get a focus-mode exam screen with a question palette, auto-save, instant scoring, and a full answer review afterwards.",
+    a: "Instructors create timed MCQ assignments from their own material. You get a focus-mode exam screen with a question palette, auto-save, instant scoring, and a full answer review afterwards.",
   },
   {
     q: "Are certificates verified?",
@@ -88,14 +83,19 @@ const FAQS = [
   },
 ];
 
-export function AboutView() {
+export function AboutView({ stats }: { stats: AboutStats }) {
+  const STATS = [
+    { value: String(stats.courses), label: "Courses open now" },
+    { value: stats.learners, label: "Learners" },
+    { value: String(stats.free), label: "Free to start" },
+    { value: "24/7", label: "Learn anytime" },
+  ];
+
   return (
     <div className="min-h-screen bg-room">
       <TopNav />
       <main id="main" className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
         <section className="relative overflow-hidden border border-ink bg-room-deep px-6 py-14 text-center text-ink-inverse sm:px-10 sm:py-20">
-          <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-ink-inverse/[0.04] blur-[80px]" />
-          <div className="absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-gold/10 blur-[90px]" />
           <span className="pointer-events-none absolute -right-6 top-1/2 hidden -translate-y-1/2 select-none text-[180px] font-semibold leading-none text-ink-inverse/[0.04] sm:block">
             Q
           </span>
@@ -104,7 +104,7 @@ export function AboutView() {
               <Sparkles size={12} aria-hidden /> About QTNXT
             </span>
             <h1 className="mx-auto mt-4 max-w-2xl text-3xl font-semibold leading-tight sm:text-5xl">
-              Learning that respects how you actually learn.
+              Learn at your own pace. Prove what you know.
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-ink-inverse/70 sm:text-base">
               QTNXT is a learning platform built for curious, self-driven people —

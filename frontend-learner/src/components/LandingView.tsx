@@ -65,7 +65,7 @@ const PILLARS: { title: string; body: string; Icon: LucideIcon }[] = [
   {
     Icon: Target,
     title: "Tests that match the work",
-    body: "Build an assessment from your own material, set marks and duration, then publish it to your learners.",
+    body: "Assessments come from the course's own material, so the test matches what you just learned.",
   },
 ];
 
@@ -147,7 +147,7 @@ export function LandingView({ courses }: { courses: Course[] }) {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink">Python Full Stack</p>
-                <p className="text-xs text-ink-faint">Chapter 2 · Your first live session</p>
+                <p className="text-xs text-ink-faint">Chapter 2 · Your first function</p>
               </div>
               <span className="tnum shrink-0 text-xs font-semibold text-gold-deep">68%</span>
             </div>
@@ -172,9 +172,9 @@ export function LandingView({ courses }: { courses: Course[] }) {
 
             <ul className="divide-y divide-rule border-t border-rule">
               {[
-                ["Scheduling and reminders", true],
-                ["Writing the run sheet", true],
-                ["Handling the room", false],
+                ["Reading the traceback", true],
+                ["Writing your first function", true],
+                ["Debugging with prints", false],
               ].map(([label, done]) => (
                 <li key={label as string} className="flex items-center gap-3 px-4 py-2.5">
                   <span

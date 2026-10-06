@@ -1,5 +1,5 @@
-import { AboutView } from "../components/AboutView";
+import { AboutContainer } from "../containers/About.container";
 
 export default function About() {
-  return <AboutView />;
+  return <AboutContainer />;
 }
