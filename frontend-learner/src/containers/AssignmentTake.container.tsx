@@ -82,6 +82,8 @@ function TakeRunner({ take }: { take: TakeData }) {
     buildSubmitAnswers,
     submitSection,
     isSectionUnlocked,
+    isSectionSubmitted,
+    sequential,
     isCurrentSectionLast,
     isLastSection,
   } = useAssignmentQuestionState(
@@ -179,8 +181,9 @@ function TakeRunner({ take }: { take: TakeData }) {
     submitMutation.mutate();
   }, [submitMutation]);
 
-  // Sequential mode: finishing a section unlocks the next one. On the final
-  // section there is nothing left to unlock, so it submits the whole exam.
+  // Sequential mode: finishing a section unlocks and advances to the next
+  // one (handled in the hook). On the final section there is nothing left to
+  // unlock, so it submits the whole exam.
   const onSubmitSection = useCallback(() => {
     submitSection(currentSectionIndex);
     if (isLastSection) {
@@ -225,6 +228,8 @@ function TakeRunner({ take }: { take: TakeData }) {
         onPrevious={previous}
         onSubmitSection={onSubmitSection}
         isSectionUnlocked={isSectionUnlocked}
+        isSectionSubmitted={isSectionSubmitted}
+        sequential={sequential}
         isCurrentSectionLast={isCurrentSectionLast}
         isLastSection={isLastSection}
         onEnterFullscreen={enter}

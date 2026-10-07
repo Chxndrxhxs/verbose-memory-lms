@@ -28,11 +28,11 @@ export function SubmitConfirmModal({ counts, onConfirm, onCancel, submitting }: 
       title="Submit Assignment?"
       description="Are you sure you want to submit your assignment? This action cannot be undone."
       footer={
-        <div className="flex gap-2">
-          <Button variant="secondary" block onClick={onCancel} disabled={submitting}>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Button variant="secondary" size="sm" block onClick={onCancel} disabled={submitting}>
             Cancel
           </Button>
-          <Button variant="primary" block onClick={onConfirm} disabled={submitting}>
+          <Button variant="primary" size="sm" block onClick={onConfirm} disabled={submitting}>
             {submitting ? (
               <>
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />

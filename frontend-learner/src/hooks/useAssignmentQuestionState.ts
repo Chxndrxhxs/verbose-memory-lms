@@ -121,56 +121,6 @@ export function useAssignmentQuestionState(
   const firstRun = useRef(true);
 
   const questions = questionsRef.current;
-
-  const getDecoded = useCallback(
-    (index: number) => {
-      const q = questions[index];
-      const raw = answers[String(q.stepId)]?.[String(q.questionId)];
-      const decoded = decodeAnswer(raw);
-      return { ...q, ...decoded, status: computeStatus(visited.has(index), decoded.selected, decoded.marked) };
-    },
-    [questions, answers, visited],
-  );
-
-  const questionsWithStatus: QuestionRow[] = questions.map((_, i) => getDecoded(i));
-
-  const selectAnswer = useCallback(
-    (optionIndex: number) => {
-      const q = questions[currentIndex];
-      setAnswers((prev) => {
-        const step = { ...(prev[String(q.stepId)] ?? {}) };
-        step[String(q.questionId)] = optionIndex;
-        return { ...prev, [String(q.stepId)]: step };
-      });
-    },
-    [questions, currentIndex],
-  );
-
-  const markForReview = useCallback(() => {
-    const q = questions[currentIndex];
-    const raw = answers[String(q.stepId)]?.[String(q.questionId)];
-    const decoded = decodeAnswer(raw);
-    setAnswers((prev) => {
-      const step = { ...(prev[String(q.stepId)] ?? {}) };
-      const encoded = encodeAnswer(decoded.selected, !decoded.marked);
-      if (encoded === undefined) {
-        delete step[String(q.questionId)];
-      } else {
-        step[String(q.questionId)] = encoded;
-      }
-      return { ...prev, [String(q.stepId)]: step };
-    });
-  }, [questions, answers, currentIndex]);
-
-  const clearAnswer = useCallback(() => {
-    const q = questions[currentIndex];
-    setAnswers((prev) => {
-      const step = { ...(prev[String(q.stepId)] ?? {}) };
-      delete step[String(q.questionId)];
-      return { ...prev, [String(q.stepId)]: step };
-    });
-  }, [questions, currentIndex]);
-
   const sections = sectionsRef.current;
   const currentSectionIndex = sections.findIndex(
     (s) => currentIndex >= s.startIndex && currentIndex <= s.endIndex,
@@ -206,23 +156,101 @@ export function useAssignmentQuestionState(
     [attemptId],
   );
 
+  // A submitted section stays readable but its answers are frozen.
+  const isSectionSubmitted = useCallback(
+    (sectionIdx: number) => submittedSections.has(sectionIdx),
+    [submittedSections],
+  );
+  const currentSectionLocked =
+    sequential &&
+    currentSectionIndex >= 0 &&
+    isSectionSubmitted(currentSectionIndex);
+
+  const getDecoded = useCallback(
+    (index: number) => {
+      const q = questions[index];
+      const raw = answers[String(q.stepId)]?.[String(q.questionId)];
+      const decoded = decodeAnswer(raw);
+      return { ...q, ...decoded, status: computeStatus(visited.has(index), decoded.selected, decoded.marked) };
+    },
+    [questions, answers, visited],
+  );
+
+  const questionsWithStatus: QuestionRow[] = questions.map((_, i) => getDecoded(i));
+
+  const selectAnswer = useCallback(
+    (optionIndex: number) => {
+      if (currentSectionLocked) return;
+      const q = questions[currentIndex];
+      setAnswers((prev) => {
+        const step = { ...(prev[String(q.stepId)] ?? {}) };
+        step[String(q.questionId)] = optionIndex;
+        return { ...prev, [String(q.stepId)]: step };
+      });
+    },
+    [questions, currentIndex, currentSectionLocked],
+  );
+
+  const markForReview = useCallback(() => {
+    if (currentSectionLocked) return;
+    const q = questions[currentIndex];
+    const raw = answers[String(q.stepId)]?.[String(q.questionId)];
+    const decoded = decodeAnswer(raw);
+    setAnswers((prev) => {
+      const step = { ...(prev[String(q.stepId)] ?? {}) };
+      const encoded = encodeAnswer(decoded.selected, !decoded.marked);
+      if (encoded === undefined) {
+        delete step[String(q.questionId)];
+      } else {
+        step[String(q.questionId)] = encoded;
+      }
+      return { ...prev, [String(q.stepId)]: step };
+    });
+  }, [questions, answers, currentIndex, currentSectionLocked]);
+
+  const clearAnswer = useCallback(() => {
+    if (currentSectionLocked) return;
+    const q = questions[currentIndex];
+    setAnswers((prev) => {
+      const step = { ...(prev[String(q.stepId)] ?? {}) };
+      delete step[String(q.questionId)];
+      return { ...prev, [String(q.stepId)]: step };
+    });
+  }, [questions, currentIndex, currentSectionLocked]);
+
   const submitSection = useCallback(
     (sectionIdx: number) => {
       if (!sequential) return;
-      persistSubmitted(new Set([...submittedSections, sectionIdx]));
+      const next = new Set(submittedSections);
+      next.add(sectionIdx);
+      persistSubmitted(next);
+      // Advance into the next section right away. Unlock state derives from
+      // submittedSections, which updates async, so jump directly to the
+      // freshly unlocked section instead of routing through goToSection.
+      const following = sectionIdx + 1;
+      if (following < sections.length) {
+        const target = sections[following].startIndex;
+        setCurrentIndex(target);
+        setVisited((prev) => {
+          if (prev.has(target)) return prev;
+          const nextVisited = new Set(prev);
+          nextVisited.add(target);
+          return nextVisited;
+        });
+      }
     },
-    [sequential, submittedSections, persistSubmitted],
+    [sequential, submittedSections, persistSubmitted, sections],
   );
 
-  // A section is reachable when it is the first, or every earlier one is done.
+  // A section is reachable when it is the first, or every earlier one is
+  // done. unlockedUpTo is the first not-yet-submitted section — the one
+  // being worked on — so submitting section N unlocks section N+1.
   const unlockedUpTo = useMemo(() => {
     if (!sequential) return Number.MAX_SAFE_INTEGER;
-    let last = 0;
     for (let i = 0; i < sections.length; i += 1) {
-      if (!submittedSections.has(i)) break;
-      last = i;
+      if (!submittedSections.has(i)) return i;
     }
-    return last;
+    return sections.length - 1;
   }, [sequential, sections.length, submittedSections]);
 
   const isSectionUnlocked = useCallback(
@@ -348,6 +376,7 @@ export function useAssignmentQuestionState(
     counts,
     sequential,
     submittedSections,
+    isSectionSubmitted,
     submitSection,
     isSectionUnlocked,
     isIndexUnlocked,

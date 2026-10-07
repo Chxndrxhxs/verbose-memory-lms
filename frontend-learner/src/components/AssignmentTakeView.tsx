@@ -81,6 +81,8 @@ type Props = {
   onPrevious: () => void;
   onSubmitSection: () => void;
   isSectionUnlocked: (sectionIndex: number) => boolean;
+  isSectionSubmitted: (sectionIndex: number) => boolean;
+  sequential: boolean;
   isCurrentSectionLast: boolean;
   isLastSection: boolean;
   onEnterFullscreen: () => void;
@@ -112,6 +114,8 @@ export function AssignmentTakeView({
   onPrevious,
   onSubmitSection,
   isSectionUnlocked,
+  isSectionSubmitted,
+  sequential,
   isCurrentSectionLast,
   isLastSection,
   onEnterFullscreen,
@@ -139,6 +143,35 @@ export function AssignmentTakeView({
 
   const current = questions[currentIndex];
   const section = sections[currentSectionIndex];
+  const multiSection = sections.length > 1;
+  const currentSectionSubmitted =
+    multiSection &&
+    currentSectionIndex >= 0 &&
+    isSectionSubmitted(currentSectionIndex);
+
+  // Palette and legend are scoped to the current section. Numbering stays
+  // global (continuous across the exam), matching the Q-range palette header.
+  const sectionQuestions = useMemo(() => {
+    if (!section) {
+      return questions.map((q, i) => ({ q, globalIndex: i }));
+    }
+    const start = multiSection ? section.startIndex : 0;
+    const end = multiSection ? section.endIndex : questions.length - 1;
+    return questions
+      .slice(start, end + 1)
+      .map((q, i) => ({ q, globalIndex: start + i }));
+  }, [questions, section, multiSection]);
+
+  const sectionCounts: Counts = useMemo(() => {
+    const slice = sectionQuestions.map(({ q }) => q);
+    return {
+      answered: slice.filter((q) => q.status === "answered").length,
+      unanswered: slice.filter((q) => q.status === "unanswered").length,
+      review: slice.filter((q) => q.status === "review").length,
+      notVisited: slice.filter((q) => q.status === "not-visited").length,
+      total: slice.length,
+    };
+  }, [sectionQuestions]);
 
   useEffect(() => {
     if (!confirmOpen) return;
@@ -211,12 +244,17 @@ export function AssignmentTakeView({
       )}
 
       <main id="main" className="mx-auto max-w-7xl px-3 py-4 sm:px-6">
-        {sections.length > 1 && (
+        {multiSection && (
           <SectionTabs
             sections={sections}
             currentSectionIndex={currentSectionIndex}
             onSelect={onGoToSection}
             isUnlocked={isSectionUnlocked}
+            isSectionSubmitted={isSectionSubmitted}
+            onSubmitSection={onSubmitSection}
+            onSubmitExam={() => setConfirmOpen(true)}
+            showSubmitSection={sequential && !currentSectionSubmitted}
+            isLastSection={isLastSection}
           />
         )}
 
@@ -225,6 +263,12 @@ export function AssignmentTakeView({
           <div className="min-w-0">
             {current ? (
               <Panel className="p-5 sm:p-6">
+                {currentSectionSubmitted && (
+                  <div className="mb-4 flex items-center gap-2 border border-live/25 bg-live-soft px-3 py-2 text-xs font-semibold text-live">
+                    <Check size={13} aria-hidden />
+                    Section submitted — answers are locked
+                  </div>
+                )}
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <h2 className="tnum text-base font-semibold text-ink">
                     Question {currentIndex + 1}
@@ -256,6 +300,7 @@ export function AssignmentTakeView({
                         key={oi}
                         type="button"
                         onClick={() => onAnswer(oi)}
+                        disabled={currentSectionSubmitted}
                         className={cn(
                           "flex w-full items-center gap-3 border px-4 py-3 text-left text-sm transition-colors",
                           checked
@@ -295,10 +340,20 @@ export function AssignmentTakeView({
 
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-rule pt-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="secondary" size="sm" onClick={onMarkForReview}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={onMarkForReview}
+                      disabled={currentSectionSubmitted}
+                    >
                       Mark for review &amp; next
                     </Button>
-                    <Button variant="secondary" size="sm" onClick={onClear}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={onClear}
+                      disabled={currentSectionSubmitted}
+                    >
                       Clear response
                     </Button>
                   </div>
@@ -311,14 +366,40 @@ export function AssignmentTakeView({
                     >
                       Previous
                     </Button>
-                    {isCurrentSectionLast ? (
+                    {sequential && !currentSectionSubmitted ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={onNext}
+                          disabled={isCurrentSectionLast}
+                        >
+                          Save &amp; next
+                          <ChevronRight size={14} className="ml-1 inline" aria-hidden />
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={
+                            isLastSection
+                              ? () => setConfirmOpen(true)
+                              : onSubmitSection
+                          }
+                          disabled={submitting}
+                        >
+                          {isLastSection ? "Submit exam" : "Submit section"}
+                        </Button>
+                      </>
+                    ) : isCurrentSectionLast ? (
                       <Button
                         variant="primary"
                         size="sm"
                         onClick={onSubmitSection}
                         disabled={submitting}
                       >
-                        {isLastSection ? "Submit exam" : "Submit section"}
+                        {currentSectionSubmitted
+                          ? "Go to next section"
+                          : "Submit section"}
                       </Button>
                     ) : (
                       <Button variant="primary" size="sm" onClick={onNext}>
@@ -377,7 +458,7 @@ export function AssignmentTakeView({
                 <Flag size={15} className="text-ink-faint" aria-hidden />
                 Question palette
                 <Badge tone="muted" showIcon={false} className="tnum">
-                  {counts.total}
+                  {sectionCounts.total}
                 </Badge>
               </span>
               <ChevronRight
@@ -397,7 +478,7 @@ export function AssignmentTakeView({
                       <span className={cn("h-3 w-3 shrink-0", item.dot)} />
                       <span>{item.label}</span>
                       <span className="tnum ml-auto font-semibold text-ink-muted">
-                        ({counts[item.countKey]})
+                        ({sectionCounts[item.countKey]})
                       </span>
                     </li>
                   ))}
@@ -415,25 +496,27 @@ export function AssignmentTakeView({
                 )}
 
                 <div className="mt-2 grid grid-cols-5 gap-2">
-                  {questions.map((q, i) => {
-                    const isCurrent = i === currentIndex;
+                  {sectionQuestions.map(({ q, globalIndex }) => {
+                    const isCurrent = globalIndex === currentIndex;
                     const unlocked = isSectionUnlocked(
                       sections.findIndex(
-                        (s) => i >= s.startIndex && i <= s.endIndex,
+                        (s) =>
+                          globalIndex >= s.startIndex &&
+                          globalIndex <= s.endIndex,
                       ),
                     );
                     return (
                       <button
                         key={`${q.stepId}-${q.questionId}`}
                         type="button"
-                        onClick={() => handlePaletteClick(i)}
+                        onClick={() => handlePaletteClick(globalIndex)}
                         disabled={!unlocked}
                         title={
                           unlocked
-                            ? `Question ${i + 1} — ${q.status.replace("-", " ")}`
+                            ? `Question ${globalIndex + 1} — ${q.status.replace("-", " ")}`
                             : "Submit the previous section to unlock"
                         }
-                        aria-label={`Question ${i + 1}: ${q.status.replace("-", " ")}`}
+                        aria-label={`Question ${globalIndex + 1}: ${q.status.replace("-", " ")}`}
                         aria-current={isCurrent}
                         className={cn(
                           "tnum inline-flex h-9 w-9 items-center justify-center text-xs font-semibold transition-colors",
@@ -441,7 +524,7 @@ export function AssignmentTakeView({
                           isCurrent && "ring-2 ring-ink ring-offset-1",
                         )}
                       >
-                        {i + 1}
+                        {globalIndex + 1}
                       </button>
                     );
                   })}
@@ -591,42 +674,79 @@ function SectionTabs({
   currentSectionIndex,
   onSelect,
   isUnlocked,
+  isSectionSubmitted,
+  onSubmitSection,
+  onSubmitExam,
+  showSubmitSection,
+  isLastSection,
 }: {
   sections: QuestionSection[];
   currentSectionIndex: number;
   onSelect: (sectionIndex: number) => void;
   isUnlocked: (sectionIndex: number) => boolean;
+  isSectionSubmitted: (sectionIndex: number) => boolean;
+  onSubmitSection: () => void;
+  onSubmitExam: () => void;
+  showSubmitSection: boolean;
+  isLastSection: boolean;
 }) {
   return (
-    <div className="overflow-x-auto border-b border-rule">
-      <div className="flex min-w-fit gap-6" role="tablist" aria-label="Exam sections">
-        {sections.map((section, i) => {
-          const active = i === currentSectionIndex;
-          const unlocked = isUnlocked(i);
-          return (
-            <button
-              key={`${section.stepId}-${i}`}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              disabled={!unlocked}
-              onClick={() => onSelect(i)}
-              title={unlocked ? undefined : "Submit the previous section to unlock"}
-              className={cn(
-                "-mb-px flex items-center gap-1.5 border-b-2 px-1 py-3 text-sm font-semibold whitespace-nowrap transition-colors",
-                active
-                  ? "border-ink text-ink"
-                  : unlocked
-                    ? "border-transparent text-ink-muted hover:text-ink"
-                    : "cursor-not-allowed border-transparent text-ink-faint",
-              )}
-            >
-              {!unlocked && <Lock size={12} className="shrink-0" aria-hidden />}
-              {section.name}
-            </button>
-          );
-        })}
+    <div className="flex items-center border-b border-rule">
+      <div className="min-w-0 flex-1 overflow-x-auto">
+        <div
+          className="flex min-w-fit gap-6"
+          role="tablist"
+          aria-label="Exam sections"
+        >
+          {sections.map((section, i) => {
+            const active = i === currentSectionIndex;
+            const unlocked = isUnlocked(i);
+            const submitted = unlocked && isSectionSubmitted(i);
+            return (
+              <button
+                key={`${section.stepId}-${i}`}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                disabled={!unlocked}
+                onClick={() => onSelect(i)}
+                title={
+                  unlocked
+                    ? submitted
+                      ? "Section submitted — answers locked"
+                      : undefined
+                    : "Submit the previous section to unlock"
+                }
+                className={cn(
+                  "-mb-px flex items-center gap-1.5 border-b-2 px-1 py-3 text-sm font-semibold whitespace-nowrap transition-colors",
+                  active
+                    ? "border-ink text-ink"
+                    : unlocked
+                      ? "border-transparent text-ink-muted hover:text-ink"
+                      : "cursor-not-allowed border-transparent text-ink-faint",
+                )}
+              >
+                {!unlocked && <Lock size={12} className="shrink-0" aria-hidden />}
+                {submitted && (
+                  <Check size={12} className="shrink-0 text-live" aria-hidden />
+                )}
+                {section.name}
+              </button>
+            );
+          })}
+        </div>
       </div>
+      {showSubmitSection && (
+        <div className="shrink-0 px-3 py-2">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={isLastSection ? onSubmitExam : onSubmitSection}
+          >
+            {isLastSection ? "Submit exam" : "Submit section"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
