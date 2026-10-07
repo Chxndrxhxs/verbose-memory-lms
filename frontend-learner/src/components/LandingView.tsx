@@ -6,7 +6,6 @@ import {
   Check,
   ChevronDown,
   Clock,
-  Play,
   Shield,
   Target,
   type LucideIcon,
@@ -23,8 +22,7 @@ import type { Course } from "../types/course";
  * "Maya Chen". The hero image was commented out and replaced with the blur.
  *
  * None of it could belong to only this product. The new page makes specific,
- * checkable promises instead, and the proof object is the actual catalogue
- * plus the actual lesson player.
+ * checkable promises instead, and the proof object is the actual catalogue.
  */
 
 const FAQS = [
@@ -42,7 +40,7 @@ const FAQS = [
   },
   {
     q: "Can I try before paying?",
-    a: "Free courses are marked free in the catalogue. Paid courses often include preview lessons you can open before enrolling.",
+    a: "Free courses are marked free in the catalogue. Every course shows its full chapter list before you enroll.",
   },
 ];
 
@@ -82,12 +80,13 @@ export function LandingView({ courses }: { courses: Course[] }) {
       <main id="main">
 
       {/*
-        Hero: asymmetric editorial split. The promise leads from the left; the
-        lesson player answers it on the right. No orbs, no blur, no centred
-        stack. The composition has to be recognisable as reading, not as SaaS.
+        Hero: a single reading column. The promise leads; the real
+        catalogue counts answer it. No orbs, no blur, no centred
+        stack, no mock player. The composition has to be recognisable
+        as reading, not as SaaS.
       */}
-      <section className="mx-auto grid w-full max-w-[1200px] gap-12 px-4 pb-16 pt-10 sm:px-6 sm:pt-16 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16 lg:pb-24">
-        <div className="min-w-0">
+      <section className="mx-auto grid w-full max-w-[1200px] gap-12 px-4 pb-16 pt-10 sm:px-6 sm:pt-16 lg:pb-24">
+        <div className="min-w-0 max-w-3xl">
           <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
             <span aria-hidden className="h-1.5 w-1.5 bg-gold-deep" />
             {courses.length} courses open now
@@ -136,71 +135,6 @@ export function LandingView({ courses }: { courses: Course[] }) {
               </div>
             ))}
           </dl>
-        </div>
-
-        {/* The proof object: a real lesson player frame, in the real system. */}
-        <div className="min-w-0">
-          <div className="border border-rule-strong bg-room-raised">
-            <div className="flex items-center gap-3 border-b border-rule px-4 py-3">
-              <span className="flex h-7 w-7 items-center justify-center bg-ink text-ink-inverse">
-                <Play size={12} strokeWidth={2.5} aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-ink">Python Full Stack</p>
-                <p className="text-xs text-ink-faint">Chapter 2 · Your first function</p>
-              </div>
-              <span className="tnum shrink-0 text-xs font-semibold text-gold-deep">68%</span>
-            </div>
-
-            <div className="aspect-video w-full bg-room-deep p-6">
-              <div className="flex h-full flex-col justify-center gap-2">
-                <p className="font-serif text-[22px] leading-snug text-ink-inverse">
-                  Pause anywhere. Your place is kept.
-                </p>
-                <p className="max-w-[42ch] text-[13px] leading-relaxed text-ink-inverse/60">
-                  Progress, notes and the lesson you were on are saved as you go.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 border-t border-rule px-4 py-3">
-              <div className="h-1.5 flex-1 bg-rule/50">
-                <div className="h-full w-[68%] bg-gold" />
-              </div>
-              <span className="tnum shrink-0 text-[11px] text-ink-faint">11:40 / 17:00</span>
-            </div>
-
-            <ul className="divide-y divide-rule border-t border-rule">
-              {[
-                ["Reading the traceback", true],
-                ["Writing your first function", true],
-                ["Debugging with prints", false],
-              ].map(([label, done]) => (
-                <li key={label as string} className="flex items-center gap-3 px-4 py-2.5">
-                  <span
-                    className={cn(
-                      "flex h-5 w-5 shrink-0 items-center justify-center border",
-                      done ? "border-live/30 bg-live-soft text-live" : "border-rule bg-room-sunk",
-                    )}
-                  >
-                    {done ? (
-                      <Check size={11} strokeWidth={3} aria-hidden />
-                    ) : (
-                      <Play size={9} strokeWidth={2.5} aria-hidden className="text-ink-faint" />
-                    )}
-                  </span>
-                  <span
-                    className={cn(
-                      "min-w-0 flex-1 truncate text-sm",
-                      done ? "text-ink-muted" : "font-medium text-ink",
-                    )}
-                  >
-                    {label as string}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
       </section>
 

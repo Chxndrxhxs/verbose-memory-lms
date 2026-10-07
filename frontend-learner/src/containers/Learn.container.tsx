@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "@masterlms/shared";
 import type { SharedApiCourseDetail } from "@masterlms/shared";
-import { toEmbed } from "@masterlms/shared";
+import { toEmbed, youtubeId } from "@masterlms/shared";
 import { absoluteMediaUrl, api } from "../lib/api";
 import { LearnView } from "../components/LearnView";
 
@@ -205,6 +205,13 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
   if (total === 0) return <p className="py-10 text-center text-sm text-ink-muted">No lessons yet. <Link to={`/courses/${courseId}`} className="inline-flex items-center gap-1 font-semibold text-ink underline"><ArrowLeft size={12} strokeWidth={2.5} aria-hidden /> Back to course</Link></p>;
 
   const embedUrl = activeLesson ? toEmbed(activeLesson.resource_url) : null;
+  const videoUrl =
+    activeLesson?.kind === "video" &&
+    !embedUrl &&
+    activeLesson.resource_url?.match(/\.(mp4|webm|mov)(\?|$)/)
+      ? absoluteMediaUrl(activeLesson.resource_url)
+      : null;
+  const ytVideoId = activeLesson?.kind === "video" ? youtubeId(activeLesson.resource_url) : null;
   const textBody = activeLesson?.kind === "text" ? (activeLesson.resource_url ?? `*${activeLesson.title}*`) : "";
   const pdfUrl = absoluteMediaUrl(activeLesson?.resource_url);
   const audioUrl = activeLesson?.kind === "audio" ? absoluteMediaUrl(activeLesson.resource_url) : null;
@@ -218,6 +225,8 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
       active={active}
       activeLesson={activeLesson}
       embedUrl={embedUrl}
+      videoUrl={videoUrl}
+      ytVideoId={ytVideoId}
       textBody={textBody}
       pdfUrl={pdfUrl}
       audioUrl={audioUrl}

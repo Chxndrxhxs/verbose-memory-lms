@@ -12,7 +12,7 @@ import {
   toEmbed,
   type LucideIcon,
 } from "@masterlms/shared";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { absoluteMediaUrl } from "../lib/api";
 import { cn } from "../lib/utils";
 import type { Chapter, Lesson, LessonKind, QuizQ, QuizQuestionType } from "../types/courseCreate";
@@ -36,6 +36,7 @@ type Props = {
   onDeleteLesson: (lessonId: string) => void;
   onUploadLesson: (lessonId: string, file: File) => void;
   onUploadQuizMedia: (file: File) => Promise<string>;
+  fetchVideoTitle: (url: string) => Promise<string | null>;
 };
 
 const QUIZ_TYPES: { value: QuizQuestionType; label: string; Icon: LucideIcon }[] = [
@@ -398,13 +399,16 @@ function QuizEditor({ lesson, onUpdate, onUploadMedia }: {
   );
 }
 
-function LessonEditor({ lesson, onUpdate, uploading, onUpload, onUploadMedia }: {
+function LessonEditor({ lesson, onUpdate, uploading, onUpload, onUploadMedia, fetchVideoTitle }: {
   lesson: Lesson;
   onUpdate: (patch: Partial<Lesson>) => void;
   uploading: boolean;
   onUpload: (file: File) => void;
   onUploadMedia: (file: File) => Promise<string>;
+  fetchVideoTitle: (url: string) => Promise<string | null>;
 }) {
+  // Out-of-order guard: only the latest blur's response may fill the title.
+  const autoTitleReq = useRef(0);
   switch (lesson.kind) {
     case "text":
       return (
@@ -449,6 +453,13 @@ function LessonEditor({ lesson, onUpdate, uploading, onUpload, onUploadMedia }: 
               <input
                 value={lesson.resource_url}
                 onChange={(e) => onUpdate({ resource_url: e.target.value })}
+                onBlur={() => {
+                  if (lesson.title !== `New video`) return;
+                  const seq = ++autoTitleReq.current;
+                  void fetchVideoTitle(lesson.resource_url).then((t) => {
+                    if (t && seq === autoTitleReq.current) onUpdate({ title: t });
+                  });
+                }}
                 placeholder={isEmbedCode ? '<iframe src="https://www.youtube.com/embed/…" …></iframe>' : "https://youtu.be/… or youtube.com/watch?v=…"}
                 className="min-w-0 flex-1 rounded-sm border border-rule bg-slate-sunk px-3 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-ink focus:bg-slate-panel"
               />
@@ -516,7 +527,7 @@ function LessonEditor({ lesson, onUpdate, uploading, onUpload, onUploadMedia }: 
   }
 }
 
-export function ChapterSection({ chapter, uploadingId, onRename, onDelete, onAddLesson, onUpdateLesson, onDeleteLesson, onUploadLesson, onUploadQuizMedia }: Props) {
+export function ChapterSection({ chapter, uploadingId, onRename, onDelete, onAddLesson, onUpdateLesson, onDeleteLesson, onUploadLesson, onUploadQuizMedia, fetchVideoTitle }: Props) {
   return (
     <div className="border border-rule bg-slate-sunk p-5 sm:p-6">
       <div className="flex items-center justify-between gap-2">
@@ -570,6 +581,7 @@ export function ChapterSection({ chapter, uploadingId, onRename, onDelete, onAdd
                     uploading={uploadingId === l.id}
                     onUpload={(file) => onUploadLesson(l.id, file)}
                     onUploadMedia={onUploadQuizMedia}
+                    fetchVideoTitle={fetchVideoTitle}
                   />
                 </div>
                 <button type="button" onClick={() => onDeleteLesson(l.id)} className="text-xs text-ink-faint hover:text-halt">

@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Link } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -22,6 +23,8 @@ import { Badge } from "./Badge";
 import { Button } from "./Button";
 import { Textarea } from "./Controls";
 import { Panel } from "./Panel";
+import { useVideoResume } from "../hooks/useVideoResume";
+import { useYouTubeResume } from "../hooks/useYouTubeResume";
 
 export type LearnLesson = {
   id: number;
@@ -45,6 +48,8 @@ type Props = {
   active: number | null;
   activeLesson: LearnLesson | undefined;
   embedUrl: string | null;
+  videoUrl: string | null;
+  ytVideoId: string | null;
   textBody: string;
   pdfUrl: string | null;
   audioUrl: string | null;
@@ -79,12 +84,16 @@ type Props = {
 
 export function LearnView(p: Props) {
   const {
-    courseId, title, progress, active, activeLesson, embedUrl, textBody,
+    courseId, title, progress, active, activeLesson, embedUrl, videoUrl, ytVideoId, textBody,
     pdfUrl, audioUrl, sections, completed, openSections, tab, note,
     quizAnswers, quizSubmitted, quizVerdict, quizGrading, quizError, quizAttempt, quizBest,
     showRating, selectedRating, submittingRating,
     userRating, toast,
   } = p;
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const ytPlayerRef = useRef<HTMLDivElement>(null);
+  useVideoResume(activeLesson?.id, videoRef);
+  useYouTubeResume(ytVideoId, activeLesson?.id, ytPlayerRef);
   return (
     <div className="min-h-screen bg-room">
       <div className="sticky top-0 z-30 flex justify-center bg-room px-3 py-3 sm:px-4">
@@ -105,14 +114,26 @@ export function LearnView(p: Props) {
       <main id="main" className="mx-auto grid max-w-[1280px] gap-4 px-3 pb-6 sm:px-4 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0">
           <div className="overflow-hidden border border-rule bg-room-raised">
-            {activeLesson?.kind === "video" && embedUrl ? (
+            {activeLesson && (
+              <div className="flex items-center justify-between gap-4 border-b border-rule px-4 py-3">
+                <h2 className="truncate text-sm font-semibold text-ink">{activeLesson.title}</h2>
+                <span className="tnum shrink-0 text-xs text-ink-muted">{activeLesson.duration}</span>
+              </div>
+            )}
+            {activeLesson?.kind === "video" && ytVideoId ? (
+              <div ref={ytPlayerRef} className="aspect-video w-full bg-black" />
+            ) : activeLesson?.kind === "video" && embedUrl ? (
               <div className="aspect-video w-full bg-black">
                 <iframe src={embedUrl} title={activeLesson.title} className="h-full w-full" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
               </div>
-            ) : activeLesson?.kind === "video" && !embedUrl ? (
+            ) : activeLesson?.kind === "video" && videoUrl ? (
+              <div className="aspect-video w-full bg-black">
+                <video ref={videoRef} src={videoUrl} controls playsInline preload="metadata" aria-label={activeLesson.title} className="h-full w-full" />
+              </div>
+            ) : activeLesson?.kind === "video" ? (
               <div className="aspect-video w-full flex flex-col items-center justify-center gap-3 bg-room-deep p-6 text-center text-ink-inverse">
                 <p className="text-sm font-semibold">No video URL set</p>
-                <p className="text-xs text-ink-inverse/70 max-w-md">{`Paste a YouTube/Vimeo/Loom share URL or <iframe> embed code for “${activeLesson.title}”.`}</p>
+                <p className="text-xs text-ink-inverse/70 max-w-md">{`Paste a YouTube/Vimeo/Loom share URL, upload an mp4, or add <iframe> embed code for “${activeLesson.title}”.`}</p>
               </div>
             ) : activeLesson?.kind === "text" ? (
               <div className="bg-room-raised p-6 sm:p-8">

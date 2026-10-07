@@ -124,3 +124,12 @@ export function toEmbed(input: string | null | undefined): string | null {
   }
   return null;
 }
+
+const YT_ID_RE = /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([\w-]{6,})/;
+
+// Extracts a YouTube video ID from watch, short, embed and <iframe> code inputs.
+export function youtubeId(input: string | null | undefined): string | null {
+  if (!input) return null;
+  const match = input.trim().match(YT_ID_RE);
+  return match ? match[1] : null;
+}

@@ -158,17 +158,14 @@ Dev port 5173. Tokens: quiet room (above).
 ### Landing
 
 - Hero: `mx-auto grid w-full max-w-[1200px] gap-12 px-4 pb-16 pt-10 sm:pt-16
-  lg:grid-cols-[1.05fr_1fr]` — **asymmetric editorial split**. No gradient, no orbs,
-  no marquee, no testimonials (removed with the rebrand).
+  lg:pb-24`, copy wrapped in `max-w-3xl` — **single reading column**. No gradient,
+  no orbs, no marquee, no testimonials, no mock player (removed with the rebrand).
 - Eyebrow `text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint` +
   `h-1.5 w-1.5 bg-gold-deep` dot. Primary CTA `h-12 border border-ink bg-ink px-6
   text-sm font-semibold hover:bg-ink/88`; secondary `border border-rule-strong
   bg-room-raised hover:bg-room-sunk`.
 - Stats row `grid max-w-lg grid-cols-3 gap-px border border-rule bg-rule`
   (`bg-room-raised px-4 py-4` cells, real catalogue counts).
-- Right column: fake lesson-player frame (`border border-rule-strong bg-room-raised`,
-  `aspect-video bg-room-deep p-6` screen, serif copy, gold progress bar, checklist
-  squares `border-live/30 bg-live-soft text-live` when done).
 - Sections: catalogue on `border-t border-rule bg-room-raised` (`sm:grid-cols-2
   lg:grid-cols-4`); "How it works" pillars in `grid gap-px border border-rule bg-rule`
   with `h-9 w-9 border border-rule bg-room-sunk text-ink-muted` icon boxes; dark
@@ -219,10 +216,16 @@ Dev port 5173. Tokens: quiet room (above).
   → `border border-rule bg-room-raised px-3 py-2` (square); back `h-7 w-7 bg-ink
   text-ink-inverse`; progress `Badge live` + `h-1.5 w-24 bg-rule/50` → `bg-gold`;
   Exit `border border-rule px-3 py-1.5 text-xs font-semibold text-ink-muted`.
-- Player `overflow-hidden border border-rule bg-room-raised`: video `aspect-video
-  bg-black` iframe; text lessons use `.prose` (**carries a stale `prose-zinc` class**
-  — its overrides remap to room tokens); PDF via `PdfReader` (`bg-room-deep` chrome,
-  gold `Open` button `border border-gold-deep bg-gold`); audio `bg-room-deep`;
+- Player `overflow-hidden border border-rule bg-room-raised`: lesson title bar
+  `flex items-center justify-between gap-4 border-b border-rule px-4 py-3`
+  (`truncate text-sm font-semibold` title, `tnum text-xs text-ink-muted`
+  duration); video `aspect-video bg-black` — YouTube via the keyless IFrame
+  API (`start` param, position kept in `lms:video-pos:{lessonId}`),
+  Vimeo/Loom as provider iframes, native `<video controls>` for uploaded
+  mp4/webm/mov (same resume key); text lessons use `.prose`
+  (**carries a stale `prose-zinc` class** — its overrides remap to room tokens);
+  PDF via `PdfReader` (`bg-room-deep` chrome, gold `Open` button
+  `border border-gold-deep bg-gold`); audio `bg-room-deep`;
   quiz options `border border-rule bg-room-raised`, submitted `border-live/40
   bg-live-soft` / `border-halt/40 bg-halt-soft`, verdict `border border-live/25
   bg-live-soft text-live`. Tabs `border-b-2 px-3 py-2 text-sm font-semibold`,

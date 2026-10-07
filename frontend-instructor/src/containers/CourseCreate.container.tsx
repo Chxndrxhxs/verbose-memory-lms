@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { hasReadableTitle } from "@masterlms/shared";
+import { hasReadableTitle, youtubeId } from "@masterlms/shared";
 import { CourseBuilderHeader } from "../components/CourseBuilderHeader";
 import { InstructorHeader } from "../components/InstructorHeader";
 import { CourseCreateStep1 } from "../components/CourseCreateStep1";
@@ -112,6 +112,23 @@ function makeLesson(kind: LessonKind): Lesson {
   if (kind === "quiz")
     base.quiz_data = [{ id: `q${Date.now()}`, type: "text", question: "", options: ["", ""], correct: 0 }];
   return base;
+}
+
+// YouTube oEmbed (keyless, CORS-enabled) — fills a lesson title
+// from a pasted URL so instructors don't type it by hand.
+async function fetchVideoTitle(url: string): Promise<string | null> {
+  const id = youtubeId(url);
+  if (!id) return null;
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as { title?: string };
+    return data.title?.trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 function StepIndicator({ step, canGoBuilder, onNavigate }: {
@@ -468,7 +485,15 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
     setUploadingId(lessonId);
     try {
       const { url } = await uploadFile(file);
-      updateLesson(chapterId, lessonId, { resource_url: url });
+      // Fill an untouched title from the file name (extension stripped,
+      // capped at the model's 200-char title limit).
+      const lesson = chapters.flatMap((c) => c.lessons).find((l) => l.id === lessonId);
+      const fromFile = file.name.replace(/\.[^.]+$/, "").trim().slice(0, 200);
+      const isDefault = lesson != null && lesson.title === `New ${lesson.kind}`;
+      updateLesson(chapterId, lessonId, {
+        resource_url: url,
+        ...(isDefault && fromFile ? { title: fromFile } : {}),
+      });
     } catch {
       showToast("Upload failed. Try again.");
     } finally {
@@ -620,6 +645,7 @@ export function CourseCreateContainer({ existingId = "" }: { existingId?: string
             onDeleteLesson={deleteLesson}
             onUploadLesson={uploadLessonFile}
             onUploadQuizMedia={uploadQuizMedia}
+            fetchVideoTitle={fetchVideoTitle}
           />
         </div>
       )}
