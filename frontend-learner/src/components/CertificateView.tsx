@@ -34,13 +34,16 @@ export function CertificateView(p: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-sm print:static print:bg-transparent print:p-0"
       onClick={p.onClose}
     >
-      <div className="w-full max-w-[760px]" onClick={(e) => e.stopPropagation()}>
-        <div className="overflow-hidden border border-gold-deep/40 bg-room-deep p-2 shadow-2xl">
+      <div
+        className="w-full max-w-[760px] print:max-w-none"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="overflow-hidden border border-gold-deep/40 bg-room-deep p-2 shadow-2xl print:shadow-none">
           <div
-            className="relative overflow-hidden border border-gold/35 bg-room-deep px-6 py-8 text-center text-ink-inverse sm:px-10"
+            className="cert-sheet relative overflow-hidden border border-gold/35 bg-room-deep px-6 py-8 text-center text-ink-inverse sm:px-10"
             style={{
               backgroundImage:
                 "radial-gradient(rgba(252,211,77,0.09) 1px, transparent 1px)",

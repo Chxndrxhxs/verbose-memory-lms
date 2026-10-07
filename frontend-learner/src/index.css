@@ -178,6 +178,15 @@
   }
 }
 
+/* The certificate keeps its aubergine/gold design when printed: browsers
+ * strip backgrounds unless color-adjust is forced for the sheet. */
+@media print {
+  .cert-sheet {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
