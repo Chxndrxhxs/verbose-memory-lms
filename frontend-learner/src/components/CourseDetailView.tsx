@@ -307,7 +307,7 @@ export function CourseDetailView({
         {/* Description + instructor */}
         {data.description && (
         <Panel className="mt-6">
-          <h3 className="text-sm font-semibold text-ink">Description</h3><p className="measure mt-2 font-serif text-sm leading-relaxed text-ink-muted">{data.description}</p>
+          <h3 className="text-sm font-semibold text-ink">Description</h3><p className="measure mt-2 break-words font-serif text-sm leading-relaxed text-ink-muted">{data.description}</p>
           {(data.instructor || data.avatar) && (
           <div className="mt-5 flex gap-3 border border-rule bg-room-sunk p-4">
             {data.avatar && <img src={data.avatar} alt="" className="h-12 w-12 rounded-full object-cover" />}

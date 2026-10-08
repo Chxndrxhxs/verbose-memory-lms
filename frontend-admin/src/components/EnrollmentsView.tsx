@@ -148,7 +148,7 @@ export function EnrollmentsView({
                   <Td>
                     <div className="flex items-center gap-2">
                       <div
-                        className="h-1.5 w-16 shrink-0 bg-rule/45"
+                        className="h-1.5 w-16 shrink-0 overflow-hidden bg-rule/45"
                         role="img"
                         aria-label={`${e.progress} percent complete`}
                       >
@@ -157,7 +157,7 @@ export function EnrollmentsView({
                             "h-full transition-[width] duration-500 ease-out",
                             e.progress === 100 ? "bg-live" : "bg-flight",
                           )}
-                          style={{ width: `${e.progress}%` }}
+                          style={{ width: `${Math.min(e.progress, 100)}%` }}
                         />
                       </div>
                       <span

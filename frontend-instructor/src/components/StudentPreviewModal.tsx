@@ -244,7 +244,7 @@ export function StudentPreviewModal({
               {course.description && (
                 <div className="mt-6 border border-rule bg-slate-panel p-5">
                   <h3 className="text-sm font-semibold text-ink">Description</h3>
-                  <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-muted">
+                  <p className="mt-2 break-words whitespace-pre-line text-sm leading-relaxed text-ink-muted">
                     {course.description}
                   </p>
                   {course.instructor_name && (

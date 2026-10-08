@@ -81,7 +81,7 @@ class AdminEnrollmentSerializer(serializers.ModelSerializer):
     course_price = serializers.SerializerMethodField()
     course_status = serializers.CharField(source="course.status", read_only=True)
     instructor = serializers.SerializerMethodField()
-    progress = serializers.IntegerField(read_only=True)
+    progress = serializers.SerializerMethodField()
 
     class Meta:
         model = Enrollment
@@ -108,6 +108,11 @@ class AdminEnrollmentSerializer(serializers.ModelSerializer):
 
     def get_instructor(self, obj: Enrollment) -> str:
         return obj.course.instructor.display_name
+
+    def get_progress(self, obj: Enrollment) -> int:
+        # Rows written before the write-path clamp can still hold
+        # values above 100 (RAM-54); progress is a percentage.
+        return min(100, obj.progress)
 
 
 class AdminPaymentSerializer(PaymentSerializer):
