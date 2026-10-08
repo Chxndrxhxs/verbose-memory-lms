@@ -326,7 +326,7 @@ def assignment_payload(assignment: Assignment, include_models: bool = True) -> d
         "end_date": assignment.end_date.isoformat() if assignment.end_date else None,
         "created_by": {
             "id": assignment.created_by_id,
-            "name": getattr(assignment.created_by, "username", ""),
+            "name": getattr(assignment.created_by, "display_name", ""),
             "role": getattr(assignment.created_by, "role", ""),
         }
         if assignment.created_by

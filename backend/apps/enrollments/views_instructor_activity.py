@@ -43,6 +43,4 @@ def instructor_activity(request):
     paged = paginate_queryset_view(request, qs, InstructorActivitySerializer)
     if paged is not None:
         return paged
-    return Response(
-        {"data": InstructorActivitySerializer(qs[:100], many=True).data, "error": None}
-    )
+    return Response({"data": InstructorActivitySerializer(qs[:100], many=True).data, "error": None})

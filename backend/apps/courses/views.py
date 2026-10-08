@@ -3,8 +3,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import NotFound, PermissionDenied
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
+from rest_framework.serializers import ValidationError
+
+from apps.enrollments.models import Enrollment
 
 from .models import Course, WishlistItem
 from .serializers import (
@@ -108,7 +111,15 @@ class CourseViewSet(viewsets.ModelViewSet):
         course = self.get_object()
         if course.instructor_id != request.user.id and not request.user.is_staff:
             raise PermissionDenied("Only the course instructor can publish this course")
-        publish_course(course)
+        try:
+            publish_course(course)
+        except ValidationError as e:
+            detail = e.detail
+            message = str(detail[0]) if isinstance(detail, list) else str(detail)
+            return Response(
+                {"data": None, "error": message},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         return Response({"data": CourseDetailSerializer(course).data, "error": None})
 
     @action(
@@ -153,6 +164,25 @@ class CourseViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
         return Response({"data": rate_course(course, request.user, rating_int), "error": None})
+
+    @action(detail=False, methods=["get"], permission_classes=[AllowAny])
+    def stats(self, request):
+        """Canonical counts for the landing hero, computed from
+        published courses only — the catalogue list and the hero
+        used to contradict each other."""
+        published = Course.objects.filter(status=Course.Status.PUBLISHED)
+        free = published.filter(price=0)
+        learners = Enrollment.objects.filter(course__in=published).count()
+        return Response(
+            {
+                "data": {
+                    "total_courses": published.count(),
+                    "total_learners": learners,
+                    "free_courses": free.count(),
+                },
+                "error": None,
+            }
+        )
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def wishlist(self, request):
@@ -218,7 +248,10 @@ def instructor_overview(request):
     )
     total = courses.count()
     published = courses.filter(status=Course.Status.PUBLISHED).count()
-    agg = courses.aggregate(
+    # Stats describe the published catalogue only: a draft has no public
+    # learners, so counting it skews "top course" and the totals.
+    live = courses.filter(status=Course.Status.PUBLISHED)
+    agg = live.aggregate(
         students=Sum("student_count"),
         rating=Avg("average_rating"),
     )
@@ -233,12 +266,13 @@ def instructor_overview(request):
         .select_related("learner", "course")
         .order_by("-enrolled_at")[:5]
     )
-    top = courses.order_by("-student_count").first()
+    top = live.order_by("-student_count").first()
     return Response(
         {
             "data": {
                 "total_courses": total,
                 "drafts": total - published,
+                "published_courses": published,
                 "total_students": agg["students"] or 0,
                 "average_rating": str(round(agg["rating"] or 0, 1)),
                 "revenue_inr": revenue_paise / 100,
@@ -255,11 +289,11 @@ def instructor_overview(request):
                         "price": str(c.price),
                         "status": c.status,
                     }
-                    for c in courses.order_by("-student_count")
+                    for c in live.order_by("-student_count")
                 ],
                 "recent_enrollments": [
                     {
-                        "learner": e.learner.get_full_name() or e.learner.username,
+                        "learner": e.learner.display_name,
                         "course": e.course.title,
                         "price": str(e.course.price),
                         "enrolled_at": e.enrolled_at,

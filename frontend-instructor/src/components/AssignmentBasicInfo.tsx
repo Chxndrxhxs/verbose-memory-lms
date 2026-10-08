@@ -160,7 +160,15 @@ export function AssignmentBasicInfoStep({ assignment, onChange, errors }: Props)
                 max={MAX_TOTAL_MARKS}
                 value={assignment.totalMarks || ""}
                 onChange={(e) =>
-                  onChange({ totalMarks: Number(e.target.value) || 0 })
+                  onChange({
+                    // No <form> submit ever fires, so HTML5 min/max
+                    // are advisory only — clamp here or 1e27-style
+                    // typos reach the API (RAM-44).
+                    totalMarks: Math.min(
+                      MAX_TOTAL_MARKS,
+                      Math.max(0, Number(e.target.value) || 0)
+                    ),
+                  })
                 }
                 placeholder="Auto-sums from questions when published"
                 className={cn(builderFieldClass, "tnum")}
@@ -217,7 +225,15 @@ export function AssignmentBasicInfoStep({ assignment, onChange, errors }: Props)
                 step={0.25}
                 value={assignment.negativeMarks}
                 onChange={(e) =>
-                  onChange({ negativeMarks: Number(e.target.value) || 0 })
+                  onChange({
+                    // The API rejects 0 while negative marking is
+                    // on, so keep the deduction at the 0.25 step
+                    // floor instead of saving a silent no-op.
+                    negativeMarks: Math.max(
+                      0.25,
+                      Number(e.target.value) || 0
+                    ),
+                  })
                 }
                 placeholder="0.25"
                 title="Marks deducted per wrong answer"

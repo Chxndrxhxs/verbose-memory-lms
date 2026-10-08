@@ -5,6 +5,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import About from "./pages/About";
 import Activity from "./pages/Activity";
 import Assignments from "./pages/Assignments";
+import CertificateShare from "./pages/CertificateShare";
 import CompleteProfile from "./pages/CompleteProfile";
 import CourseDetail from "./pages/CourseDetail";
 import Courses from "./pages/Courses";
@@ -12,6 +13,7 @@ import Landing from "./pages/Landing";
 import Leaderboard from "./pages/Leaderboard";
 import Learn from "./pages/Learn";
 import Login from "./pages/Login";
+import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import PackDetail from "./pages/PackDetail";
 import AssignmentDetail from "./pages/AssignmentDetail";
@@ -42,6 +44,7 @@ const ROUTE_TITLES: [RegExp, string][] = [
   [/^\/packs\/\d+$/, "Test package · QTNXT"],
   [/^\/profile$/, "Profile · QTNXT"],
   [/^\/about$/, "About · QTNXT"],
+  [/^\/certificates\//, "Certificate · QTNXT"],
 ];
 
 function DocumentTitle() {
@@ -61,29 +64,48 @@ function RootLayout() {
   );
 }
 
-const router = createBrowserRouter([
-  {
-    element: <RootLayout />,
-    children: [
-  { path: "/", element: <Landing /> },
-  { path: "/login", element: <Login /> },
-  { path: "/complete-profile", element: <CompleteProfile /> },
-  { path: "/courses", element: <Protected><Courses /></Protected> },
-  { path: "/courses/:id", element: <Protected><CourseDetail /></Protected> },
-  { path: "/wishlist", element: <Protected><Wishlist /></Protected> },
-  { path: "/learn/:id", element: <Protected><Learn /></Protected> },
-  { path: "/activity", element: <Protected><Activity /></Protected> },
-  { path: "/leaderboard", element: <Protected><Leaderboard /></Protected> },
-  { path: "/assignments", element: <Protected><Assignments /></Protected> },
-  { path: "/packs/:id", element: <PackDetail /> },
-  { path: "/assignments/:id", element: <Protected><AssignmentDetail /></Protected> },
-  { path: "/assignments/take/:attemptId", element: <Protected><AssignmentTake /></Protected> },
-  { path: "/assignments/transcript/:assignmentId", element: <Protected><AssignmentResult /></Protected> },
-  { path: "/profile", element: <Protected><Profile /></Protected> },
-  { path: "/about", element: <About /> },
-    ],
-  },
-], { basename: "/" });
+function RouteError() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-room px-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-2xl font-semibold text-ink">Something went wrong</h1>
+        <p className="mt-3 text-sm text-ink-muted">
+          This page hit an unexpected error. Head back home and try again.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+const router = createBrowserRouter(
+  [
+    {
+      element: <RootLayout />,
+      errorElement: <RouteError />,
+      children: [
+        { path: "/", element: <Landing /> },
+        { path: "/login", element: <Login /> },
+        { path: "/complete-profile", element: <CompleteProfile /> },
+        { path: "/courses", element: <Protected><Courses /></Protected> },
+        { path: "/courses/:id", element: <Protected><CourseDetail /></Protected> },
+        { path: "/wishlist", element: <Protected><Wishlist /></Protected> },
+        { path: "/learn/:id", element: <Protected><Learn /></Protected> },
+        { path: "/activity", element: <Protected><Activity /></Protected> },
+        { path: "/leaderboard", element: <Protected><Leaderboard /></Protected> },
+        { path: "/assignments", element: <Protected><Assignments /></Protected> },
+        { path: "/packs/:id", element: <PackDetail /> },
+        { path: "/assignments/:id", element: <Protected><AssignmentDetail /></Protected> },
+        { path: "/assignments/take/:attemptId", element: <Protected><AssignmentTake /></Protected> },
+        { path: "/assignments/transcript/:assignmentId", element: <Protected><AssignmentResult /></Protected> },
+        { path: "/profile", element: <Protected><Profile /></Protected> },
+        { path: "/about", element: <About /> },
+        { path: "/certificates/:certificateId", element: <CertificateShare /> },
+        { path: "*", element: <NotFound /> },
+      ],
+    },
+  ],
+  { basename: "/" },
+);
 
 export default function App() {
   const fetchMe = useAuth((s) => s.fetchMe);

@@ -2,7 +2,7 @@ import re
 
 from rest_framework import serializers
 
-MIN_AGE = 0
+MIN_AGE = 1
 MAX_AGE = 100
 
 AGE_MSG = f"Please enter a valid age between {MIN_AGE} and {MAX_AGE}."
@@ -14,6 +14,10 @@ MIN_TOTAL_MARKS = 1
 MAX_TOTAL_MARKS = 1000
 
 NAME_RE = re.compile(r"^[A-Za-z]+(?:[ '\-][A-Za-z]+)*$")
+
+# Hierarchy rows (category / sub-category / inter-category) share one
+# naming rule with profile names.
+CATEGORY_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9& ]*(?:[ '\-&][A-Za-z0-9& ]*)*$")
 
 
 def validate_person_name(value: str, label: str) -> str:
@@ -32,6 +36,64 @@ def validate_person_name(value: str, label: str) -> str:
             f"{label} may only contain letters, spaces, hyphens and apostrophes."
         )
     return text
+
+
+def validate_category_name(value: str) -> str:
+    """Taxonomy rows are typed into admin forms and rendered in dropdowns
+    everywhere, so they follow the name rule (plus digits and '&' for
+    names like "Class 10 & 12").
+    """
+    text = (value or "").strip()
+    if not text:
+        raise serializers.ValidationError("Name is required.")
+    if len(text) > 60:
+        raise serializers.ValidationError("Name must be 60 characters or fewer.")
+    if not CATEGORY_NAME_RE.match(text):
+        raise serializers.ValidationError(
+            "Name may only contain letters, digits, spaces, hyphens and '&'."
+        )
+    return text
+
+
+# A title is a short human phrase. "Has a letter" alone lets keyboard
+# smash like "qwertyuiop !@#$%12345" through, so titles also reject
+# runs of 3+ symbols. Mirrors isValidTitle() in
+# packages/shared/src/validation.ts.
+TITLE_SYMBOL_RUN_RE = re.compile(r"[^\w\s]{3,}", re.UNICODE)
+
+
+def validate_title(value: str, label: str = "Title") -> str:
+    text = (value or "").strip()
+    if not re.search(r"[^\W_]", text, re.UNICODE):
+        raise serializers.ValidationError(f"{label} must contain at least one letter or number.")
+    if TITLE_SYMBOL_RUN_RE.search(text):
+        raise serializers.ValidationError(f"{label} must not contain a run of symbols.")
+    return text
+
+
+def validate_text_block(value: str, label: str, max_len: int) -> str:
+    """Free-text blocks (subtitles, descriptions, instructions).
+
+    Long enough for real content, but control characters are stripped and a
+    block with no letters at all is keyboard smash, not content.
+    """
+    text = (value or "").strip()
+    if not text:
+        return text
+    text = "".join(ch for ch in text if ch == "\n" or ch >= " ")
+    if len(text) > max_len:
+        raise serializers.ValidationError(f"{label} must be {max_len} characters or fewer.")
+    if not re.search(r"[^\W_]", text, re.UNICODE):
+        raise serializers.ValidationError(f"{label} must contain at least one letter.")
+    return text
+
+
+def validate_step_name(value: str) -> str:
+    return validate_text_block(value, "Step name", 120)
+
+
+def validate_question_text(value: str) -> str:
+    return validate_text_block(value, "Question", 2000)
 
 
 def validate_person_age(value, *, required: bool = False) -> int | None:

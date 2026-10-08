@@ -305,7 +305,7 @@ export function LearnView(p: Props) {
         <div className="lg:sticky lg:top-[72px] lg:h-[calc(100vh-84px)] lg:overflow-auto">
           <div className="overflow-hidden border border-rule bg-room-raised">
             <div className="flex items-center justify-between border-b border-rule px-4 py-3">
-              <p className="text-sm font-semibold text-ink">Course content</p><span className="tnum text-xs text-ink-muted">{completed.size}/{p.total} • {progress}%</span>
+              <p className="text-sm font-semibold text-ink">Course content</p><span className="tnum text-xs text-ink-muted">Lessons {completed.size}/{p.total} • {progress}%</span>
             </div>
             <div className="p-2">
               <div className="h-1.5 overflow-hidden bg-rule/50"><div className="h-full bg-gold transition-all" style={{ width: `${progress}%` }} /></div>

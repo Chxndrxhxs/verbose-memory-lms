@@ -39,7 +39,7 @@ export function PdfReader({ url, title }: Props) {
                 <ArrowLeft size={12} strokeWidth={2.5} aria-hidden /> Prev
               </button>
               <span className="tnum font-medium text-ink-inverse/80">
-                {pageNumber} / {numPages}
+                Page {pageNumber}/{numPages}
               </span>
               <button
                 type="button"

@@ -65,5 +65,6 @@ backend/media/
 
 # local agent session transcripts (not committed)
 session-*.md
+dogfood-output
 *.png
 testing-*.md

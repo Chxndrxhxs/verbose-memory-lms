@@ -22,6 +22,21 @@ class User(AbstractUser):
     def __str__(self) -> str:
         return f"{self.username} ({self.mobile})"
 
+    @property
+    def display_name(self) -> str:
+        """Public-facing name. The username is the raw mobile number,
+        so it must never surface as a display name on leaderboards,
+        certificates or instructor bylines — phone numbers are private.
+        """
+        full = self.get_full_name()
+        if full:
+            return full
+        if self.role == self.Role.INSTRUCTOR:
+            return "Instructor"
+        if self.role == self.Role.ADMIN:
+            return "Admin"
+        return f"Learner #{self.id}"
+
 
 class OTP(models.Model):
     mobile = models.CharField(max_length=15, db_index=True)

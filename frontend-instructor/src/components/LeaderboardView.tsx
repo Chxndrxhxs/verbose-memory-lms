@@ -98,11 +98,11 @@ export function LeaderboardView({
               value={scope}
               onChange={(v) => onScope(v)}
               options={[
-                { value: "global", label: "All learners" },
                 {
                   value: "my_students",
                   label: isScoped && meta?.total != null ? `My students (${meta.total})` : "My students",
                 },
+                { value: "global", label: "All learners" },
               ]}
             />
           </div>

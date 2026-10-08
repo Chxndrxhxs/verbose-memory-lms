@@ -57,6 +57,7 @@ export function CoursesView({
   deletingId?: number;
 }) {
   const [target, setTarget] = useState<AdminCourse | null>(null);
+  const [confirming, setConfirming] = useState<AdminCourse | null>(null);
 
   return (
     <div className="space-y-6">
@@ -170,7 +171,11 @@ export function CoursesView({
                         variant="ghost"
                         size="sm"
                         iconOnly
-                        onClick={() => onToggle(c.id, c.status === "published" ? "draft" : "published")}
+                        onClick={() =>
+                          c.status === "published"
+                            ? onToggle(c.id, "draft")
+                            : setConfirming(c)
+                        }
                         disabled={togglingId === c.id}
                         aria-label={
                           c.status === "published"
@@ -214,6 +219,21 @@ export function CoursesView({
           setTarget(null);
         }}
         onCancel={() => setTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={confirming !== null}
+        title="Publish this course?"
+        description={`Make "${confirming?.title}" visible to learners? It has ${
+          confirming?.lesson_count ?? 0
+        } lessons${confirming?.cover_image ? "" : " and no cover image"}.`}
+        confirmLabel="Publish"
+        busy={togglingId === confirming?.id}
+        onConfirm={() => {
+          if (confirming) onToggle(confirming.id, "published");
+          setConfirming(null);
+        }}
+        onCancel={() => setConfirming(null)}
       />
     </div>
   );

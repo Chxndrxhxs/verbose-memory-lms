@@ -139,6 +139,14 @@ def test_admin_course_crud_and_status(admin, instructor):
     assert course.category == "Design"
 
     r = c.post(f"{ADMIN}/courses/{course_id}/status", {"status": "published"}, format="json")
+    assert r.status_code == 400
+    assert "chapter" in r.json()["error"]
+    # A curriculum makes the same call succeed.
+    from apps.courses.models import Lesson, Section
+
+    section = Section.objects.create(course=course, title="Ch 1", order=0)
+    Lesson.objects.create(section=section, title="Lesson 1", order=0)
+    r = c.post(f"{ADMIN}/courses/{course_id}/status", {"status": "published"}, format="json")
     assert r.status_code == 200
     course.refresh_from_db()
     assert course.status == Course.Status.PUBLISHED
@@ -165,7 +173,7 @@ def test_admin_enrollment_and_payment_views(admin, learner, instructor):
     assert r.status_code == 200
     assert any(e["id"] == enrollment.id for e in r.json()["data"])
     entry = next(e for e in r.json()["data"] if e["id"] == enrollment.id)
-    assert entry["learner_name"] == learner.username
+    assert entry["learner_name"] == f"Learner #{learner.id}"
 
     r = c.delete(f"{ADMIN}/enrollments/{enrollment.id}")
     assert r.status_code == 200

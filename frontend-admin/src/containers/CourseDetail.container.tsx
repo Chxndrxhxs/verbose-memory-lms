@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
-import { api } from "../lib/api";
-import type { AdminCourse, AdminCourseDetailResponse } from "../types/admin";
+import { api, apiEnvelope } from "../lib/api";
+import type { AdminCourse, AdminCourseDetailResponse, Envelope } from "../types/admin";
 import { CourseDetailView } from "../components/CourseDetailView";
 
 export type CourseEditValues = {
@@ -43,6 +43,15 @@ export function CourseDetailContainer() {
     queryFn: () => api<AdminCourseDetailResponse>(`/admin/courses/${cid}`),
     enabled: Number.isFinite(cid),
   });
+
+  const { data: catalog } = useQuery({
+    queryKey: ["admin", "courses", "category-suggestions"],
+    queryFn: () =>
+      apiEnvelope<Envelope<AdminCourse>>("/admin/courses?page_size=100"),
+  });
+  const categorySuggestions = Array.from(
+    new Set((catalog?.data ?? []).map((c) => c.category))
+  ).sort();
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["admin", "course", cid] });
@@ -91,6 +100,7 @@ export function CourseDetailContainer() {
       loading={isLoading}
       error={isError || !data ? String(error ?? new Error("Failed to load course")) : null}
       initial={course ? toForm(course) : undefined}
+      categorySuggestions={categorySuggestions}
       onSave={update.mutate}
       saving={update.isPending}
       saveError={update.isError ? "Could not save changes." : null}

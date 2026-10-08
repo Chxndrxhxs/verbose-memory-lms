@@ -3,6 +3,8 @@ from urllib.parse import unquote, urlparse
 
 from rest_framework import serializers
 
+from core.validators import validate_text_block, validate_title
+
 from .models import Course, Lesson, Review, Section, WishlistItem
 
 IMAGE_EXTENSIONS = (
@@ -43,15 +45,11 @@ class SectionSerializer(serializers.ModelSerializer):
 
 
 def validate_course_title(value: str) -> str:
-    """A title made only of punctuation is unreadable everywhere it renders.
-
-    Symbols alone are still allowed — ".NET" and "C++" are legitimate — the
-    rule is only that at least one letter or digit must appear.
+    """A title made only of punctuation is unreadable everywhere it
+    renders, and keyboard smash ("qwertyuiop !@#$%12345") is not a
+    course name.
     """
-    title = (value or "").strip()
-    if not re.search(r"[^\W_]", title, re.UNICODE):
-        raise serializers.ValidationError("Title must contain at least one letter or number.")
-    return title
+    return validate_title(value)
 
 
 def validate_cover_image_url(value: str) -> str:
@@ -83,6 +81,12 @@ class CourseListSerializer(serializers.ModelSerializer):
 
     def validate_title(self, value: str) -> str:
         return validate_course_title(value)
+
+    def validate_subtitle(self, value: str) -> str:
+        return validate_text_block(value, "Subtitle", 140)
+
+    def validate_description(self, value: str) -> str:
+        return validate_text_block(value, "Description", 5000)
 
     def validate_cover_image(self, value: str) -> str:
         return validate_cover_image_url(value)
@@ -117,7 +121,7 @@ class CourseListSerializer(serializers.ModelSerializer):
         )
 
     def get_instructor_name(self, obj: Course) -> str:
-        return obj.instructor.get_full_name() or obj.instructor.username
+        return obj.instructor.display_name
 
     def get_instructor_avatar(self, obj: Course) -> str:
         return getattr(obj.instructor, "avatar", "") or ""

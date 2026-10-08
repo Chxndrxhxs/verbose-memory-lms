@@ -13,6 +13,7 @@ import {
 import { CourseCard } from "./CourseCard";
 import { Header } from "./Header";
 import { cn } from "../lib/utils";
+import type { CourseStats } from "../containers/Landing.container";
 import type { Course } from "../types/course";
 
 /*
@@ -67,11 +68,20 @@ const PILLARS: { title: string; body: string; Icon: LucideIcon }[] = [
   },
 ];
 
-export function LandingView({ courses }: { courses: Course[] }) {
+export function LandingView({
+  courses,
+  stats,
+}: {
+  courses: Course[];
+  stats?: CourseStats;
+}) {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
-  const totalLearners = courses.reduce((n, c) => n + c.studentCount, 0);
-  const freeCount = courses.filter((c) => c.rawPrice === 0).length;
+  // Canonical counts from the stats endpoint; fall back to
+  // catalogue sums while the query is in flight.
+  const totalLearners = stats?.total_learners ?? courses.reduce((n, c) => n + c.studentCount, 0);
+  const courseCount = stats?.total_courses ?? courses.length;
+  const freeCount = stats?.free_courses ?? courses.filter((c) => c.rawPrice === 0).length;
   const featured = courses.slice(0, 8);
 
   return (
@@ -86,16 +96,18 @@ export function LandingView({ courses }: { courses: Course[] }) {
         as reading, not as SaaS.
       */}
       <section className="mx-auto grid w-full max-w-[1200px] gap-12 px-4 pb-16 pt-10 sm:px-6 sm:pt-16 lg:pb-24">
-        <div className="min-w-0 max-w-3xl">
-          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+        <div className="mx-auto min-w-0 max-w-3xl text-center">
+          <p className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
             <span aria-hidden className="h-1.5 w-1.5 bg-gold-deep" />
-            {courses.length} courses open now
+            {courseCount} courses open now
           </p>
 
           <h1 className="mt-5 text-[40px] font-semibold leading-[1.04] tracking-[-0.035em] text-ink sm:text-[54px] lg:text-[60px]">
-            Learn the thing,
+            Learn skills that{" "}
             <br />
-            properly.
+            {" "}actually move{" "}
+            <br />
+            {" "}you forward.
           </h1>
 
           <p className="measure mt-6 text-[15px] leading-relaxed text-ink-muted">
@@ -104,7 +116,7 @@ export function LandingView({ courses }: { courses: Course[] }) {
             need no card.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/courses"
               className="inline-flex h-12 items-center gap-2 border border-ink bg-ink px-6 text-sm font-semibold text-ink-inverse transition-colors hover:bg-ink/88"
@@ -120,10 +132,10 @@ export function LandingView({ courses }: { courses: Course[] }) {
             </a>
           </div>
 
-          {/* Real counts from the catalogue, not invented social proof. */}
-          <dl className="mt-10 grid max-w-lg grid-cols-3 gap-px border border-rule bg-rule">
+          {/* Real counts from the stats endpoint, not invented social proof. */}
+          <dl className="mx-auto mt-10 grid max-w-lg grid-cols-3 gap-px border border-rule bg-rule">
             {[
-              [String(courses.length), "Courses"],
+              [String(courseCount), "Courses"],
               [totalLearners > 999 ? `${(totalLearners / 1000).toFixed(1)}k` : String(totalLearners), "Learners"],
               [String(freeCount), "Free to start"],
             ].map(([v, k]) => (

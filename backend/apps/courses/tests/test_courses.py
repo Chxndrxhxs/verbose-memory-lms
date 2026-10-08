@@ -49,6 +49,35 @@ def test_list_courses_only_published_for_anonymous():
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    "title",
+    ["qwertyuiop !@#$%12345", "junk !@#$%12345", "asdf !!! ###"],
+)
+def test_course_title_that_is_keyboard_smash_is_rejected(instructor, title):
+    c = APIClient()
+    c.force_authenticate(instructor)
+    r = c.post(
+        "/api/v1/courses/",
+        {"title": title, "category": "x", "price": 0},
+        format="json",
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("title", ["C++ Basics", "Class 10 & 12", "A/B Testing", "日本語 Test"])
+def test_course_title_with_symbols_is_accepted(instructor, title):
+    c = APIClient()
+    c.force_authenticate(instructor)
+    r = c.post(
+        "/api/v1/courses/",
+        {"title": title, "category": "x", "price": 0},
+        format="json",
+    )
+    assert r.status_code == 201
+
+
+@pytest.mark.django_db
 def test_only_instructor_can_create_course():
     c = APIClient()
     r = c.post("/api/v1/courses/", {"title": "X", "category": "y", "price": 0}, format="json")
@@ -72,6 +101,16 @@ def test_instructor_creates_and_publishes(instructor):
         assert len(payload) >= 1
         return
     cid = payload["id"]
+    # An empty course cannot go live: a curriculum is required first.
+    r = c.post(f"/api/v1/courses/{cid}/publish/")
+    assert r.status_code == 400
+    assert "chapter" in r.json()["error"]
+    r = c.put(
+        f"/api/v1/courses/{cid}/curriculum/",
+        {"sections": [{"title": "Ch 1", "lessons": [{"title": "Intro", "kind": "video"}]}]},
+        format="json",
+    )
+    assert r.status_code == 200
     r = c.post(f"/api/v1/courses/{cid}/publish/")
     assert r.status_code == 200
     assert r.json()["data"]["status"] == "published"

@@ -280,10 +280,25 @@ def test_assignment_title_without_letter_or_digit_is_rejected(
     assert "at least one letter or number" in str(r.json())
 
 
-@pytest.mark.parametrize("title", ["C++ Basics", "Physics 2026", "日本語 Test"])
-def test_assignment_title_with_readable_text_is_accepted(
+@pytest.mark.parametrize(
+    "title",
+    ["qwertyuiop !@#$%12345", "junk !@#$%12345", "asdf !!! ###", "a b c !@#$%^&*()"],
+)
+def test_assignment_title_that_is_keyboard_smash_is_rejected(
     title, instructor_client, inter_category
 ):
+    r = instructor_client.post(
+        "/api/v1/admin/assignments/",
+        {"title": title, "inter_category": inter_category.id, "status": "draft"},
+        format="json",
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.parametrize(
+    "title", ["C++ Basics", "Physics 2026", "日本語 Test", "Class 10 & 12", "A/B Testing"]
+)
+def test_assignment_title_with_readable_text_is_accepted(title, instructor_client, inter_category):
     r = instructor_client.post(
         "/api/v1/admin/assignments/",
         {"title": title, "inter_category": inter_category.id, "status": "draft"},

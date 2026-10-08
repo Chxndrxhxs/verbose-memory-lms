@@ -9,7 +9,10 @@ export function LeaderboardContainer() {
   const season = sp.get("season") ?? "current";
   const ordering = sp.get("ordering") ?? "rank";
   const page = Math.max(1, Number(sp.get("page") ?? "1") || 1);
-  const myStudents = sp.get("my_students") === "1";
+  // Instructors start on "My students": the global board lists every
+  // learner on the platform, which is not the default view a teacher
+  // needs. Opt out with ?my_students=0.
+  const myStudents = sp.get("my_students") !== "0";
   const { data, isLoading } = useLeaderboard({ city, category, season, ordering, page, myStudents });
 
   function setParam(key: string, value: string) {

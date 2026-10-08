@@ -232,51 +232,58 @@ export function AssignmentListView({
             {assignments.map((a) => (
               <div
                 key={a.id}
-                className="row-hover flex items-center gap-4 border border-rule bg-slate-panel px-4 py-4"
+                className="row-hover flex flex-col gap-3 border border-rule bg-slate-panel px-4 py-4 sm:flex-row sm:items-center sm:gap-4"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-ink-inverse">
-                  <FileText size={16} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <Link
-                      to={`/assignments/${a.id}/edit`}
-                      className="truncate text-sm font-semibold text-ink hover:underline"
-                    >
-                      {a.title}
-                    </Link>
-                    <span className="hidden shrink-0 rounded-sm border border-rule bg-slate-sunk px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-muted sm:inline">
-                      {MODEL_LABELS[a.modelType]}
-                    </span>
+                {/* Mobile: one row (avatar, title, badge, actions) with the
+                    metadata beneath it. On sm+ the wrapper turns transparent
+                    so these become direct card children again. */}
+                <div className="flex items-start gap-3 sm:contents sm:items-center">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink text-ink-inverse">
+                    <FileText size={16} />
                   </div>
-                  <div className="mt-0.5 flex items-center gap-3 text-xs text-ink-muted tnum">
-                    <span>{a.subjectLabel || "No exam subject"}</span>
-                    <span className="flex items-center gap-1">
-                      <HelpCircle size={11} />
-                      {getTotalQuestions(a)} Q
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock size={11} />
-                      {formatDuration(a.duration)}
-                    </span>
-                    <span className="hidden sm:inline">{formatDate(a.createdAt)}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to={`/assignments/${a.id}/edit`}
+                        className="min-w-0 truncate text-sm font-semibold text-ink hover:underline"
+                      >
+                        {a.title}
+                      </Link>
+                      <span className="hidden shrink-0 rounded-sm border border-rule bg-slate-sunk px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-muted sm:inline">
+                        {MODEL_LABELS[a.modelType]}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted tnum">
+                      <span className="min-w-0 max-w-full truncate">
+                        {a.subjectLabel || "No exam subject"}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1">
+                        <HelpCircle size={11} />
+                        {getTotalQuestions(a)} Q
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1">
+                        <Clock size={11} />
+                        {formatDuration(a.duration)}
+                      </span>
+                      <span className="hidden sm:inline">{formatDate(a.createdAt)}</span>
+                    </div>
                   </div>
+                  <span
+                    className={cn(
+                      "shrink-0 self-start rounded-sm px-2 py-0.5 text-[10px] font-semibold sm:px-3 sm:py-1 sm:text-xs",
+                      STATUS_COLORS[a.status]
+                    )}
+                  >
+                    {STATUS_LABELS[a.status]}
+                  </span>
+                  <ActionMenu
+                    assignment={a}
+                    onDelete={onDelete}
+                    onDuplicate={onDuplicate}
+                    onPublish={onPublish}
+                    onArchive={onArchive}
+                  />
                 </div>
-                <span
-                  className={cn(
-                    "shrink-0 rounded-sm px-3 py-1 text-xs font-semibold",
-                    STATUS_COLORS[a.status]
-                  )}
-                >
-                  {STATUS_LABELS[a.status]}
-                </span>
-                <ActionMenu
-                  assignment={a}
-                  onDelete={onDelete}
-                  onDuplicate={onDuplicate}
-                  onPublish={onPublish}
-                  onArchive={onArchive}
-                />
               </div>
             ))}
           </div>

@@ -5,7 +5,7 @@ import { z } from "zod";
  *  matching the checks in backend/core/validators.py.
  */
 
-export const MIN_AGE = 0;
+export const MIN_AGE = 1;
 export const MAX_AGE = 100;
 
 export const NAME_MSG =
@@ -69,14 +69,20 @@ export function isImageUrl(url: string): boolean {
   return IMAGE_EXT_RE.test(path);
 }
 
-/** A course title needs at least one letter or digit, so "----" is rejected
- *  while legitimate titles like ".NET" or "C++" still pass.
+/** A course or assignment title is a short human phrase: at least one
+ *  letter or digit and no run of 3+ symbols — so "----" and
+ *  "qwertyuiop !@#$%12345" are rejected while ".NET", "C++",
+ *  "A/B Testing" and "日本語 Test" still pass.
+ *  Mirrors validate_title() in backend/core/validators.py.
  */
-export function hasReadableTitle(title: string): boolean {
-  return /[\p{L}\p{N}]/u.test(title);
+export function isValidTitle(title: string): boolean {
+  const text = title.trim();
+  if (!/[\p{L}\p{N}]/u.test(text)) return false;
+  return !/[^\p{L}\p{N}\p{M}\s_]{3,}/u.test(text);
 }
 
-export const TITLE_MSG = "Title must contain at least one letter or number";
+export const TITLE_MSG =
+  "Title must be a real phrase — no long symbol runs or random characters";
 
 /** zod field builders so every profile form validates the same way instead of
  *  each app keeping its own copy of these rules. Each wraps the predicate above,

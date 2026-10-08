@@ -64,7 +64,20 @@ def create_course(*, instructor, data) -> Course:
     return course
 
 
+def publish_guard(course: Course) -> None:
+    """A published course with no curriculum is an empty shell learners
+    can enroll in (QA report: courses 13/15 shipped 0/0).
+    """
+    from rest_framework import serializers as drf_serializers
+
+    if not course.sections.exists() or not Lesson.objects.filter(section__course=course).exists():
+        raise drf_serializers.ValidationError(
+            "Add at least one chapter with a lesson before publishing."
+        )
+
+
 def publish_course(course: Course) -> Course:
+    publish_guard(course)
     course.status = Course.Status.PUBLISHED
     course.save(update_fields=["status"])
     return course
@@ -99,15 +112,22 @@ def replace_curriculum(course: Course, sections: list) -> Course:
             new_ids.append(lesson.id)
     # A re-save deletes every old lesson row, so stored completions point at dead
     # IDs. Remap them by position so learner progress survives content edits.
-    if old_ids and new_ids:
-        old_index = {lid: i for i, lid in enumerate(old_ids)}
-        for enrollment in Enrollment.objects.filter(course=course):
+    for enrollment in Enrollment.objects.filter(course=course):
+        if old_ids and new_ids:
+            old_index = {lid: i for i, lid in enumerate(old_ids)}
             done = sorted(
                 old_index[lid] for lid in enrollment.completed_lessons if lid in old_index
             )
             enrollment.completed_lessons = [new_ids[i] for i in done if i < len(new_ids)]
-            enrollment.progress = int(len(enrollment.completed_lessons) / len(new_ids) * 100)
-            enrollment.save(update_fields=["completed_lessons", "progress"])
+        else:
+            # Nothing to remap onto: every stored completion points at a
+            # lesson row that no longer exists.
+            enrollment.completed_lessons = []
+        total = len(new_ids)
+        enrollment.progress = (
+            min(100, int(len(enrollment.completed_lessons) / total * 100)) if total else 0
+        )
+        enrollment.save(update_fields=["completed_lessons", "progress"])
     return course
 
 

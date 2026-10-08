@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Award } from "@masterlms/shared";
+import { useEffect, useState } from "react";
+import { Award, LinkIcon, Check } from "@masterlms/shared";
 import { Button } from "./Button";
 
 type Props = {
@@ -9,6 +9,9 @@ type Props = {
   issuedLabel: string;
   certificateId: string;
   onClose: () => void;
+  /** Render the sheet inline (the public /certificates/:id page)
+   *  instead of as a modal overlay. */
+  standalone?: boolean;
 };
 
 function GoldCorners() {
@@ -24,6 +27,9 @@ function GoldCorners() {
 }
 
 export function CertificateView(p: Props) {
+  const [copied, setCopied] = useState(false);
+  const shareUrl = `${window.location.origin}/certificates/${p.certificateId}`;
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") p.onClose();
@@ -32,14 +38,25 @@ export function CertificateView(p: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [p]);
 
+  const copyLink = () => {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-sm print:static print:bg-transparent print:p-0"
-      onClick={p.onClose}
+      className={
+        p.standalone
+          ? undefined
+          : "fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-sm print:static print:bg-transparent print:p-0"
+      }
+      onClick={p.standalone ? undefined : p.onClose}
     >
       <div
         className="w-full max-w-[760px] print:max-w-none"
-        onClick={(e) => e.stopPropagation()}
+        onClick={p.standalone ? undefined : (e) => e.stopPropagation()}
       >
         <div className="overflow-hidden border border-gold-deep/40 bg-room-deep p-2 shadow-2xl print:shadow-none">
           <div
@@ -105,7 +122,7 @@ export function CertificateView(p: Props) {
                 ["Enrolled on", p.enrolledLabel],
                 ["Completed on", p.issuedLabel],
                 ["Certificate ID", p.certificateId],
-                ["Verify at", `qtnxt.com/verify/${p.certificateId}`],
+                ["Verify at", shareUrl],
               ].map(([label, value]) => (
                 <div key={label} className="border border-ink-inverse/10 bg-ink-inverse/5 px-3 py-2.5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-inverse/45">{label}</p>
@@ -136,9 +153,15 @@ export function CertificateView(p: Props) {
           <Button variant="gold" onClick={() => window.print()}>
             Print / Save PDF
           </Button>
-          <Button variant="secondary" onClick={p.onClose}>
-            Close
+          <Button variant="secondary" onClick={copyLink}>
+            {copied ? <Check size={14} strokeWidth={2.5} aria-hidden /> : <LinkIcon size={14} strokeWidth={2.5} aria-hidden />}
+            {copied ? " Copied" : " Copy link"}
           </Button>
+          {!p.standalone && (
+            <Button variant="secondary" onClick={p.onClose}>
+              Close
+            </Button>
+          )}
         </div>
       </div>
     </div>

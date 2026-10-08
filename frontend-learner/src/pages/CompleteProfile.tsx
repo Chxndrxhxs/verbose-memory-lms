@@ -151,7 +151,9 @@ export default function CompleteProfile() {
         <img src="https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?auto=compress&cs=tinysrgb&w=1400" alt="" className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-room-deep/80 via-room-deep/25 to-transparent" />
         <div className="absolute bottom-10 left-10 right-10 text-ink-inverse">
-          <p className="text-3xl font-semibold leading-tight">Your journey<br/>starts here.</p>
+          <p className="text-3xl font-semibold leading-tight">
+            Your journey starts here.
+          </p>
           <p className="mt-3 max-w-sm text-sm text-ink-inverse/80">Personalized paths, calm sessions, real progress — built around how you actually learn.</p>
           <div className="mt-6 flex items-center gap-3 text-xs text-ink-inverse/70">
             <span className="h-px w-8 bg-ink-inverse/40" />

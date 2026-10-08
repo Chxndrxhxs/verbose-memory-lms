@@ -276,7 +276,7 @@ export function UserDetailView({
       <GridPanel>
         <div className="border-b border-rule bg-paper px-5 py-3">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink">
-            Enrollments
+            Enrollments{" "}
             <span className="tnum ml-2 font-normal text-ink-faint">{data.enrollments.length}</span>
           </h2>
         </div>
@@ -330,7 +330,7 @@ export function UserDetailView({
       <GridPanel>
         <div className="border-b border-rule bg-paper px-5 py-3">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink">
-            Payments
+            Payments{" "}
             <span className="tnum ml-2 font-normal text-ink-faint">{data.payments.length}</span>
           </h2>
         </div>

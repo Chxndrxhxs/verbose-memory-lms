@@ -66,3 +66,68 @@ def test_patch_updates_and_toggles(instructor_client, inter_category):
         f"/api/v1/admin/subcategories/{sub_id}/", {"is_active": False}, format="json"
     )
     assert r.json()["data"]["is_active"] is False
+
+
+@pytest.mark.django_db
+def test_duplicate_names_at_every_level_are_rejected(instructor_client, inter_category):
+    cat = inter_category.sub_category.category
+    r = instructor_client.post(
+        "/api/v1/admin/categories/", {"name": cat.name.upper()}, format="json"
+    )
+    assert r.status_code == 400
+    assert "already exists" in str(r.json())
+
+    r = instructor_client.post(
+        "/api/v1/admin/subcategories/",
+        {"name": inter_category.sub_category.name.upper(), "category_id": cat.id},
+        format="json",
+    )
+    assert r.status_code == 400
+    assert "already exists" in str(r.json())
+
+    r = instructor_client.post(
+        "/api/v1/admin/intercategories/",
+        {
+            "name": inter_category.name.upper(),
+            "sub_category_id": inter_category.sub_category.id,
+        },
+        format="json",
+    )
+    assert r.status_code == 400
+    assert "already exists" in str(r.json())
+
+
+@pytest.mark.django_db
+def test_rename_to_a_taken_name_is_rejected(instructor_client, instructor, inter_category):
+    other = Category.objects.create(name="Other", created_by=instructor)
+    r = instructor_client.patch(
+        f"/api/v1/admin/categories/{other.id}/",
+        {"name": inter_category.sub_category.category.name},
+        format="json",
+    )
+    assert r.status_code == 400
+    assert "already exists" in str(r.json())
+
+    twin = SubCategory.objects.create(
+        name="Chemistry",
+        category=inter_category.sub_category.category,
+        created_by=instructor,
+    )
+    r = instructor_client.patch(
+        f"/api/v1/admin/subcategories/{inter_category.sub_category.id}/",
+        {"name": twin.name.upper()},
+        format="json",
+    )
+    assert r.status_code == 400
+
+    inter_twin = InterCategory.objects.create(
+        name="JEE Advanced",
+        sub_category=inter_category.sub_category,
+        created_by=instructor,
+    )
+    r = instructor_client.patch(
+        f"/api/v1/admin/intercategories/{inter_category.id}/",
+        {"name": inter_twin.name.upper()},
+        format="json",
+    )
+    assert r.status_code == 400

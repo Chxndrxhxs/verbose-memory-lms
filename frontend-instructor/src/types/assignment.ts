@@ -1,5 +1,5 @@
 import {
-  hasReadableTitle,
+  isValidTitle,
   isValidTotalMarks,
   optionImage,
   optionText,
@@ -483,8 +483,8 @@ export function validateAssignment(assignment: Assignment): AssignmentValidation
 
   if (!assignment.title.trim()) {
     errors.push({ field: "title", message: "Title is required" });
-  } else if (!hasReadableTitle(assignment.title)) {
-    // A title of only punctuation ("!@#$%^&*()") reads as broken in the
+  } else if (!isValidTitle(assignment.title)) {
+    // Keyboard smash ("qwertyuiop !@#$%12345") reads as broken in the
     // student and admin modules (RAM-35).
     errors.push({ field: "title", message: TITLE_MSG });
   }
