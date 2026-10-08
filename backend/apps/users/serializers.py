@@ -29,7 +29,9 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "role", "is_mobile_verified")
 
     def get_name(self, obj: User) -> str:
-        return obj.get_full_name() or obj.username
+        # Empty until the learner sets a real name: /users/me prefills
+        # the profile form, and the username is the raw mobile number.
+        return obj.get_full_name() or ""
 
 
 def tokens_for(user) -> dict:

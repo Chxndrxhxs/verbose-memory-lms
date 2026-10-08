@@ -2,8 +2,10 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.serializers import ValidationError
 
 from apps.courses.models import Course
+from apps.courses.services import publish_guard
 from apps.enrollments.models import Enrollment
 from apps.payments.models import Payment
 from apps.promotions.models import Coupon, Gift
@@ -165,6 +167,19 @@ def course_status(request, course_id: int):
             {"data": None, "error": "status must be 'published' or 'draft'"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    if new_status == Course.Status.PUBLISHED:
+        # Same curriculum guard as publish_course(); this endpoint sets
+        # status directly so the serializer rule never runs (QA: courses
+        # 13/15 went live empty through here).
+        try:
+            publish_guard(course)
+        except ValidationError as e:
+            detail = e.detail
+            message = str(detail[0]) if isinstance(detail, dict) else str(detail)
+            return Response(
+                {"data": None, "error": message},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
     course.status = new_status
     course.save(update_fields=["status", "updated_at"])
     return Response({"data": AdminCourseDetailSerializer(course).data, "error": None})

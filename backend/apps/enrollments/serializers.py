@@ -30,7 +30,7 @@ class CertificateSerializer(serializers.ModelSerializer):
         )
 
     def get_learner_name(self, obj) -> str:
-        return obj.learner.get_full_name() or obj.learner.username
+        return obj.learner.display_name
 
 
 class ActivityEventSerializer(serializers.ModelSerializer):
@@ -69,7 +69,7 @@ class InstructorActivitySerializer(ActivityEventSerializer):
             return None
         return {
             "id": u.id,
-            "name": u.get_full_name() or u.username,
+            "name": u.display_name,
             "avatar": u.avatar or "",
             "city": u.city or "",
         }

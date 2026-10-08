@@ -15,7 +15,7 @@ User = get_user_model()
 
 
 class AdminUserSerializer(serializers.ModelSerializer):
-    name = serializers.CharField(source="get_full_name", read_only=True)
+    name = serializers.CharField(source="display_name", read_only=True)
 
     class Meta:
         model = User
@@ -101,13 +101,13 @@ class AdminEnrollmentSerializer(serializers.ModelSerializer):
         )
 
     def get_learner_name(self, obj: Enrollment) -> str:
-        return obj.learner.get_full_name() or obj.learner.username
+        return obj.learner.display_name
 
     def get_course_price(self, obj: Enrollment) -> str:
         return str(obj.course.price)
 
     def get_instructor(self, obj: Enrollment) -> str:
-        return obj.course.instructor.get_full_name() or obj.course.instructor.username
+        return obj.course.instructor.display_name
 
 
 class AdminPaymentSerializer(PaymentSerializer):
@@ -129,7 +129,7 @@ class AdminPaymentSerializer(PaymentSerializer):
         )
 
     def get_user_name(self, obj) -> str:
-        return obj.user.get_full_name() or obj.user.username
+        return obj.user.display_name
 
     def get_amount_inr(self, obj) -> float:
         return obj.amount / 100
@@ -153,7 +153,7 @@ class AdminActivitySerializer(serializers.ModelSerializer):
         )
 
     def get_learner_name(self, obj) -> str:
-        return obj.learner.get_full_name() or obj.learner.username
+        return obj.learner.display_name
 
     def get_course_title(self, obj) -> str | None:
         return obj.course.title if obj.course else None
@@ -171,7 +171,7 @@ class AdminCertificateSerializer(serializers.ModelSerializer):
         fields = ("id", "certificate_id", "learner_name", "course_title", "issued_at")
 
     def get_learner_name(self, obj) -> str:
-        return obj.learner.get_full_name() or obj.learner.username
+        return obj.learner.display_name
 
 
 def section_payload(course: Course) -> list[dict]:

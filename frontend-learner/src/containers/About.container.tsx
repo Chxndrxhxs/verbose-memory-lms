@@ -22,8 +22,8 @@ export function AboutContainer() {
     queryKey: ["about-catalogue"],
     queryFn: fetchCatalogue,
   });
-  const courses = data ?? [];
   const stats = useMemo(() => {
+    const courses = data ?? [];
     const totalLearners = courses.reduce((n, c) => n + (c.student_count ?? 0), 0);
     const freeCount = courses.filter((c) => Number(c.price) === 0).length;
     return {
@@ -32,6 +32,6 @@ export function AboutContainer() {
         totalLearners > 999 ? `${(totalLearners / 1000).toFixed(1)}k` : String(totalLearners),
       free: freeCount,
     };
-  }, [courses]);
+  }, [data]);
   return <AboutView stats={stats} />;
 }

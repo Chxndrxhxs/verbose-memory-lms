@@ -411,6 +411,20 @@ export function ProfileContainer() {
                         <p><span className="font-semibold text-ink">Completed:</span> {completeDate}</p>
                       </div>
                       <Button type="button" variant="primary" size="sm" onClick={() => setViewCert(c)} className="mt-3"><Eye size={12} strokeWidth={2.5} aria-hidden /> View certificate</Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}/certificates/${c.certificate_id}`
+                          );
+                          setToast("Certificate link copied");
+                        }}
+                      >
+                        Copy link
+                      </Button>
                     </div>
                   );
                 })}

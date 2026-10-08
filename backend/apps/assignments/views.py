@@ -10,6 +10,11 @@ from rest_framework.response import Response
 from apps.enrollments.models import ActivityEvent
 from apps.enrollments.services import log_event
 from core.pagination import EnvelopePagination, paginate_queryset_view
+from core.validators import (
+    MAX_TOTAL_MARKS,
+    MIN_TOTAL_MARKS,
+    validate_category_name,
+)
 
 from .models import (
     Assignment,
@@ -86,7 +91,9 @@ def published_list(request):
     qs = Assignment.objects.filter(
         status=Assignment.Status.PUBLISHED, pack__isnull=True
     ).select_related(
-        "board", "inter_category", "inter_category__sub_category",
+        "board",
+        "inter_category",
+        "inter_category__sub_category",
         "inter_category__sub_category__category",
     )
     q = request.query_params.get("q", "").strip()
@@ -508,6 +515,20 @@ def admin_publish(request, assignment_id: int):
             {"data": None, "error": "Publish at least one model first"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    # The publish endpoint sets status directly, so the write
+    # serializer's total-marks rule never runs here.
+    draft_total = (assignment.draft_data or {}).get("totalMarks")
+    if isinstance(draft_total, (int, float)) and not isinstance(draft_total, bool):
+        if draft_total < MIN_TOTAL_MARKS or draft_total > MAX_TOTAL_MARKS:
+            return Response(
+                {
+                    "data": None,
+                    "error": (
+                        f"Total marks must be between {MIN_TOTAL_MARKS} and {MAX_TOTAL_MARKS}"
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
     for model in published:
         leaf_steps = collect_leaf_steps(model)
         step_ids = [step.id for step in leaf_steps]
@@ -656,6 +677,7 @@ def _page_status(data):
 def categories(request):
     if request.method == "POST":
         payload = _page_status(request.data)
+        payload["name"] = validate_category_name(payload.get("name", ""))
         cat = Category.objects.create(created_by=request.user, **payload)
         return ok(_category(cat))
     qs = Category.objects.prefetch_related("subcategories__intercategories").order_by(
@@ -678,6 +700,8 @@ def category_detail(request, category_id: int):
         return ok({"message": "Category deleted"})
     if request.method == "PATCH":
         payload = {k: v for k, v in request.data.items() if k in ("name", "is_active", "position")}
+        if "name" in payload:
+            payload["name"] = validate_category_name(payload["name"])
         for key, value in payload.items():
             setattr(cat, key, value)
         cat.save()
@@ -698,6 +722,8 @@ def sub_categories(request):
             )
         create_payload = dict(payload)
         create_payload.pop("category_id", None)
+        if "name" in create_payload:
+            create_payload["name"] = validate_category_name(create_payload["name"])
         sub = SubCategory.objects.create(category=cat, created_by=request.user, **create_payload)
         return ok(_sub_category(sub))
     category_id = request.query_params.get("category_id")
@@ -725,6 +751,8 @@ def sub_category_detail(request, sub_category_id: int):
             for k, v in request.data.items()
             if k in ("name", "is_active", "position", "category_id")
         }
+        if "name" in payload:
+            payload["name"] = validate_category_name(payload["name"])
         if "category_id" in payload:
             try:
                 payload["category"] = Category.objects.get(id=payload.pop("category_id"))
@@ -754,6 +782,8 @@ def inter_categories(request):
             )
         create_payload = dict(payload)
         create_payload.pop("sub_category_id", None)
+        if "name" in create_payload:
+            create_payload["name"] = validate_category_name(create_payload["name"])
         inter = InterCategory.objects.create(
             sub_category=sub, created_by=request.user, **create_payload
         )

@@ -1,17 +1,27 @@
 import { NavLink } from "react-router-dom";
-import { Activity, BarChart3, BookOpen, FileText, LayoutGrid } from "@masterlms/shared";
+import {
+  Activity,
+  BarChart3,
+  BookOpen,
+  FileText,
+  Layers,
+  LayoutGrid,
+  Trophy,
+} from "@masterlms/shared";
 import { cn } from "../lib/utils";
 
 /*
- * Five destinations, not six. The old bar carried Tests and Ranks but dropped
- * Packs entirely, so a whole product area was unreachable on mobile.
+ * Seven destinations, matching the desktop nav. Packs and Leaderboard
+ * were desktop-only, so both were unreachable on a phone.
  */
 const TABS = [
   { to: "/dashboard", label: "Home", Icon: LayoutGrid },
   { to: "/courses", label: "Courses", Icon: BookOpen },
   { to: "/assignments", label: "Tests", Icon: FileText },
+  { to: "/packs", label: "Packs", Icon: Layers },
   { to: "/analytics", label: "Stats", Icon: BarChart3 },
   { to: "/activity", label: "Activity", Icon: Activity },
+  { to: "/leaderboard", label: "Ranks", Icon: Trophy },
 ];
 
 export function MobileTabBar() {
@@ -20,7 +30,7 @@ export function MobileTabBar() {
       aria-label="Primary"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-slate-panel/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
     >
-      <div className="grid grid-cols-5">
+      <div className="grid grid-cols-7">
         {TABS.map(({ to, label, Icon }) => (
           <NavLink
             key={to}

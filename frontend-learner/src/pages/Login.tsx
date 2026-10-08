@@ -33,6 +33,12 @@ export default function Login() {
   const verifyDone = useRef(false);
   // Seconds until "Resend code" unlocks, so OTP requests stay spaced out.
   const [cooldown, setCooldown] = useState(0);
+  // The mock code only exists when the backend runs with
+  // DEBUG=True, so this banner is dev-only by construction.
+  // A 4-second toast is gone before anyone can type it; keep
+  // the code on screen until it is used or dismissed.
+  const [mockCode, setMockCode] = useState<string | null>(null);
+  const [codeDismissed, setCodeDismissed] = useState(false);
 
   const phoneForm = useForm<z.infer<typeof phoneSchema>>({
     resolver: zodResolver(phoneSchema),
@@ -63,6 +69,8 @@ export default function Login() {
     onSuccess: (res) => {
       verifyDone.current = false;
       setCooldown(30);
+      setMockCode(res.mock_code ?? null);
+      setCodeDismissed(false);
       showToast(`OTP sent: ${res.mock_code}`, 4000);
       setStep("otp");
     },
@@ -77,6 +85,7 @@ export default function Login() {
       }),
     onSuccess: (data) => {
       verifyDone.current = true;
+      setMockCode(null);
       setUser({
         name: data.user.name || "Learner",
         email: data.user.email,
@@ -133,6 +142,34 @@ export default function Login() {
               ? "We will send a one-time code to your mobile."
               : `Sent to +91 ${phone}.`}
           </p>
+
+          {step === "otp" && mockCode && !codeDismissed && (
+            <div className="mt-6 flex items-center justify-between gap-3 border border-gold/50 bg-gold/10 px-4 py-3">
+              <p className="tnum text-sm text-ink">
+                Demo code: <span className="font-semibold">{mockCode}</span>
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(mockCode);
+                    showToast("Code copied");
+                  }}
+                  className="px-2 py-1 text-xs font-semibold text-ink underline underline-offset-2"
+                >
+                  Copy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCodeDismissed(true)}
+                  className="px-2 py-1 text-xs font-semibold text-ink-muted"
+                  aria-label="Dismiss demo code"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
 
           {step === "phone" ? (
             <form

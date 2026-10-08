@@ -45,7 +45,7 @@ def test_person_name_rejects_everything_else(raw, fragment):
 
 
 def test_age_bounds_are_inclusive():
-    assert (MIN_AGE, MAX_AGE) == (0, 100)
+    assert (MIN_AGE, MAX_AGE) == (1, 100)
 
 
 @pytest.mark.django_db
@@ -173,8 +173,8 @@ def test_api_accepts_valid_profile(admin, target):
         ("last_name", "Ch3n", "may only contain"),
         ("city", "Chennai1", "may only contain"),
         ("city", "", "required"),
-        ("age", 101, "between 0 and 100"),
-        ("age", 121, "between 0 and 100"),
+        ("age", 101, "between 1 and 100"),
+        ("age", 121, "between 1 and 100"),
     ],
 )
 def test_api_rejects_invalid_fields(admin, target, field, value, fragment):

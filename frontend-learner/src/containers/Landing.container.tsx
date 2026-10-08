@@ -61,13 +61,24 @@ async function fetchLandingCourses(): Promise<Course[]> {
   return list.map(mapApi);
 }
 
+export type CourseStats = {
+  total_courses: number;
+  total_learners: number;
+  free_courses: number;
+};
+
+async function fetchCourseStats(): Promise<CourseStats> {
+  return api<CourseStats>("/courses/stats/", { auth: false });
+}
+
 export function LandingContainer() {
   const { data } = useQuery({ queryKey: ["landing-courses"], queryFn: fetchLandingCourses });
+  const { data: stats } = useQuery({ queryKey: ["course-stats"], queryFn: fetchCourseStats });
   const { data: myCourses } = useMyCourses();
   const enrolledIds = useMemo(
     () => new Set((myCourses ?? []).map((e) => String(e.course.id))),
     [myCourses]
   );
   const enriched = (data ?? []).map((c) => ({ ...c, enrolled: enrolledIds.has(c.id) }));
-  return <LandingView courses={enriched} />;
+  return <LandingView courses={enriched} stats={stats} />;
 }

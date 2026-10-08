@@ -49,8 +49,16 @@ export function AssignmentWizard({
   const [step, setStep] = useState(0);
   const questionCount = getTotalQuestions(assignment);
 
+  // Step captions stay short: a long or junk title would otherwise
+  // spill into the wizard chrome.
+  const captionTitle = (raw: string) => {
+    const t = raw.trim();
+    if (!t) return "Missing title";
+    return t.length > 24 ? `${t.slice(0, 24)}…` : t;
+  };
+
   const captions = [
-    assignment.title.trim() || "Missing title",
+    captionTitle(assignment.title),
     assignment.sourceDocumentName || "Optional",
     `${assignment.questions.length} in pool`,
     `${questionCount} question${questionCount === 1 ? "" : "s"}`,

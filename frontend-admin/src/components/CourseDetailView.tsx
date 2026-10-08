@@ -7,7 +7,7 @@ import {
   EyeOff,
   Play,
   Trash2,
-  hasReadableTitle,
+  isValidTitle,
   isImageUrl,
 } from "@masterlms/shared";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,8 +28,8 @@ const schema = z.object({
     .min(1, "Title is required")
     .max(200, "Title must be 200 characters or fewer")
     .refine(
-      (v) => v.trim() === "" || hasReadableTitle(v),
-      "Title must contain at least one letter or number",
+      (v) => v.trim() === "" || isValidTitle(v),
+      "Title must be a real phrase — no long symbol runs or random characters",
     ),
   subtitle: z.string().max(255),
   category: z.string().min(1, "Category is required").max(50),

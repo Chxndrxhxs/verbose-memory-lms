@@ -35,7 +35,7 @@ def test_instructor_overview_returns_totals(instructor, learner):
         price=100,
         status="published",
     )
-    Course.objects.create(
+    draft = Course.objects.create(
         instructor=instructor,
         title="D",
         category="x",
@@ -43,6 +43,9 @@ def test_instructor_overview_returns_totals(instructor, learner):
         status="draft",
     )
     Enrollment.objects.create(learner=learner, course=course)
+    # A course can go back to draft after learners enrolled; those
+    # enrollments must not reach the published-catalogue stats.
+    Enrollment.objects.create(learner=learner, course=draft)
     c = APIClient()
     c.force_authenticate(user=instructor)
     r = c.get("/api/v1/instructor/overview")
@@ -50,9 +53,11 @@ def test_instructor_overview_returns_totals(instructor, learner):
     data = r.json()["data"]
     assert data["total_courses"] == 2
     assert data["drafts"] == 1
+    assert data["published_courses"] == 1
     assert data["total_students"] == 1
     assert data["top_course"]["title"] == "T"
-    assert len(data["recent_enrollments"]) == 1
+    assert [x["title"] for x in data["courses"]] == ["T"]
+    assert len(data["recent_enrollments"]) == 2
 
 
 @pytest.mark.django_db

@@ -45,7 +45,9 @@ export default function CompleteProfile() {
   } = useForm<Form>({
     resolver: zodResolver(schema) as never,
     defaultValues: {
-      name: user?.name ?? "",
+      // A brand-new account's "name" is the raw mobile number (the username)
+      // until the profile is completed — never prefill the field with it.
+      name: /^\d+$/.test(user?.name ?? "") ? "" : (user?.name ?? ""),
       email: user?.email ?? "",
       age: user?.age === null || user?.age === undefined ? "" : String(user.age),
       city: "",

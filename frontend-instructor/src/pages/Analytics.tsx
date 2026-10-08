@@ -19,6 +19,7 @@ type OverviewCourse = {
 type Overview = {
   total_students: number;
   revenue_inr: number;
+  published_courses: number;
   top_course: { id: number; title: string; students: number } | null;
   courses: OverviewCourse[];
 };
@@ -63,8 +64,12 @@ export default function Analytics() {
                 {isLoading ? "—" : students.toLocaleString("en-IN")}
               </p>
               <p className="mt-1.5 text-xs text-ink-muted">
-                {courses.length > 0
-                  ? `across ${courses.length} ${courses.length === 1 ? "course" : "courses"}`
+                {(data?.published_courses ?? courses.length) > 0
+                  ? `across ${data?.published_courses ?? courses.length} ${
+                      (data?.published_courses ?? courses.length) === 1
+                        ? "published course"
+                        : "published courses"
+                    }`
                   : "Publish a course to start enrolling"}
               </p>
             </Panel>

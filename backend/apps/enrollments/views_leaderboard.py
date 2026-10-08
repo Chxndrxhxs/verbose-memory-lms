@@ -32,7 +32,9 @@ def _distinct_categories():
 def leaderboard_view(request):
     city = request.query_params.get("city")
     category = request.query_params.get("category")
-    season = request.query_params.get("season") or "current"
+    # "all" by default: the current-month window scores every
+    # inactive learner at 0, which makes the board meaningless.
+    season = request.query_params.get("season") or "all"
     ordering = request.query_params.get("ordering") or "rank"
     page_raw = request.query_params.get("page") or "1"
     try:
@@ -40,11 +42,15 @@ def leaderboard_view(request):
     except ValueError:
         page = 1
     page_size = 12
-    my_students = request.query_params.get("my_students") in (
-        "1",
-        "true",
-        "True",
-    ) or request.query_params.get("scope") == "my_students"
+    my_students = (
+        request.query_params.get("my_students")
+        in (
+            "1",
+            "true",
+            "True",
+        )
+        or request.query_params.get("scope") == "my_students"
+    )
     if my_students:
         is_inst = (
             getattr(request.user, "role", "") in ("instructor", "admin") or request.user.is_staff
@@ -78,7 +84,7 @@ def leaderboard_view(request):
                 "tier": e["tier"],
                 "learner": {
                     "id": u.id,
-                    "name": u.get_full_name() or u.username,
+                    "name": u.display_name,
                     "avatar": u.avatar or "",
                     "city": u.city or "",
                 },
@@ -104,7 +110,7 @@ def leaderboard_view(request):
                     "tier": e["tier"],
                     "learner": {
                         "id": u.id,
-                        "name": u.get_full_name() or u.username,
+                        "name": u.display_name,
                         "avatar": u.avatar or "",
                         "city": u.city or "",
                     },

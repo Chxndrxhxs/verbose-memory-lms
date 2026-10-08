@@ -64,7 +64,20 @@ def create_course(*, instructor, data) -> Course:
     return course
 
 
+def publish_guard(course: Course) -> None:
+    """A published course with no curriculum is an empty shell learners
+    can enroll in (QA report: courses 13/15 shipped 0/0).
+    """
+    from rest_framework import serializers as drf_serializers
+
+    if not course.sections.exists() or not Lesson.objects.filter(section__course=course).exists():
+        raise drf_serializers.ValidationError(
+            "Add at least one chapter with a lesson before publishing."
+        )
+
+
 def publish_course(course: Course) -> Course:
+    publish_guard(course)
     course.status = Course.Status.PUBLISHED
     course.save(update_fields=["status"])
     return course

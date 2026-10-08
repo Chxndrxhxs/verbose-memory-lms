@@ -52,7 +52,7 @@ def dashboard_stats() -> dict:
         "recent_users": [
             {
                 "id": u.id,
-                "name": u.get_full_name() or u.username,
+                "name": u.display_name,
                 "mobile": u.mobile,
                 "role": u.role,
                 "city": u.city,
@@ -65,7 +65,7 @@ def dashboard_stats() -> dict:
             {
                 "id": e.id,
                 "learner_id": e.learner_id,
-                "learner": e.learner.get_full_name() or e.learner.username,
+                "learner": e.learner.display_name,
                 "course": e.course.title,
                 "progress": e.progress,
                 "enrolled_at": e.enrolled_at,

@@ -1,6 +1,6 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.courses.models import Course, Lesson
@@ -197,6 +197,24 @@ def generate_certificate(request, course_id: int):
         course=enrollment.course,
         meta={"certificate_id": cert_id},
     )
+    return Response({"data": CertificateSerializer(cert).data, "error": None})
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def certificate_share(request, certificate_id: str):
+    """Public read view behind a share link (/certificates/<id> in
+    the SPA). Deliberately exposes only what a recipient needs to
+    see: learner display name, course, dates, certificate id."""
+    try:
+        cert = Certificate.objects.select_related("course", "enrollment").get(
+            certificate_id=certificate_id
+        )
+    except Certificate.DoesNotExist:
+        return Response(
+            {"data": None, "error": "Certificate not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
     return Response({"data": CertificateSerializer(cert).data, "error": None})
 
 

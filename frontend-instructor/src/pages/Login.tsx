@@ -119,7 +119,9 @@ export default function Login() {
       if (me) setUser(me);
       else
         setUser({
-          name: fallback.name || "Instructor",
+          // The verify-otp fallback can carry the raw mobile as "name"
+          // (the username) — never store a number as a display name.
+          name: /^\d+$/.test(fallback.name) ? "" : fallback.name || "Instructor",
           email: fallback.email,
           mobile: fallback.mobile,
           avatar: fallback.avatar,

@@ -13,6 +13,7 @@ import {
 import { CourseCard } from "./CourseCard";
 import { Header } from "./Header";
 import { cn } from "../lib/utils";
+import type { CourseStats } from "../containers/Landing.container";
 import type { Course } from "../types/course";
 
 /*
@@ -67,11 +68,20 @@ const PILLARS: { title: string; body: string; Icon: LucideIcon }[] = [
   },
 ];
 
-export function LandingView({ courses }: { courses: Course[] }) {
+export function LandingView({
+  courses,
+  stats,
+}: {
+  courses: Course[];
+  stats?: CourseStats;
+}) {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
-  const totalLearners = courses.reduce((n, c) => n + c.studentCount, 0);
-  const freeCount = courses.filter((c) => c.rawPrice === 0).length;
+  // Canonical counts from the stats endpoint; fall back to
+  // catalogue sums while the query is in flight.
+  const totalLearners = stats?.total_learners ?? courses.reduce((n, c) => n + c.studentCount, 0);
+  const courseCount = stats?.total_courses ?? courses.length;
+  const freeCount = stats?.free_courses ?? courses.filter((c) => c.rawPrice === 0).length;
   const featured = courses.slice(0, 8);
 
   return (
@@ -89,7 +99,7 @@ export function LandingView({ courses }: { courses: Course[] }) {
         <div className="min-w-0 max-w-3xl">
           <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
             <span aria-hidden className="h-1.5 w-1.5 bg-gold-deep" />
-            {courses.length} courses open now
+            {courseCount} courses open now
           </p>
 
           <h1 className="mt-5 text-[40px] font-semibold leading-[1.04] tracking-[-0.035em] text-ink sm:text-[54px] lg:text-[60px]">
@@ -120,10 +130,10 @@ export function LandingView({ courses }: { courses: Course[] }) {
             </a>
           </div>
 
-          {/* Real counts from the catalogue, not invented social proof. */}
+          {/* Real counts from the stats endpoint, not invented social proof. */}
           <dl className="mt-10 grid max-w-lg grid-cols-3 gap-px border border-rule bg-rule">
             {[
-              [String(courses.length), "Courses"],
+              [String(courseCount), "Courses"],
               [totalLearners > 999 ? `${(totalLearners / 1000).toFixed(1)}k` : String(totalLearners), "Learners"],
               [String(freeCount), "Free to start"],
             ].map(([v, k]) => (

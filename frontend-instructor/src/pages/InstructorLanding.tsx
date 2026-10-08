@@ -147,9 +147,9 @@ export default function InstructorLanding() {
 
           {/* Three levels, exactly: hook, bridge, detail. */}
           <h1 className="mt-5 text-[38px] font-semibold leading-[1.02] tracking-[-0.035em] text-ink sm:text-[52px] lg:text-[58px]">
-            Teach the thing
+            Teach the thing{" "}
             <br />
-            you know{" "}
+            {" "}you know{" "}
             <span className="relative inline-block">
               <span className="relative z-10">properly</span>
               <span

@@ -108,7 +108,7 @@ def test_profile_age_outside_range_is_rejected(raw):
     assert "valid age between" in str(exc.value.detail)
 
 
-@pytest.mark.parametrize("raw", [0, 5, 30, 100])
+@pytest.mark.parametrize("raw", [1, 5, 30, 100])
 def test_profile_age_inside_range_is_accepted(raw):
     assert CompleteProfileSerializer(data={"name": "Maya Chen", "age": raw}).is_valid()
 

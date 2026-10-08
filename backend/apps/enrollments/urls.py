@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    certificate_share,
     complete_lesson,
     enroll_view,
     generate_certificate,
@@ -23,5 +24,6 @@ urlpatterns = [
     path("me/courses", my_courses),
     path("me/activity/", my_activity),
     path("me/certificates", my_certificates),
+    path("certificates/<str:certificate_id>/", certificate_share),
     path("me/timeline", my_timeline),
 ]
