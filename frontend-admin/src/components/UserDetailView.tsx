@@ -64,6 +64,10 @@ export function UserDetailView({
   saveError,
   onDelete,
   deleting,
+  avatarPreview,
+  avatarFile,
+  avatarError,
+  onAvatarPicked,
 }: {
   data?: AdminUserDetail;
   loading: boolean;
@@ -74,6 +78,10 @@ export function UserDetailView({
   saveError: string | null;
   onDelete: () => void;
   deleting: boolean;
+  avatarPreview?: string | null;
+  avatarFile?: File | null;
+  avatarError?: string | null;
+  onAvatarPicked: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -144,13 +152,21 @@ export function UserDetailView({
       </Link>
 
       <header className="flex flex-wrap items-center gap-4 border-b border-rule-strong pb-4">
-        {u.avatar ? (
-          <img src={u.avatar} alt="" className="h-14 w-14 shrink-0 object-cover" />
-        ) : (
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center bg-paper-sunk text-ink-faint">
-            <User size={22} strokeWidth={2} aria-hidden />
-          </span>
-        )}
+        <label
+          htmlFor="user-avatar-input"
+          className="block h-14 w-14 shrink-0 cursor-pointer overflow-hidden border border-rule"
+          title="Change photo"
+        >
+          {avatarPreview ? (
+            <img src={avatarPreview} alt="" className="h-full w-full object-cover" />
+          ) : u.avatar ? (
+            <img src={u.avatar} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center bg-paper-sunk text-ink-faint">
+              <User size={22} strokeWidth={2} aria-hidden />
+            </span>
+          )}
+        </label>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold text-ink">{u.name || u.username}</h1>
@@ -215,6 +231,38 @@ export function UserDetailView({
                 placeholder={`e.g. ${25}`}
                 {...form.register("age")}
               />
+            </Field>
+
+            <Field
+              label="Avatar"
+              className="sm:col-span-2"
+              hint="Optional. Image, max 2 MB."
+            >
+              <div className="flex items-center gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden border border-rule bg-paper-sunk">
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <User size={18} strokeWidth={2} className="text-ink-faint" aria-hidden />
+                  )}
+                </span>
+                <label
+                  htmlFor="user-avatar-input"
+                  className="cursor-pointer border border-rule px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:bg-paper-sunk"
+                >
+                  {avatarFile ? "Replace photo" : "Upload photo"}
+                </label>
+                <input
+                  id="user-avatar-input"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onAvatarPicked}
+                />
+              </div>
+              {avatarError && (
+                <p role="alert" className="mt-1 text-xs font-medium text-halt">{avatarError}</p>
+              )}
             </Field>
 
             {FLAGS.map(([key, label]) => (

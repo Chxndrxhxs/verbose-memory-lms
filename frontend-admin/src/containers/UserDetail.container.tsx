@@ -1,8 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
-import { api } from "../lib/api";
+import { useState } from "react";
+import { AVATAR_SIZE_MSG, isAvatarSizeAllowed } from "@masterlms/shared";
+import { absoluteMediaUrl, api, uploadFile } from "../lib/api";
 import type { AdminUser, AdminUserDetail } from "../types/admin";
 import { UserDetailView } from "../components/UserDetailView";
+import { useAuth } from "../hooks/useAuth";
 
 export type UserEditValues = {
   first_name: string;
@@ -37,6 +40,11 @@ export function UserDetailContainer() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const uid = Number(id);
+  const { user: me } = useAuth();
+
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["admin", "user", uid],
@@ -44,13 +52,54 @@ export function UserDetailContainer() {
     enabled: Number.isFinite(uid),
   });
 
+  const onAvatarPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!isAvatarSizeAllowed(f)) {
+      setAvatarError(AVATAR_SIZE_MSG);
+      setAvatarFile(null);
+      setAvatarPreview(null);
+      e.target.value = "";
+      return;
+    }
+    setAvatarError(null);
+    setAvatarFile(f);
+    const r = new FileReader();
+    r.onload = () => setAvatarPreview(r.result as string);
+    r.readAsDataURL(f);
+  };
+
   const update = useMutation({
-    mutationFn: (values: UserEditValues) =>
-      api<AdminUser>(`/admin/users/${uid}`, {
+    mutationFn: async (values: UserEditValues) => {
+      const body: Record<string, unknown> = {
+        ...values,
+        age: values.age === "" ? null : Number(values.age),
+      };
+      // avatar is only sent when a new photo was picked; the
+      // backend stores it as a URL, so the uploaded file goes
+      // through /upload/ first (RAM-49).
+      let newAvatar: string | undefined;
+      if (avatarFile) {
+        const uploaded = await uploadFile(avatarFile, "avatar");
+        newAvatar = absoluteMediaUrl(uploaded.url) ?? uploaded.url;
+        body.avatar = newAvatar;
+      }
+      const res = await api<AdminUser>(`/admin/users/${uid}`, {
         method: "PATCH",
-        body: JSON.stringify({ ...values, age: values.age === "" ? null : Number(values.age) }),
-      }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "user", uid] }),
+        body: JSON.stringify(body),
+      });
+      return { res, newAvatar };
+    },
+    onSuccess: ({ res, newAvatar }) => {
+      qc.invalidateQueries({ queryKey: ["admin", "user", uid] });
+      qc.invalidateQueries({ queryKey: ["admin", "users"] });
+      setAvatarPreview(null);
+      setAvatarFile(null);
+      // Keep the sidebar photo fresh when an admin edits their own account.
+      if (newAvatar !== undefined && me?.id != null && res.id === me.id) {
+        useAuth.getState().setUser({ ...me, avatar: newAvatar || undefined });
+      }
+    },
   });
 
   const del = useMutation({
@@ -72,6 +121,10 @@ export function UserDetailContainer() {
       saveError={update.isError ? String(update.error ?? "Could not save changes.") : null}
       onDelete={del.mutate}
       deleting={del.isPending}
+      avatarPreview={avatarPreview}
+      avatarFile={avatarFile}
+      avatarError={avatarError}
+      onAvatarPicked={onAvatarPicked}
     />
   );
 }

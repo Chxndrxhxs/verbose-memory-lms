@@ -175,6 +175,29 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
   const total = allLessons.length;
   const progress = total ? Math.round((completed.size / total) * 100) : 0;
 
+  const embedUrl = useMemo(() => {
+    if (!activeLesson) return null;
+    const embed = toEmbed(activeLesson.resource_url);
+    if (!embed) return null;
+    // YouTube embeds carry the resume position as the `start` param. The
+    // IFrame API path was dropped: its iframe can't set referrerpolicy,
+    // which YouTube now requires (RAM-46, Error 153).
+    if (activeLesson.kind === "video" && youtubeId(activeLesson.resource_url)) {
+      let startAt = 0;
+      try {
+        const saved = Number(
+          localStorage.getItem(`lms:video-pos:${activeLesson.id}`),
+        );
+        if (saved > 0) startAt = Math.floor(saved);
+      } catch {
+        /* storage unavailable */
+      }
+      if (startAt > 0)
+        return `${embed}${embed.includes("?") ? "&" : "?"}start=${startAt}`;
+    }
+    return embed;
+  }, [activeLesson]);
+
   const toggleSection = (i: number) => {
     const n = new Set(openSections);
     if (n.has(i)) n.delete(i); else n.add(i);
@@ -204,14 +227,12 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
   if (courseQuery.error) return <p className="py-10 text-center text-sm text-ink-muted">{String(courseQuery.error)}. <Link to={`/courses/${courseId}`} className="inline-flex items-center gap-1 font-semibold text-ink underline"><ArrowLeft size={12} strokeWidth={2.5} aria-hidden /> Back</Link></p>;
   if (total === 0) return <p className="py-10 text-center text-sm text-ink-muted">No lessons yet. <Link to={`/courses/${courseId}`} className="inline-flex items-center gap-1 font-semibold text-ink underline"><ArrowLeft size={12} strokeWidth={2.5} aria-hidden /> Back to course</Link></p>;
 
-  const embedUrl = activeLesson ? toEmbed(activeLesson.resource_url) : null;
   const videoUrl =
     activeLesson?.kind === "video" &&
     !embedUrl &&
     activeLesson.resource_url?.match(/\.(mp4|webm|mov)(\?|$)/)
       ? absoluteMediaUrl(activeLesson.resource_url)
       : null;
-  const ytVideoId = activeLesson?.kind === "video" ? youtubeId(activeLesson.resource_url) : null;
   const textBody = activeLesson?.kind === "text" ? (activeLesson.resource_url ?? `*${activeLesson.title}*`) : "";
   const pdfUrl = absoluteMediaUrl(activeLesson?.resource_url);
   const audioUrl = activeLesson?.kind === "audio" ? absoluteMediaUrl(activeLesson.resource_url) : null;
@@ -226,7 +247,6 @@ export function LearnContainer({ courseId: propId, title: propTitle }: { courseI
       activeLesson={activeLesson}
       embedUrl={embedUrl}
       videoUrl={videoUrl}
-      ytVideoId={ytVideoId}
       textBody={textBody}
       pdfUrl={pdfUrl}
       audioUrl={audioUrl}

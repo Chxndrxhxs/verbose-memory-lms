@@ -24,7 +24,6 @@ import { Button } from "./Button";
 import { Textarea } from "./Controls";
 import { Panel } from "./Panel";
 import { useVideoResume } from "../hooks/useVideoResume";
-import { useYouTubeResume } from "../hooks/useYouTubeResume";
 
 export type LearnLesson = {
   id: number;
@@ -49,7 +48,6 @@ type Props = {
   activeLesson: LearnLesson | undefined;
   embedUrl: string | null;
   videoUrl: string | null;
-  ytVideoId: string | null;
   textBody: string;
   pdfUrl: string | null;
   audioUrl: string | null;
@@ -84,16 +82,14 @@ type Props = {
 
 export function LearnView(p: Props) {
   const {
-    courseId, title, progress, active, activeLesson, embedUrl, videoUrl, ytVideoId, textBody,
+    courseId, title, progress, active, activeLesson, embedUrl, videoUrl, textBody,
     pdfUrl, audioUrl, sections, completed, openSections, tab, note,
     quizAnswers, quizSubmitted, quizVerdict, quizGrading, quizError, quizAttempt, quizBest,
     showRating, selectedRating, submittingRating,
     userRating, toast,
   } = p;
   const videoRef = useRef<HTMLVideoElement>(null);
-  const ytPlayerRef = useRef<HTMLDivElement>(null);
   useVideoResume(activeLesson?.id, videoRef);
-  useYouTubeResume(ytVideoId, activeLesson?.id, ytPlayerRef);
   return (
     <div className="min-h-screen bg-room">
       <div className="sticky top-0 z-30 flex justify-center bg-room px-3 py-3 sm:px-4">
@@ -120,9 +116,7 @@ export function LearnView(p: Props) {
                 <span className="tnum shrink-0 text-xs text-ink-muted">{activeLesson.duration}</span>
               </div>
             )}
-            {activeLesson?.kind === "video" && ytVideoId ? (
-              <div ref={ytPlayerRef} className="aspect-video w-full bg-black" />
-            ) : activeLesson?.kind === "video" && embedUrl ? (
+            {activeLesson?.kind === "video" && embedUrl ? (
               <div className="aspect-video w-full bg-black">
                 <iframe src={embedUrl} title={activeLesson.title} className="h-full w-full" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
               </div>

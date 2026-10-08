@@ -31,7 +31,6 @@ type Props = {
   assignment: Assignment;
   onAssignmentChange: (a: Assignment) => void;
   onSave: (publish: boolean) => void;
-  onPersistDraft: () => Promise<string | null>;
   saving: boolean;
   errors: AssignmentValidationError[];
   isEditing?: boolean;
@@ -41,7 +40,6 @@ export function AssignmentWizard({
   assignment,
   onAssignmentChange,
   onSave,
-  onPersistDraft,
   saving,
   errors,
   isEditing: _isEditing,
@@ -72,7 +70,7 @@ export function AssignmentWizard({
 
   const blockers: (string | null)[] = [
     assignment.title.trim() ? null : "Add a title to continue.",
-    assignment.board == null ? null : "Pick an exam board to continue.",
+    assignment.board == null ? "Pick an exam board to continue." : null,
     isValidTotalMarks(assignment.totalMarks)
       ? null
       : "Total marks looks unrealistic — check the value.",
@@ -86,13 +84,9 @@ export function AssignmentWizard({
   ];
   const blocker = blockers[step];
 
-  const advance = async () => {
+  const advance = () => {
     if (blocker) return;
-    if (step < STEP_LABELS.length - 1) {
-      const saved = await onPersistDraft();
-      if (!saved) return;
-      setStep(step + 1);
-    }
+    if (step < STEP_LABELS.length - 1) setStep(step + 1);
   };
 
   const goBack = () => {

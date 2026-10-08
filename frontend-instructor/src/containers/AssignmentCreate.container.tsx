@@ -179,7 +179,6 @@ export function AssignmentCreateContainer({ existingId }: { existingId?: string 
           assignment={assignment}
           onAssignmentChange={handleAssignmentChange}
           onSave={handleSave}
-          onPersistDraft={persistDraft}
           saving={saving}
           errors={errors}
           isEditing={isEditing}
