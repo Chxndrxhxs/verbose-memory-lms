@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Archive, Check, Copy, Trash2, type AssignmentDetail } from "@masterlms/shared";
+import { Archive, Check, Copy, Trash2, X, type AssignmentDetail } from "@masterlms/shared";
 import { PageHeader } from "./Panel";
 import { Badge, statusTone } from "./Badge";
 import { Button } from "./Button";
@@ -19,6 +19,8 @@ export function AssignmentsView({
   assignments,
   loading,
   error,
+  actionError,
+  onDismissActionError,
   busy,
   onPublish,
   onUnpublish,
@@ -28,6 +30,8 @@ export function AssignmentsView({
   assignments: AssignmentDetail[];
   loading: boolean;
   error: string | null;
+  actionError: string | null;
+  onDismissActionError: () => void;
   busy: boolean;
   onPublish: (id: number) => void;
   onUnpublish: (id: number) => void;
@@ -42,6 +46,24 @@ export function AssignmentsView({
         title="Assignments"
         description="Manage published assessments across categories."
       />
+
+      {actionError && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-4 border border-halt bg-halt-soft px-4 py-3"
+        >
+          <p className="text-sm font-medium text-halt">{actionError}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            onClick={onDismissActionError}
+            aria-label="Dismiss error"
+          >
+            <X size={14} strokeWidth={2.5} aria-hidden />
+          </Button>
+        </div>
+      )}
 
       <GridPanel>
         {loading ? (
@@ -59,7 +81,7 @@ export function AssignmentsView({
             <GridHead>
               <Th>Assignment</Th>
               <Th>Category</Th>
-              <Th align="right">Models</Th>
+              <Th align="right">Tests</Th>
               <Th align="right">Duration</Th>
               <Th>Status</Th>
               <Th align="right">Actions</Th>

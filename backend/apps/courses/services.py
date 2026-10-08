@@ -112,15 +112,22 @@ def replace_curriculum(course: Course, sections: list) -> Course:
             new_ids.append(lesson.id)
     # A re-save deletes every old lesson row, so stored completions point at dead
     # IDs. Remap them by position so learner progress survives content edits.
-    if old_ids and new_ids:
-        old_index = {lid: i for i, lid in enumerate(old_ids)}
-        for enrollment in Enrollment.objects.filter(course=course):
+    for enrollment in Enrollment.objects.filter(course=course):
+        if old_ids and new_ids:
+            old_index = {lid: i for i, lid in enumerate(old_ids)}
             done = sorted(
                 old_index[lid] for lid in enrollment.completed_lessons if lid in old_index
             )
             enrollment.completed_lessons = [new_ids[i] for i in done if i < len(new_ids)]
-            enrollment.progress = int(len(enrollment.completed_lessons) / len(new_ids) * 100)
-            enrollment.save(update_fields=["completed_lessons", "progress"])
+        else:
+            # Nothing to remap onto: every stored completion points at a
+            # lesson row that no longer exists.
+            enrollment.completed_lessons = []
+        total = len(new_ids)
+        enrollment.progress = (
+            min(100, int(len(enrollment.completed_lessons) / total * 100)) if total else 0
+        )
+        enrollment.save(update_fields=["completed_lessons", "progress"])
     return course
 
 

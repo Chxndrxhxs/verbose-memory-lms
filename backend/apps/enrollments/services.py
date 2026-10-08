@@ -94,13 +94,18 @@ def mark_lesson_done(learner, course: Course, lesson: Lesson) -> Enrollment:
     record_completion(learner, lesson)
     log_event(learner, ActivityEvent.Verb.COMPLETED_LESSON, course=course, lesson=lesson)
     enrollment = Enrollment.objects.get(learner=learner, course=course)
+    # A curriculum re-save deletes lesson rows, so stored completions can
+    # point at dead IDs and push progress past 100%. Keep only lessons
+    # that still exist, and cap progress at 100%.
+    valid_ids = set(Lesson.objects.filter(section__course=course).values_list("id", flat=True))
+    completed = [lid for lid in enrollment.completed_lessons if lid in valid_ids]
     lid = int(lesson.id)
-    if lid not in enrollment.completed_lessons:
-        enrollment.completed_lessons.append(lid)
-        total = Lesson.objects.filter(section__course=course).count()
-        done = len(enrollment.completed_lessons)
-        enrollment.progress = int(done / total * 100) if total else 0
-        enrollment.save(update_fields=["completed_lessons", "progress"])
+    if lid in valid_ids and lid not in completed:
+        completed.append(lid)
+    total = len(valid_ids)
+    enrollment.completed_lessons = completed
+    enrollment.progress = min(100, int(len(completed) / total * 100)) if total else 0
+    enrollment.save(update_fields=["completed_lessons", "progress"])
     return enrollment
 
 

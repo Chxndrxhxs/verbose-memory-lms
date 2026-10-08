@@ -121,9 +121,6 @@ export function PaymentsView({
                     <p className="tnum whitespace-nowrap text-sm font-semibold text-ink">
                       ₹{p.amount_inr.toLocaleString("en-IN")}
                     </p>
-                    <p className="tnum text-xs text-ink-faint">
-                      {(p.amount / 100).toFixed(2)} {p.currency}
-                    </p>
                   </Td>
                   <Td>
                     <Badge tone={statusTone(p.status)}>{p.status}</Badge>

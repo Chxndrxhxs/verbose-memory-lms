@@ -75,7 +75,7 @@ admin_patterns = [
         name="assignment-duplicate",
     ),
     path(
-        "admin/assignments/<int:assignment_id>/attempts",
+        "admin/assignments/<int:assignment_id>/attempts/",
         views.admin_attempts,
         name="assignment-attempts",
     ),

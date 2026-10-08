@@ -678,6 +678,11 @@ def categories(request):
     if request.method == "POST":
         payload = _page_status(request.data)
         payload["name"] = validate_category_name(payload.get("name", ""))
+        if Category.objects.filter(name__iexact=payload["name"]).exists():
+            return Response(
+                {"data": None, "error": "A category with this name already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         cat = Category.objects.create(created_by=request.user, **payload)
         return ok(_category(cat))
     qs = Category.objects.prefetch_related("subcategories__intercategories").order_by(
@@ -702,6 +707,11 @@ def category_detail(request, category_id: int):
         payload = {k: v for k, v in request.data.items() if k in ("name", "is_active", "position")}
         if "name" in payload:
             payload["name"] = validate_category_name(payload["name"])
+            if Category.objects.exclude(id=cat.id).filter(name__iexact=payload["name"]).exists():
+                return Response(
+                    {"data": None, "error": "A category with this name already exists."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         for key, value in payload.items():
             setattr(cat, key, value)
         cat.save()
@@ -724,6 +734,15 @@ def sub_categories(request):
         create_payload.pop("category_id", None)
         if "name" in create_payload:
             create_payload["name"] = validate_category_name(create_payload["name"])
+            if (
+                SubCategory.objects.filter(category=cat)
+                .filter(name__iexact=create_payload["name"])
+                .exists()
+            ):
+                return Response(
+                    {"data": None, "error": "A sub category with this name already exists."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         sub = SubCategory.objects.create(category=cat, created_by=request.user, **create_payload)
         return ok(_sub_category(sub))
     category_id = request.query_params.get("category_id")
@@ -761,6 +780,18 @@ def sub_category_detail(request, sub_category_id: int):
                     {"data": None, "error": "Category not found"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+        if "name" in payload:
+            scope = payload.get("category", sub.category)
+            if (
+                SubCategory.objects.filter(category=scope)
+                .exclude(id=sub.id)
+                .filter(name__iexact=payload["name"])
+                .exists()
+            ):
+                return Response(
+                    {"data": None, "error": "A sub category with this name already exists."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         for key, value in payload.items():
             setattr(sub, key, value)
         sub.save()
@@ -784,6 +815,15 @@ def inter_categories(request):
         create_payload.pop("sub_category_id", None)
         if "name" in create_payload:
             create_payload["name"] = validate_category_name(create_payload["name"])
+            if (
+                InterCategory.objects.filter(sub_category=sub)
+                .filter(name__iexact=create_payload["name"])
+                .exists()
+            ):
+                return Response(
+                    {"data": None, "error": "An inter category with this name already exists."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         inter = InterCategory.objects.create(
             sub_category=sub, created_by=request.user, **create_payload
         )
@@ -821,6 +861,18 @@ def inter_category_detail(request, inter_category_id: int):
             except SubCategory.DoesNotExist:
                 return Response(
                     {"data": None, "error": "Sub category not found"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        if "name" in payload:
+            scope = payload.get("sub_category", inter.sub_category)
+            if (
+                InterCategory.objects.filter(sub_category=scope)
+                .exclude(id=inter.id)
+                .filter(name__iexact=payload["name"])
+                .exists()
+            ):
+                return Response(
+                    {"data": None, "error": "An inter category with this name already exists."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
         for key, value in payload.items():

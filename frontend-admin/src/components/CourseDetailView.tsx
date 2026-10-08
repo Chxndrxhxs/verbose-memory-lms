@@ -62,6 +62,7 @@ export function CourseDetailView({
   loading,
   error,
   initial,
+  categorySuggestions,
   onSave,
   saving,
   saveError,
@@ -75,6 +76,7 @@ export function CourseDetailView({
   loading: boolean;
   error: string | null;
   initial?: CourseEditValues;
+  categorySuggestions?: string[];
   onSave: (v: CourseEditValues) => void;
   saving: boolean;
   saveError: string | null;
@@ -184,7 +186,19 @@ export function CourseDetailView({
                 <Input {...form.register("subtitle")} />
               </Field>
               <Field label="Category" error={form.formState.errors.category?.message}>
-                <Input placeholder="e.g. Programming" {...form.register("category")} />
+                <Input
+                  placeholder="e.g. Programming"
+                  list="course-category-suggestions"
+                  {...form.register("category")}
+                />
+                {/* Suggests the categories already in use; free
+                    text stays because new categories have no
+                    management UI yet. */}
+                <datalist id="course-category-suggestions">
+                  {(categorySuggestions ?? []).map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
               </Field>
             </div>
 

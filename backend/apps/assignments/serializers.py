@@ -154,7 +154,7 @@ class StepPayloadSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=["test", "set"], default="test")
     name = serializers.CharField(allow_blank=True, validators=[validate_step_name])
     description = serializers.CharField(required=False, allow_blank=True, default="")
-    duration_seconds = serializers.IntegerField(min_value=0)
+    duration_seconds = serializers.IntegerField(min_value=1)
     children = serializers.ListField(required=False, default=list)
     questions = QuestionPayloadSerializer(many=True, required=False, default=list)
 
