@@ -96,16 +96,18 @@ export function LandingView({
         as reading, not as SaaS.
       */}
       <section className="mx-auto grid w-full max-w-[1200px] gap-12 px-4 pb-16 pt-10 sm:px-6 sm:pt-16 lg:pb-24">
-        <div className="min-w-0 max-w-3xl">
-          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+        <div className="mx-auto min-w-0 max-w-3xl text-center">
+          <p className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
             <span aria-hidden className="h-1.5 w-1.5 bg-gold-deep" />
             {courseCount} courses open now
           </p>
 
           <h1 className="mt-5 text-[40px] font-semibold leading-[1.04] tracking-[-0.035em] text-ink sm:text-[54px] lg:text-[60px]">
-            Learn the thing,
+            Learn skills that{" "}
             <br />
-            properly.
+            {" "}actually move{" "}
+            <br />
+            {" "}you forward.
           </h1>
 
           <p className="measure mt-6 text-[15px] leading-relaxed text-ink-muted">
@@ -114,7 +116,7 @@ export function LandingView({
             need no card.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/courses"
               className="inline-flex h-12 items-center gap-2 border border-ink bg-ink px-6 text-sm font-semibold text-ink-inverse transition-colors hover:bg-ink/88"
@@ -131,7 +133,7 @@ export function LandingView({
           </div>
 
           {/* Real counts from the stats endpoint, not invented social proof. */}
-          <dl className="mt-10 grid max-w-lg grid-cols-3 gap-px border border-rule bg-rule">
+          <dl className="mx-auto mt-10 grid max-w-lg grid-cols-3 gap-px border border-rule bg-rule">
             {[
               [String(courseCount), "Courses"],
               [totalLearners > 999 ? `${(totalLearners / 1000).toFixed(1)}k` : String(totalLearners), "Learners"],

@@ -31,7 +31,7 @@ export function Header() {
             <span className="text-sm font-semibold tracking-tight text-ink">QTNXT</span>
           </Link>
 
-          <nav aria-label="Primary" className="hidden min-w-0 flex-1 items-center gap-0.5 sm:flex">
+          <nav aria-label="Primary" className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 sm:flex">
             {LINKS.map((l) => (
               <NavLink
                 key={l.to}
