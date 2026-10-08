@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import type { SharedApiCourseDetail } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 import { useToggleWishlist, useWishlistIds } from "../hooks/useWishlist";
@@ -51,8 +51,9 @@ async function fetchCourse(id: string): Promise<Detail> {
 export function CourseDetailContainer() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const nav = useNavigate();
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["course", id], queryFn: () => fetchCourse(id!), enabled: !!id });
-  const [open, setOpen] = useState<number>(0);
+  const [open, setOpen] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [coupon, setCoupon] = useState<CouponQuote | null>(null);
   const user = useAuth((s) => s.user);
@@ -63,7 +64,7 @@ export function CourseDetailContainer() {
       const res = await api<{ course: { id: number }; progress: number }[] | { results: { course: { id: number }; progress: number }[] }>("/me/courses");
       return Array.isArray(res) ? res : (res.results ?? []);
     },
-    enabled: !!id && !!data,
+    enabled: !!id && !!data && !!user,
   });
   const enrollment = enrollmentList.find((e) => String(e.course.id) === String(id));
   const enrolled = Boolean(enrollment);
@@ -251,6 +252,11 @@ export function CourseDetailContainer() {
 
   const handleEnroll = async () => {
     if (!data || enrolled || processing) return;
+    // Browsing is public, but enrolling needs an account.
+    if (!user) {
+      nav("/login");
+      return;
+    }
     const isFree = data.price === "Free";
 
     if (isFree) {
