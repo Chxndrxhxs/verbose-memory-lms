@@ -65,3 +65,5 @@ backend/media/
 
 # local agent session transcripts (not committed)
 session-*.md
+*.png
+testing-*.md
