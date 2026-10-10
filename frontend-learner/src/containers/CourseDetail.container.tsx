@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { SharedApiCourseDetail } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 import { useToggleWishlist, useWishlistIds } from "../hooks/useWishlist";
@@ -52,6 +52,7 @@ export function CourseDetailContainer() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const nav = useNavigate();
+  const location = useLocation();
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["course", id], queryFn: () => fetchCourse(id!), enabled: !!id });
   const [open, setOpen] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
@@ -254,7 +255,7 @@ export function CourseDetailContainer() {
     if (!data || enrolled || processing) return;
     // Browsing is public, but enrolling needs an account.
     if (!user) {
-      nav("/login");
+      nav("/login", { state: { from: location.pathname + location.search } });
       return;
     }
     const isFree = data.price === "Free";

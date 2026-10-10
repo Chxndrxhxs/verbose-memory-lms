@@ -45,7 +45,7 @@ export function InstructorHeader() {
             <TeachMark />
           </Link>
 
-          <nav className="hidden min-w-0 flex-1 items-center gap-0.5 lg:flex" aria-label="Primary">
+          <nav className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 lg:flex" aria-label="Primary">
             {showNav &&
               LINKS.map((l) => (
                 <NavLink
