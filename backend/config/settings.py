@@ -148,7 +148,8 @@ CSP_POLICY = env(
         "default-src 'self'; script-src 'self' 'unsafe-inline'; "
         "style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; "
         "font-src 'self' data:; connect-src 'self' ws:; "
-        "frame-src https://www.youtube.com; object-src 'none'; base-uri 'self'"
+        "frame-src https://www.youtube.com https://www.youtube-nocookie.com; "
+        "object-src 'none'; base-uri 'self'"
     ),
 )
 

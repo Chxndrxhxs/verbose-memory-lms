@@ -158,7 +158,7 @@ export function LearnView(p: Props) {
                         const isVideo = q.type === "video";
                         let src: string | null = null;
                         if (isVideo) {
-                          src = /^<iframe/i.test(raw) ? raw : (toEmbed(raw) ?? (raw.match(/\.(mp4|webm|mov)(\?|$)/) ? absoluteMediaUrl(raw) : null));
+                          src = toEmbed(raw) ?? (raw.match(/\.(mp4|webm|mov)(\?|$)/) ? absoluteMediaUrl(raw) : null);
                         } else {
                           src = absoluteMediaUrl(raw);
                         }

@@ -107,7 +107,7 @@ export function toEmbed(input: string | null | undefined): string | null {
     const id = u.pathname.slice(1).split(/[/?]/)[0];
     return id ? `https://www.youtube.com/embed/${id}?rel=0` : null;
   }
-  if (host === 'youtube.com') {
+  if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
     if (u.pathname.startsWith('/embed/')) return `${url}${u.search ? '' : '?rel=0'}`;
     const v = u.searchParams.get('v');
     if (v) return `https://www.youtube.com/embed/${v}?rel=0`;
@@ -125,7 +125,7 @@ export function toEmbed(input: string | null | undefined): string | null {
   return null;
 }
 
-const YT_ID_RE = /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([\w-]{6,})/;
+const YT_ID_RE = /(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([\w-]{6,})/;
 
 // Extracts a YouTube video ID from watch, short, embed and <iframe> code inputs.
 export function youtubeId(input: string | null | undefined): string | null {
