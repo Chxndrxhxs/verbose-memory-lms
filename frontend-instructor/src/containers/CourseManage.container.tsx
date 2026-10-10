@@ -7,7 +7,7 @@ import { StudentPreviewModal } from "../components/StudentPreviewModal";
 import { PageHeader, Panel } from "../components/Panel";
 import { ListMessage, ListPanel, Pager, SkeletonRows } from "../components/DataGrid";
 import { Badge, statusTone } from "../components/Badge";
-import { Button } from "../components/Button";
+import { Button, Segmented } from "../components/Button";
 import { SearchInput, Select } from "../components/Controls";
 import { cn } from "../lib/utils";
 
@@ -84,6 +84,7 @@ export function CourseManageContainer() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | "draft" | "published">("all");
   const [page, setPage] = useState(1);
+  const [view, setView] = useState<"grid" | "list">("list");
   const [previewId, setPreviewId] = useState<number | null>(null);
 
   const list = data ?? [];
@@ -163,6 +164,17 @@ export function CourseManageContainer() {
                 <option value="published">Published</option>
                 <option value="draft">Drafts</option>
               </Select>
+              <div className="ml-auto">
+                <Segmented
+                  value={view}
+                  onChange={setView}
+                  ariaLabel="Course layout"
+                  options={[
+                    { value: "grid" as const, label: "Grid" },
+                    { value: "list" as const, label: "List" },
+                  ]}
+                />
+              </div>
             </>
           }
           footer={
@@ -183,6 +195,12 @@ export function CourseManageContainer() {
               title="No courses match those filters"
               body="Try a different title, or clear the status filter to see everything you have built."
             />
+          ) : view === "grid" ? (
+            <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+              {visible.map((c) => (
+                <CourseCard key={c.id} course={c} onPreview={() => setPreviewId(c.id)} />
+              ))}
+            </div>
           ) : (
             <ul className="divide-y divide-rule">
               {visible.map((c) => (
@@ -208,11 +226,6 @@ function CourseRow({
   onPreview: () => void;
 }) {
   const cover = absoluteMediaUrl(c.cover_image);
-
-  const actions: { label: string; Icon: LucideIcon; to?: string; onClick?: () => void }[] = [
-    { label: "Edit", Icon: Pencil, to: `/courses/${c.id}` },
-    { label: "Preview", Icon: Eye, onClick: onPreview },
-  ];
 
   return (
     <li className="row-hover flex flex-wrap items-center gap-4 px-4 py-3.5 sm:flex-nowrap">
@@ -244,24 +257,80 @@ function CourseRow({
         <Badge tone={statusTone(c.status)}>{c.status}</Badge>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
-        {actions.map(({ label, Icon, to, onClick }) =>
-          to ? (
-            <Link
-              key={label}
-              to={to}
-              className="inline-flex h-8 items-center gap-1.5 border border-rule px-2.5 text-xs font-semibold text-ink-muted transition-colors hover:bg-slate-sunk hover:text-ink"
-            >
-              <Icon size={14} strokeWidth={2.25} aria-hidden />
-              {label}
-            </Link>
-          ) : (
-            <Button key={label} variant="secondary" size="sm" onClick={onClick}>
-              <Icon size={14} strokeWidth={2.25} aria-hidden />
-              {label}
-            </Button>
-          ),
-        )}
+      <CourseActions course={c} onPreview={onPreview} />
+    </li>
+  );
+}
+
+function CourseActions({
+  course,
+  onPreview,
+}: {
+  course: ApiCourse;
+  onPreview: () => void;
+}) {
+  const actions: { label: string; Icon: LucideIcon; to?: string; onClick?: () => void }[] = [
+    { label: "Edit", Icon: Pencil, to: `/courses/${course.id}` },
+    { label: "Preview", Icon: Eye, onClick: onPreview },
+  ];
+
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      {actions.map(({ label, Icon, to, onClick }) =>
+        to ? (
+          <Link
+            key={label}
+            to={to}
+            className="inline-flex h-8 items-center gap-1.5 border border-rule px-2.5 text-xs font-semibold text-ink-muted transition-colors hover:bg-slate-sunk hover:text-ink"
+          >
+            <Icon size={14} strokeWidth={2.25} aria-hidden />
+            {label}
+          </Link>
+        ) : (
+          <Button key={label} variant="secondary" size="sm" onClick={onClick}>
+            <Icon size={14} strokeWidth={2.25} aria-hidden />
+            {label}
+          </Button>
+        ),
+      )}
+    </div>
+  );
+}
+
+function CourseCard({
+  course: c,
+  onPreview,
+}: {
+  course: ApiCourse;
+  onPreview: () => void;
+}) {
+  const cover = absoluteMediaUrl(c.cover_image);
+
+  return (
+    <li className="flex flex-col border border-rule bg-slate-panel transition-colors hover:bg-slate-sunk">
+      <div className="aspect-[16/9] overflow-hidden border-b border-rule">
+        <CoverPattern id={c.id} cover={cover} />
+      </div>
+      <div className="flex flex-1 flex-col gap-2 p-4">
+        <div className="flex items-start justify-between gap-2">
+          <Link
+            to={`/courses/${c.id}`}
+            className="line-clamp-2 text-sm font-medium leading-snug text-ink hover:underline"
+          >
+            {c.title}
+          </Link>
+          <Badge tone={statusTone(c.status)}>{c.status}</Badge>
+        </div>
+        <p className="tnum text-xs text-ink-faint">
+          {c.student_count} {c.student_count === 1 ? "learner" : "learners"} · updated{" "}
+          {timeAgo(c.updated_at || c.created_at)}
+        </p>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+          <span className="tnum text-sm font-semibold text-ink">
+            {c.price && Number(c.price) > 0 ? `₹${Number(c.price).toLocaleString("en-IN")}` : "Free"}
+          </span>
+          <CourseActions course={c} onPreview={onPreview} />
+        </div>
       </div>
     </li>
   );
