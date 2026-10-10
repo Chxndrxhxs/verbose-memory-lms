@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   ArrowLeft,
+  ArrowRight,
   ArrowUpRight,
   Check,
   CheckCircle2,
@@ -240,7 +241,7 @@ export function LearnView(p: Props) {
                     </div>
                   ) : (
                     <div className="border border-live/25 bg-live-soft p-3 text-sm text-live">
-                      <p className="font-semibold tnum">Score: {quizVerdict.score}/{quizVerdict.total} — {quizVerdict.score === quizVerdict.total ? "Perfect! ✓" : "Keep practicing"}</p>
+                      <p className="font-semibold tnum">Score: {quizVerdict.score}/{quizVerdict.total} — {quizVerdict.score === quizVerdict.total ? (<>Perfect! <Check size={12} strokeWidth={3} aria-hidden /></>) : "Keep practicing"}</p>
                       {quizAttempt != null && quizBest != null && quizVerdict.total > 0 && <span className="tnum mt-1 block text-xs text-live/80">Attempt {quizAttempt} · Best {quizBest}/{quizVerdict.total}</span>}
                     </div>
                   )}
@@ -267,7 +268,7 @@ export function LearnView(p: Props) {
             ] as const).map(([k, label]) => (
               <button key={k} type="button" onClick={() => p.onTab(k)} className={cn("border-b-2 px-3 py-2 text-sm font-semibold transition-colors", tab === k ? "border-ink text-ink" : "border-transparent text-ink-muted hover:text-ink")}>{label}</button>
             ))}
-            <button type="button" onClick={p.onMarkComplete} disabled={active != null && completed.has(active)} className={cn("ml-auto mb-2 hidden items-center gap-1.5 border px-3 py-1 text-xs font-semibold transition-colors sm:inline-flex", active != null && completed.has(active) ? "border-live/25 bg-live-soft text-live" : "border-rule bg-room-raised text-ink hover:bg-room-sunk")}>{active != null && completed.has(active) ? "✓ Completed" : "Mark complete"}</button>
+                      <button type="button" onClick={p.onMarkComplete} disabled={active != null && completed.has(active)} className={cn("ml-auto mb-2 hidden items-center gap-1.5 border px-3 py-1 text-xs font-semibold transition-colors sm:inline-flex", active != null && completed.has(active) ? "border-live/25 bg-live-soft text-live" : "border-rule bg-room-raised text-ink hover:bg-room-sunk")}>{active != null && completed.has(active) ? (<><Check size={12} strokeWidth={3} aria-hidden /> Completed</>) : "Mark complete"}</button>
           </div>
 
           {tab === "overview" && (
@@ -278,7 +279,7 @@ export function LearnView(p: Props) {
                 <Badge tone="muted" showIcon={false} className="bg-ink text-ink-inverse">Calm pace</Badge>
                 <Badge tone="gold" showIcon={false}>Hands-on</Badge>
               </div>
-              <Button variant="primary" block onClick={p.onMarkComplete} disabled={active != null && completed.has(active)} className="mt-4 sm:hidden">{active != null && completed.has(active) ? "✓ Completed" : "Mark complete"}</Button>
+              <Button variant="primary" block onClick={p.onMarkComplete} disabled={active != null && completed.has(active)} className="mt-4 sm:hidden">{active != null && completed.has(active) ? (<><Check size={12} strokeWidth={3} aria-hidden /> Completed</>) : "Mark complete"}</Button>
             </Panel>
           )}
           {tab === "notes" && (
@@ -327,7 +328,7 @@ export function LearnView(p: Props) {
             <div className="p-3">
               <Link to={`/courses/${courseId}`} className="block w-full border border-rule py-2.5 text-center text-sm font-semibold text-ink transition-colors hover:bg-room-sunk">Back to course</Link>
               {progress === 100 && !userRating && !showRating && (
-                <Button variant="primary" block onClick={p.onShowRating} className="mt-2">Mark course as complete →</Button>
+                <Button variant="primary" block onClick={p.onShowRating} className="mt-2">Mark course as complete <ArrowRight size={14} strokeWidth={2.5} aria-hidden /></Button>
               )}
               {showRating && !userRating && (
                 <div className="mt-3 border border-rule bg-room-raised p-4">
@@ -367,7 +368,7 @@ export function LearnView(p: Props) {
               )}
               {userRating && (
                 <div className="mt-3 border border-live/25 bg-live-soft p-3 text-center">
-                  <p className="tnum text-xs font-semibold text-live">You rated {userRating} ★ — thanks for your feedback!</p>
+                  <p className="tnum inline-flex items-center gap-1 text-xs font-semibold text-live">You rated {userRating} <Star size={11} fill="currentColor" strokeWidth={0} aria-hidden /> — thanks for your feedback!</p>
                   <p className="mt-1 text-[11px] text-ink-muted">Average rating updated on course details & cards.</p>
                 </div>
               )}

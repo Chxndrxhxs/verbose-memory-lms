@@ -82,7 +82,7 @@ export function CourseDetailContainer() {
       { courseId: Number(id), wishlisted },
       {
         onSuccess: (nowWishlisted) =>
-          showToast(nowWishlisted ? "Added to wishlist ♡" : "Removed from wishlist"),
+          showToast(nowWishlisted ? "Added to wishlist" : "Removed from wishlist"),
         onError: (e) => showToast(e instanceof Error ? e.message : String(e)),
       },
     );

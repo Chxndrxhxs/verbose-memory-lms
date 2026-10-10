@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useQuery } from "@tanstack/react-query";
-import { Diamond, Hexagon, Code, Target } from "@masterlms/shared";
+import { ArrowRight, Diamond, Hexagon, Code, Star, Target, X } from "@masterlms/shared";
 import { CourseCard } from "../components/CourseCard";
 import { api } from "../lib/api";
 import { useMyCourses } from "../hooks/useMyCourses";
@@ -205,7 +205,7 @@ export function CourseListContainer() {
             className="min-w-0"
           />
           {query && (
-            <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="shrink-0 px-2 py-1 text-xs font-semibold text-ink-faint transition-colors hover:text-ink">✕</button>
+            <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="shrink-0 px-2 py-1 text-xs font-semibold text-ink-faint transition-colors hover:text-ink"><X size={13} aria-hidden /></button>
           )}
         </div>
 
@@ -257,7 +257,7 @@ export function CourseListContainer() {
             const enrolled = enrolledIds.has(c.id);
             const pct = progressById.get(c.id) ?? 0;
             const to = enrolled ? `/learn/${c.id}` : `/courses/${c.id}`;
-            const label = pct >= 100 ? "Review →" : pct > 0 ? `Continue ${pct}% →` : "Start course →";
+            const label = pct >= 100 ? "Review" : pct > 0 ? `Continue ${pct}%` : "Start course";
             return (
               <Link key={c.id} to={to} className="flex items-center gap-3 border border-rule bg-room-raised p-3 transition-colors hover:bg-room-sunk">
                 {c.img ? (
@@ -270,14 +270,14 @@ export function CourseListContainer() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold leading-tight text-ink">{c.title}</p>
                   <p className="tnum truncate text-xs text-ink-muted">
-                    {c.subtitle ? `${c.subtitle} • ` : ""}{c.category} • {c.level} • {c.instructor} • {c.studentCount} students{c.rating ? ` • ★ ${c.rating}` : ""}
+                    {c.subtitle ? `${c.subtitle} • ` : ""}{c.category} • {c.level} • {c.instructor} • {c.studentCount} students{c.rating ? (<> • <Star size={11} fill="currentColor" strokeWidth={0} aria-hidden /> {c.rating}</>) : ""}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {enrolled ? (
                     <>
                       <Badge tone="live" showIcon={false}>Enrolled</Badge>
-                      <span className="tnum border border-ink bg-ink px-3 py-1 text-xs font-semibold text-ink-inverse">{label}</span>
+                      <span className="tnum inline-flex items-center gap-1 border border-ink bg-ink px-3 py-1 text-xs font-semibold text-ink-inverse">{label}<ArrowRight size={12} strokeWidth={2.5} aria-hidden /></span>
                     </>
                   ) : (
                     <>

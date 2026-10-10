@@ -1,4 +1,4 @@
-import { Layers, ListChecks } from "@masterlms/shared";
+import { Check, Layers, ListChecks } from "@masterlms/shared";
 import { cn } from "../lib/utils";
 import { builderCardClass } from "../lib/builder";
 import type { Assignment, AssignmentModelType } from "../types/assignment";
@@ -77,11 +77,11 @@ export function AssignmentModelSelectStep({ assignment, onChange }: Props) {
                 </span>
                 <span
                   className={cn(
-                    "flex h-5 w-5 items-center justify-center rounded-full text-[11px]",
+                    "flex h-5 w-5 items-center justify-center rounded-full",
                     active ? "bg-ink-inverse text-ink" : "bg-slate-sunk text-transparent",
                   )}
                 >
-                  ✓
+                  <Check size={11} strokeWidth={3} aria-hidden />
                 </span>
               </div>
               <p className="mt-4 text-[15px] font-semibold">{MODEL_LABELS[model]}</p>

@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  Check,
+  Heart,
   LESSON_KIND_BADGE,
   Minus,
   Plus,
+  Star,
   absoluteMediaUrl,
   X,
 } from "@masterlms/shared";
@@ -135,7 +138,7 @@ export function StudentPreviewModal({
 
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
                 {rating && (
-                  <span className="font-semibold text-hold tnum">★ {rating}</span>
+                  <span className="inline-flex items-center gap-1 font-semibold text-hold tnum"><Star size={12} fill="currentColor" strokeWidth={0} aria-hidden /> {rating}</span>
                 )}
                 {course.student_count != null && (
                   <span className="text-ink-muted tnum">{course.student_count} students</span>
@@ -165,8 +168,8 @@ export function StudentPreviewModal({
                         key={item}
                         className="flex gap-2 text-xs leading-relaxed text-ink-muted"
                       >
-                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-live text-[10px] text-ink-inverse">
-                          ✓
+                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-live text-ink-inverse">
+                          <Check size={10} strokeWidth={3} aria-hidden />
                         </span>
                         {item}
                       </div>
@@ -287,9 +290,10 @@ export function StudentPreviewModal({
                   <button
                     type="button"
                     disabled
-                    className={`mt-2 w-full rounded-sm border border-rule-strong py-2 text-sm font-semibold text-ink-muted ${disabled}`}
+                    className={`mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-sm border border-rule-strong py-2 text-sm font-semibold text-ink-muted ${disabled}`}
                   >
-                    Add to wishlist ♡
+                    <Heart size={14} strokeWidth={2.5} aria-hidden />
+                    Add to wishlist
                   </button>
                   <p className="mt-2 text-center text-[11px] text-ink-muted">
                     30-day money-back guarantee • Full lifetime access

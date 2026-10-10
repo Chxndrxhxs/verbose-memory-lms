@@ -1,4 +1,4 @@
-import { Sparkles } from "@masterlms/shared";
+import { ArrowRight, Sparkles } from "@masterlms/shared";
 import { cn } from "../lib/utils";
 import {
   builderCardClass,
@@ -249,9 +249,9 @@ export function CourseCreateStep1({ values, errors, isSubmitting, editing, onAiC
           <button
             type="submit"
             disabled={isSubmitting}
-            className="h-12 rounded-sm bg-ink px-7 text-[15px] font-semibold text-ink-inverse disabled:opacity-60"
+            className="inline-flex h-12 items-center justify-center gap-1.5 rounded-sm bg-ink px-7 text-[15px] font-semibold text-ink-inverse disabled:opacity-60"
           >
-            {isSubmitting ? (editing ? "Saving…" : "Creating…") : (editing ? "Save & continue" : "Continue →")}
+            {isSubmitting ? (editing ? "Saving…" : "Creating…") : editing ? "Save & continue" : (<>Continue <ArrowRight size={14} strokeWidth={2.5} aria-hidden /></>)}
           </button>
         </div>
       </form>

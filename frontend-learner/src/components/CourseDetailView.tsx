@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LESSON_KIND_BADGE, Minus, Plus } from "@masterlms/shared";
+import { ArrowRight, Check, Heart, LESSON_KIND_BADGE, Minus, Plus, Star } from "@masterlms/shared";
 import type { CourseDetail } from "../types/course";
 import type {
   CouponQuote,
@@ -85,7 +85,7 @@ export function CourseDetailView({
   const curriculum = data.curriculum ?? [];
   const learn = data.learn ?? [];
   const lectureCount = curriculum.reduce((a, c) => a + c.lessons.length, 0);
-  const cta = progress >= 100 ? "Review course →" : progress > 0 ? `Continue learning — ${progress}% →` : "Start learning →";
+  const cta = progress >= 100 ? "Review course" : progress > 0 ? `Continue learning — ${progress}%` : "Start learning";
   const [dialog, setDialog] = useState<Dialog>(null);
   const [couponCode, setCouponCode] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
@@ -211,7 +211,7 @@ export function CourseDetailView({
         {data.subtitle && <p className="measure mt-2 font-serif text-sm leading-relaxed text-ink-muted">{data.subtitle}</p>}
 
         <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
-          {data.rating && <span className="tnum inline-flex items-center gap-1 font-semibold text-gold-deep"><span aria-hidden>★</span> {data.rating}</span>}
+          {data.rating && <span className="tnum inline-flex items-center gap-1 font-semibold text-gold-deep"><Star size={13} fill="currentColor" strokeWidth={0} aria-hidden /> {data.rating}</span>}
           {data.students && <span className="tnum text-ink-muted">({data.students})</span>}
           {(data.instructor || data.avatar) && (
             <span className="flex items-center gap-1.5 text-ink-muted">
@@ -238,7 +238,7 @@ export function CourseDetailView({
               </div>
             )}
             {enrolled ? (
-              <Link to={`/learn/${data.id}`} className="mt-3 flex h-12 w-full items-center justify-center border border-live bg-live text-sm font-semibold text-ink-inverse transition-colors hover:bg-live/90">{cta}</Link>
+              <Link to={`/learn/${data.id}`} className="mt-3 flex h-12 w-full items-center justify-center gap-1.5 border border-live bg-live text-sm font-semibold text-ink-inverse transition-colors hover:bg-live/90">{cta}<ArrowRight size={14} strokeWidth={2.5} aria-hidden /></Link>
             ) : (
               <Button variant="primary" size="lg" block onClick={onEnroll} disabled={processing} className="mt-3">
                 {processing ? "Processing…" : data.price === "Free" ? "Enroll now — Free" : "Enroll now"}
@@ -251,7 +251,8 @@ export function CourseDetailView({
               aria-pressed={wishlisted}
               className="mt-2"
             >
-              {wishlisted ? "Wishlisted ♥" : "Add to wishlist ♡"}
+              <Heart size={14} strokeWidth={2.5} fill={wishlisted ? "currentColor" : "none"} aria-hidden />
+              {wishlisted ? "Wishlisted" : "Add to wishlist"}
             </Button>
             {coupon && (
               <p className="tnum mt-2 text-center text-[11px] font-semibold text-live">
@@ -274,7 +275,7 @@ export function CourseDetailView({
           <h3 className="text-sm font-semibold text-ink">What you’ll learn</h3>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {learn.map((l) => (
-              <div key={l} className="flex gap-2 text-xs leading-relaxed text-ink-muted"><span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center bg-live text-[10px] font-semibold text-ink-inverse">✓</span>{l}</div>
+              <div key={l} className="flex gap-2 text-xs leading-relaxed text-ink-muted"><span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center bg-live text-ink-inverse"><Check size={10} strokeWidth={3} aria-hidden /></span>{l}</div>
             ))}
           </div>
         </Panel>
@@ -337,7 +338,7 @@ export function CourseDetailView({
               </div>
             )}
             {enrolled ? (
-              <Link to={`/learn/${data.id}`} className="mt-4 flex h-12 w-full items-center justify-center border border-live bg-live text-sm font-semibold text-ink-inverse transition-colors hover:bg-live/90">{cta}</Link>
+              <Link to={`/learn/${data.id}`} className="mt-4 flex h-12 w-full items-center justify-center gap-1.5 border border-live bg-live text-sm font-semibold text-ink-inverse transition-colors hover:bg-live/90">{cta}<ArrowRight size={14} strokeWidth={2.5} aria-hidden /></Link>
             ) : (
               <Button variant="primary" size="lg" block onClick={onEnroll} disabled={processing} className="mt-4">
                 {processing ? "Processing…" : "Enroll now"}
@@ -350,7 +351,8 @@ export function CourseDetailView({
               aria-pressed={wishlisted}
               className="mt-2"
             >
-              {wishlisted ? "Wishlisted ♥" : "Add to wishlist ♡"}
+              <Heart size={14} strokeWidth={2.5} fill={wishlisted ? "currentColor" : "none"} aria-hidden />
+              {wishlisted ? "Wishlisted" : "Add to wishlist"}
             </Button>
             <p className="mt-2 text-center text-[11px] text-ink-muted">30-day money-back guarantee • Full lifetime access</p>
 
@@ -508,16 +510,16 @@ export function CourseDetailView({
                     {redeemDone.kind === "course" ? (
                       <Link
                         to={`/learn/${redeemDone.item_id}`}
-                        className="mt-3 flex h-10 w-full items-center justify-center border border-live bg-live text-sm font-semibold text-ink-inverse transition-colors hover:bg-live/90"
+                        className="mt-3 flex h-10 w-full items-center justify-center gap-1.5 border border-live bg-live text-sm font-semibold text-ink-inverse transition-colors hover:bg-live/90"
                       >
-                        Start learning →
+                        Start learning <ArrowRight size={14} strokeWidth={2.5} aria-hidden />
                       </Link>
                     ) : (
                       <Link
                         to={`/packs/${redeemDone.item_id}`}
-                        className="mt-3 flex h-10 w-full items-center justify-center border border-live bg-live text-sm font-semibold text-ink-inverse transition-colors hover:bg-live/90"
+                        className="mt-3 flex h-10 w-full items-center justify-center gap-1.5 border border-live bg-live text-sm font-semibold text-ink-inverse transition-colors hover:bg-live/90"
                       >
-                        View pack →
+                        View pack <ArrowRight size={14} strokeWidth={2.5} aria-hidden />
                       </Link>
                     )}
                     <Button variant="ghost" size="sm" block onClick={closeDialog} className="mt-2">Close</Button>

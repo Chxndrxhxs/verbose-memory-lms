@@ -59,7 +59,7 @@ export function WishlistContainer() {
         <ListMessage
           kind="empty"
           title="Your wishlist is empty."
-          body="Open any course and hit “Add to wishlist ♡” to save it here."
+          body="Open any course and hit “Add to wishlist” to save it here."
           action={
             <Link
               to="/courses"

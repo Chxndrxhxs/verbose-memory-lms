@@ -1,4 +1,4 @@
-import { EXAM_MODULE_META } from "@masterlms/shared";
+import { Check, EXAM_MODULE_META } from "@masterlms/shared";
 import { cn } from "../lib/utils";
 import { builderCardClass } from "../lib/builder";
 import {
@@ -160,7 +160,7 @@ export function PackPublishStep({
                     : "bg-slate-sunk text-ink-faint",
                 )}
               >
-                {check.ok ? "✓" : "·"}
+                {check.ok ? <Check size={11} strokeWidth={3} aria-hidden /> : "·"}
               </span>
               <span className={check.ok ? "text-ink" : "text-ink-faint"}>
                 {check.label}

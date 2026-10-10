@@ -1,4 +1,4 @@
-import { EXAM_MODULE_META, type ExamModule } from "@masterlms/shared";
+import { Check, EXAM_MODULE_META, type ExamModule } from "@masterlms/shared";
 import { cn } from "../lib/utils";
 import { builderCardClass, builderFieldClass, builderLabelClass } from "../lib/builder";
 import {
@@ -71,11 +71,11 @@ export function PackModulesStep({ info, onChange, questionCount }: Props) {
                   {meta.label}
                   <span
                     className={cn(
-                      "flex h-5 w-5 items-center justify-center rounded-full text-[11px]",
+                      "flex h-5 w-5 items-center justify-center rounded-full",
                       active ? "bg-ink-inverse text-ink" : "bg-slate-sunk text-transparent",
                     )}
                   >
-                    ✓
+                    <Check size={11} strokeWidth={3} aria-hidden />
                   </span>
                 </p>
                 <p className={cn("mt-1.5 text-sm", active ? "text-ink-inverse/70" : "text-ink-muted")}>

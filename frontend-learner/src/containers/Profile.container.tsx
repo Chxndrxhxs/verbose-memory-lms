@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { AGE_MSG, User, ArrowRight, Trash2, AlertTriangle, Download, Receipt, Award, Eye, AVATAR_SIZE_MSG, isAvatarSizeAllowed, isValidAge, isValidEmail, isValidName, NAME_MSG } from "@masterlms/shared";
+import { AGE_MSG, User, ArrowRight, Check, Trash2, AlertTriangle, Download, Receipt, Award, Eye, AVATAR_SIZE_MSG, isAvatarSizeAllowed, isValidAge, isValidEmail, isValidName, NAME_MSG } from "@masterlms/shared";
 import { TopNav } from "../components/TopNav";
 import { CertificateView } from "../components/CertificateView";
 import { useAuth } from "../hooks/useAuth";
@@ -215,7 +215,7 @@ export function ProfileContainer() {
               <div className="flex gap-4 sm:gap-5">
                 <div className="relative h-20 w-20 shrink-0 overflow-hidden border border-ink-inverse/20 bg-room-raised sm:h-24 sm:w-24">
                   {avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-2xl font-semibold text-ink">{user.name?.[0] ?? "?"}</span>}
-                  <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center bg-live text-[10px] font-semibold text-ink-inverse ring-2 ring-room-deep">✓</span>
+                  <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center bg-live text-ink-inverse ring-2 ring-room-deep"><Check size={11} strokeWidth={3} aria-hidden /></span>
                 </div>
                 <div className="min-w-0">
                   <div className="inline-flex items-center gap-2">
@@ -230,7 +230,7 @@ export function ProfileContainer() {
                   </p>
                   <div className="mt-3 flex gap-2">
                     <Button type="button" variant="gold" size="sm" onClick={() => setEditing((v) => !v)}>{editing ? "Cancel" : "Edit profile"}</Button>
-                    <Link to="/activity" className="inline-flex h-8 items-center border border-ink-inverse/25 bg-ink-inverse/10 px-3 text-xs font-semibold text-ink-inverse transition-colors hover:bg-ink-inverse/15">View activity →</Link>
+                    <Link to="/activity" className="inline-flex h-8 items-center gap-1 border border-ink-inverse/25 bg-ink-inverse/10 px-3 text-xs font-semibold text-ink-inverse transition-colors hover:bg-ink-inverse/15">View activity <ArrowRight size={12} strokeWidth={2.5} aria-hidden /></Link>
                   </div>
                 </div>
               </div>

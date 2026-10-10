@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "@masterlms/shared";
+import { ArrowLeft, X } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 import { api } from "../lib/api";
 import { Button } from "../components/Button";
@@ -165,7 +165,7 @@ export default function Login() {
                   className="px-2 py-1 text-xs font-semibold text-ink-muted"
                   aria-label="Dismiss demo code"
                 >
-                  ✕
+                  <X size={14} aria-hidden />
                 </button>
               </div>
             </div>

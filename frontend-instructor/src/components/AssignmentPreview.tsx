@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Clock, ChevronLeft, ChevronRight, AlertTriangle } from "@masterlms/shared";
+import { Check, Clock, ChevronLeft, ChevronRight, AlertTriangle } from "@masterlms/shared";
 import { absoluteMediaUrl, optionImage, optionText } from "@masterlms/shared";
 import { cn } from "../lib/utils";
 import { builderCardClass } from "../lib/builder";
@@ -91,7 +91,7 @@ function PreviewQuestionCard({
                     )}
                   >
                     {selected === i ? (
-                      <span className="text-[10px]">✓</span>
+                      <Check size={11} strokeWidth={3} aria-hidden />
                     ) : (
                       letterFor(i)
                     )}

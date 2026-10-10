@@ -693,13 +693,13 @@ export function AssignmentQuestionReviewStep({ assignment, onChange }: Props) {
               type="button"
               onClick={() => setReviewOnly((v) => !v)}
               className={cn(
-                "h-12 rounded-sm border px-4 text-sm font-semibold",
+                "inline-flex h-12 items-center gap-1 rounded-sm border px-4 text-sm font-semibold",
                 reviewOnly
                   ? "border-hold/40 bg-hold-soft text-hold"
                   : "border-rule bg-slate-panel text-ink-muted",
               )}
             >
-              Needs review{reviewOnly ? " ✓" : ""}
+              Needs review{reviewOnly && <Check size={12} strokeWidth={3} aria-hidden />}
             </button>
             <button
               type="button"
