@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   ageField,
   ArrowRight,
@@ -33,6 +33,10 @@ type Form = z.infer<typeof schema>;
 
 export default function CompleteProfile() {
   const nav = useNavigate();
+  const location = useLocation();
+  // Return target passed along from the login step.
+  const from = (location.state as { from?: string } | null)?.from;
+  const next = typeof from === "string" && from.startsWith("/") ? from : "/";
   const { user, setUser } = useAuth();
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatar, setAvatar] = useState<string | null>(user?.avatar ?? null);
@@ -83,7 +87,7 @@ export default function CompleteProfile() {
       const updated = await api<AuthUser>("/auth/complete-profile", { method: "PATCH", body: JSON.stringify({ name: data.name, email: data.email, age: Number(data.age), city: data.city, avatar: avatarUrl }) });
       setUser(updated);
       setToast("Profile saved! Welcome to QTNXT");
-      setTimeout(() => nav("/"), 800);
+      setTimeout(() => nav(next), 800);
     } catch (e) { setToast(String(e)); setTimeout(()=>setToast(null),2200); }
   };
 

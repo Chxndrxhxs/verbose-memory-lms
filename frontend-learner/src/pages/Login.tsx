@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, X } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 import { api } from "../lib/api";
@@ -27,6 +27,11 @@ type VerifyUser = {
 
 export default function Login() {
   const nav = useNavigate();
+  const location = useLocation();
+  // Return target threaded through by whichever page sent
+  // us here (enroll, a protected route, …).
+  const from = (location.state as { from?: string } | null)?.from;
+  const next = typeof from === "string" && from.startsWith("/") ? from : "/";
   const { setUser } = useAuth();
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [toast, setToast] = useState<string | null>(null);
@@ -93,8 +98,8 @@ export default function Login() {
         avatar: data.user.avatar,
         age: data.user.age,
       });
-      if (data.is_new) nav("/complete-profile");
-      else nav("/");
+      if (data.is_new) nav("/complete-profile", { state: { from: next } });
+      else nav(next);
     },
     onError: (e) => showToast(String(e)),
   });
