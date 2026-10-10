@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AVATAR_SIZE_MSG, isAvatarSizeAllowed } from "@masterlms/shared";
 import { absoluteMediaUrl, api, uploadFile } from "../lib/api";
 import type { AdminUser, AdminUserDetail } from "../types/admin";
@@ -110,12 +110,19 @@ export function UserDetailContainer() {
     },
   });
 
+  // RAM-57: building this inline gave it a new identity on every render, so
+  // the presenter's form.reset() fired on unrelated state changes (e.g.
+  // picking a photo) and wiped unsaved edits. TanStack Query keeps `data`
+  // referentially stable until a refetch, so memoizing on it resets only on
+  // real changes (e.g. after save invalidation).
+  const initial = useMemo(() => (data ? toForm(data.user) : undefined), [data]);
+
   return (
     <UserDetailView
       data={data}
       loading={isLoading}
       error={isError || !data ? String(error ?? new Error("Failed to load user")) : null}
-      initial={data ? toForm(data.user) : undefined}
+      initial={initial}
       onSave={update.mutateAsync}
       saving={update.isPending}
       saveError={update.isError ? String(update.error ?? "Could not save changes.") : null}

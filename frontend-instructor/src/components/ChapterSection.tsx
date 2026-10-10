@@ -7,6 +7,7 @@ import {
   Trash2,
   Upload,
   Video,
+  X,
   LESSON_KIND_BADGE,
   quizOption,
   toEmbed,
@@ -183,7 +184,7 @@ function QuizEditor({ lesson, onUpdate, onUploadMedia }: {
                 type="button"
                 onClick={() => setQuestions(questions.filter((_, i) => i !== qi))}
                 className="text-xs text-ink-faint hover:text-halt"
-              >✕</button>
+              ><X size={13} aria-hidden /></button>
             </div>
 
             {qtype === "image" && (
@@ -232,7 +233,7 @@ function QuizEditor({ lesson, onUpdate, onUploadMedia }: {
                     {isVideo ? (
                       <video src={embed} controls className="max-h-40 w-full object-contain" />
                     ) : (
-                      <iframe src={embed} title="Question media" className="aspect-video w-full" allowFullScreen />
+                      <iframe src={embed} title="Question media" className="aspect-video w-full" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
                     )}
                   </div>
                 ) : null}
@@ -353,7 +354,7 @@ function QuizEditor({ lesson, onUpdate, onUploadMedia }: {
                                 {oIsVideo ? (
                                   <video src={oEmbed} controls className="max-h-24 w-full object-contain" />
                                 ) : (
-                                  <iframe src={oEmbed} title={`Option ${oi + 1} media`} className="aspect-video w-full" allowFullScreen />
+                                  <iframe src={oEmbed} title={`Option ${oi + 1} media`} className="aspect-video w-full" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
                                 )}
                               </div>
                             ) : null}
@@ -376,7 +377,7 @@ function QuizEditor({ lesson, onUpdate, onUploadMedia }: {
                           )
                         }
                         className="mt-1 text-xs text-ink-faint hover:text-halt"
-                      >✕</button>
+                      ><X size={13} aria-hidden /></button>
                     </div>
                   );
                 })}
@@ -409,6 +410,12 @@ function LessonEditor({ lesson, onUpdate, uploading, onUpload, onUploadMedia, fe
 }) {
   // Out-of-order guard: only the latest blur's response may fill the title.
   const autoTitleReq = useRef(0);
+  // RAM-58: the source mode is explicit state. Deriving it from the field
+  // content meant the Embed code tab never highlighted until an <iframe>
+  // string was pasted — clicking the tab was a no-op.
+  const [videoMode, setVideoMode] = useState<"url" | "embed">(() =>
+    /^<iframe/i.test(lesson.resource_url.trim()) ? "embed" : "url"
+  );
   switch (lesson.kind) {
     case "text":
       return (
@@ -430,7 +437,6 @@ function LessonEditor({ lesson, onUpdate, uploading, onUpload, onUploadMedia, fe
     case "quiz":
       return <QuizEditor lesson={lesson} onUpdate={onUpdate} onUploadMedia={onUploadMedia} />;
     case "video": {
-      const isEmbedCode = /^<iframe/i.test(lesson.resource_url.trim());
       const embedUrl = toEmbed(lesson.resource_url) ?? (
         lesson.resource_url.match(/\.(mp4|webm|mov)(\?|$)/) ? absoluteMediaUrl(lesson.resource_url) : null
       );
@@ -439,13 +445,19 @@ function LessonEditor({ lesson, onUpdate, uploading, onUpload, onUploadMedia, fe
           <div className="mt-2 flex rounded-sm border border-rule bg-slate-sunk p-0.5">
             <button
               type="button"
-              onClick={() => { if (isEmbedCode) onUpdate({ resource_url: "" }); }}
-              className={cn("flex-1 rounded-sm py-1 text-xs font-semibold transition-colors", !isEmbedCode ? "bg-ink text-ink-inverse" : "text-ink-muted hover:text-ink")}
+              onClick={() => {
+                setVideoMode("url");
+                if (/^<iframe/i.test(lesson.resource_url.trim())) onUpdate({ resource_url: "" });
+              }}
+              className={cn("flex-1 rounded-sm py-1 text-xs font-semibold transition-colors", videoMode === "url" ? "bg-ink text-ink-inverse" : "text-ink-muted hover:text-ink")}
             >YouTube URL</button>
             <button
               type="button"
-              onClick={() => { if (!isEmbedCode && lesson.resource_url) onUpdate({ resource_url: "" }); }}
-              className={cn("flex-1 rounded-sm py-1 text-xs font-semibold transition-colors", isEmbedCode ? "bg-ink text-ink-inverse" : "text-ink-muted hover:text-ink")}
+              onClick={() => {
+                setVideoMode("embed");
+                if (lesson.resource_url && !/^<iframe/i.test(lesson.resource_url.trim())) onUpdate({ resource_url: "" });
+              }}
+              className={cn("flex-1 rounded-sm py-1 text-xs font-semibold transition-colors", videoMode === "embed" ? "bg-ink text-ink-inverse" : "text-ink-muted hover:text-ink")}
             >Embed code</button>
           </div>
           <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_96px]">
@@ -460,7 +472,7 @@ function LessonEditor({ lesson, onUpdate, uploading, onUpload, onUploadMedia, fe
                     if (t && seq === autoTitleReq.current) onUpdate({ title: t });
                   });
                 }}
-                placeholder={isEmbedCode ? '<iframe src="https://www.youtube.com/embed/…" …></iframe>' : "https://youtu.be/… or youtube.com/watch?v=…"}
+                placeholder={videoMode === "embed" ? '<iframe src="https://www.youtube.com/embed/…" …></iframe>' : "https://youtu.be/… or youtube.com/watch?v=…"}
                 className="min-w-0 flex-1 rounded-sm border border-rule bg-slate-sunk px-3 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-ink focus:bg-slate-panel"
               />
               <label className="shrink-0 cursor-pointer rounded-sm bg-ink px-3 py-1.5 text-xs font-semibold text-ink-inverse hover:bg-ink/88">
@@ -476,14 +488,14 @@ function LessonEditor({ lesson, onUpdate, uploading, onUpload, onUploadMedia, fe
             />
           </div>
           <p className="mt-1 text-[10px] text-ink-faint">
-            {isEmbedCode ? "Paste a YouTube/Vimeo/Loom <iframe> embed code." : "Paste a YouTube, Vimeo or Loom share URL, or upload an mp4."}
+            {videoMode === "embed" ? "Paste a YouTube/Vimeo/Loom <iframe> embed code." : "Paste a YouTube, Vimeo or Loom share URL, or upload an mp4."}
           </p>
           {lesson.resource_url && embedUrl ? (
             <div className="mt-2 flex aspect-[16/9] max-h-[440px] flex-col overflow-hidden border border-rule">
               {/\.(mp4|webm|mov)(\?|$)/.test(embedUrl) ? (
                 <video src={embedUrl} controls className="h-full w-full bg-ink object-contain" />
               ) : (
-                <iframe src={embedUrl} title={lesson.title} className="h-full w-full" allowFullScreen />
+                <iframe src={embedUrl} title={lesson.title} className="h-full w-full" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
               )}
             </div>
           ) : null}

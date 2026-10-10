@@ -128,7 +128,9 @@ export function UserDetailView({
         v.is_staff === initial.is_staff &&
         v.is_superuser === initial.is_superuser &&
         v.is_mobile_verified === initial.is_mobile_verified;
-      if (same) {
+      // RAM-57: a picked photo is a change even when every field matches —
+      // without this a photo-only save was rejected as "no changes".
+      if (same && !avatarFile) {
         setNoChanges(true);
         return;
       }
