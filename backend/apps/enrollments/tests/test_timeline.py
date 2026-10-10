@@ -9,6 +9,7 @@ from apps.users.models import User
 @pytest.fixture
 def learner(db):
     return User.objects.create_user(
+        first_name="Test", email="test@example.com", age=25, city="Test",
         username="timeline_learner",
         mobile="9888888888",
         role="learner",
@@ -19,6 +20,7 @@ def learner(db):
 @pytest.fixture
 def instructor(db):
     return User.objects.create_user(
+        first_name="Test", email="test@example.com", age=25, city="Test",
         username="timeline_instructor",
         mobile="9999999999",
         role="instructor",
@@ -81,7 +83,10 @@ def test_reenroll_does_not_duplicate_enrolled_event(learner, course_with_lesson)
 @pytest.mark.django_db
 def test_timeline_returns_own_events_only(learner, instructor, course_with_lesson):
     course, lesson = course_with_lesson
-    other = User.objects.create_user(username="timeline_other", mobile="9777777770", role="learner")
+    other = User.objects.create_user(
+        username="timeline_other", mobile="9777777770", role="learner",
+        first_name="Test", email="test@example.com", age=25, city="Test",
+    )
     Enrollment.objects.create(learner=other, course=course)
     c = APIClient()
     c.force_authenticate(user=learner)

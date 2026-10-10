@@ -9,6 +9,7 @@ from apps.assignments.models import Assignment, AssignmentQuestion
 from apps.assignments.permissions import IsInstructor
 from apps.assignments.services import AttemptDenied, begin_attempt, take_structure
 from apps.assignments.views import _attempt_brief, ok
+from apps.users.permissions import RequireCompleteProfile
 
 from .models import PackPurchase, QuestionPack
 from .serializers import PackQuestionsSerializer, PackWriteSerializer
@@ -49,7 +50,7 @@ def _owns(user, pack: QuestionPack) -> bool:
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def pack_list(request):
     qs = (
         QuestionPack.objects.filter(status=QuestionPack.Status.PUBLISHED)
@@ -78,7 +79,7 @@ def pack_list(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def pack_detail(request, pack_id: int):
     try:
         pack = QuestionPack.objects.select_related(
@@ -92,7 +93,7 @@ def pack_detail(request, pack_id: int):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def my_packs(request):
     purchases = (
         PackPurchase.objects.filter(learner=request.user)
@@ -108,7 +109,7 @@ def my_packs(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def pack_start(request, pack_id: int):
     module = str(request.data.get("module", "")).strip().lower()
     if module not in MODULE_CODES:
@@ -158,7 +159,7 @@ def pack_start(request, pack_id: int):
 
 
 @api_view(["GET", "POST"])
-@permission_classes([IsAuthenticated, IsInstructor])
+@permission_classes([IsAuthenticated, IsInstructor, RequireCompleteProfile])
 def admin_packs(request):
     if request.method == "GET":
         qs = QuestionPack.objects.select_related("owner").order_by("-created_at")
@@ -175,7 +176,7 @@ def admin_packs(request):
 
 
 @api_view(["GET", "PATCH", "DELETE"])
-@permission_classes([IsAuthenticated, IsInstructor])
+@permission_classes([IsAuthenticated, IsInstructor, RequireCompleteProfile])
 def admin_pack_detail(request, pack_id: int):
     try:
         pack = QuestionPack.objects.get(id=pack_id)
@@ -195,7 +196,7 @@ def admin_pack_detail(request, pack_id: int):
 
 
 @api_view(["PUT"])
-@permission_classes([IsAuthenticated, IsInstructor])
+@permission_classes([IsAuthenticated, IsInstructor, RequireCompleteProfile])
 def admin_pack_questions(request, pack_id: int):
     """Bulk-replace snapshot questions (bank import / upload / generate output)."""
     try:
@@ -236,7 +237,7 @@ def admin_pack_questions(request, pack_id: int):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsInstructor])
+@permission_classes([IsAuthenticated, IsInstructor, RequireCompleteProfile])
 def admin_pack_publish(request, pack_id: int):
     try:
         pack = QuestionPack.objects.get(id=pack_id)
@@ -258,7 +259,7 @@ def admin_pack_publish(request, pack_id: int):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsInstructor])
+@permission_classes([IsAuthenticated, IsInstructor, RequireCompleteProfile])
 def admin_pack_unpublish(request, pack_id: int):
     try:
         pack = QuestionPack.objects.get(id=pack_id)
@@ -273,7 +274,7 @@ def admin_pack_unpublish(request, pack_id: int):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated, IsInstructor])
+@permission_classes([IsAuthenticated, IsInstructor, RequireCompleteProfile])
 def admin_pack_purchases(request, pack_id: int):
     try:
         pack = QuestionPack.objects.get(id=pack_id)
@@ -299,7 +300,7 @@ def admin_pack_purchases(request, pack_id: int):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated, IsInstructor])
+@permission_classes([IsAuthenticated, IsInstructor, RequireCompleteProfile])
 def question_bank_topics(request):
     """Distinct question categories (topics) for the bank filter dropdown."""
     qs = AssignmentQuestion.objects.filter(assignment__pack__isnull=True).exclude(topic__exact="")
@@ -310,7 +311,7 @@ def question_bank_topics(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated, IsInstructor])
+@permission_classes([IsAuthenticated, IsInstructor, RequireCompleteProfile])
 def question_bank(request):
     """Browse existing saved questions to import into a pack."""
     qs = AssignmentQuestion.objects.filter(assignment__pack__isnull=True).select_related(
@@ -349,7 +350,7 @@ def question_bank(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def claim_free_pack(request, pack_id: int):
     """Own a free pack without going through Razorpay."""
     try:

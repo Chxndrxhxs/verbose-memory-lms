@@ -4,6 +4,7 @@ from rest_framework.response import Response
 
 from apps.courses.models import Course
 from apps.users.models import User
+from apps.users.permissions import RequireCompleteProfile
 
 from .services_leaderboard import compute_leaderboard
 
@@ -28,7 +29,7 @@ def _distinct_categories():
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def leaderboard_view(request):
     city = request.query_params.get("city")
     category = request.query_params.get("category")

@@ -12,6 +12,7 @@ from apps.courses.models import Course
 from apps.packs.models import QuestionPack
 from apps.payments.models import Payment
 from apps.payments.services import create_razorpay_order, get_razorpay_client
+from apps.users.permissions import RequireCompleteProfile
 
 from .models import Gift
 from .serializers import GiftSerializer
@@ -67,7 +68,7 @@ def _resolve_item(course_id, pack_id):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def validate_coupon_view(request):
     (course, pack), error = _resolve_item(
         request.data.get("course_id"), request.data.get("pack_id")
@@ -133,7 +134,7 @@ def _mock_gift_order(gift, payment_amount, coupon, discount):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def create_gift_view(request):
     (course, pack), error = _resolve_item(
         request.data.get("course_id"), request.data.get("pack_id")
@@ -234,7 +235,7 @@ def create_gift_view(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def claim_gift_view(request):
     try:
         result = claim_gift(request.user, request.data.get("code", ""))
@@ -247,7 +248,7 @@ def claim_gift_view(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def my_gifts_view(request):
     given = (
         Gift.objects.filter(giver=request.user)

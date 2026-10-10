@@ -15,6 +15,10 @@ from apps.users.models import User
 def make_user(mobile, **extra):
     extra.setdefault("role", "learner")
     extra.setdefault("is_mobile_verified", True)
+    extra.setdefault("first_name", "Test")
+    extra.setdefault("email", "test@example.com")
+    extra.setdefault("age", 25)
+    extra.setdefault("city", "Test")
     return User.objects.create_user(username=mobile, mobile=mobile, **extra)
 
 
@@ -36,6 +40,7 @@ def instructor(db):
 @pytest.fixture
 def admin(db):
     return User.objects.create_user(
+        first_name="Test", email="test@example.com", age=25, city="Test",
         username="9000000000",
         mobile="9000000000",
         role="admin",

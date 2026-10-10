@@ -21,6 +21,7 @@ from apps.promotions.services import (
     record_redemption,
     validate_coupon,
 )
+from apps.users.permissions import RequireCompleteProfile
 
 from .models import Payment
 from .serializers import PaymentSerializer
@@ -120,7 +121,7 @@ def mock_payments_allowed() -> bool:
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def create_order(request):
     course_id = request.data.get("course_id")
     pack_id = request.data.get("pack_id")
@@ -274,7 +275,7 @@ def _fulfil(payment):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def verify_payment(request):
     order_id = request.data.get("razorpay_order_id")
     payment_id = request.data.get("razorpay_payment_id")
@@ -393,7 +394,7 @@ def _expected_amount_paise(payment) -> int | None:
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def my_payments(request):
     qs = (
         Payment.objects.filter(user=request.user, status=Payment.Status.PAID)

@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.users.permissions import RequireCompleteProfile
 from core.pagination import paginate_queryset_view
 
 from .models import ActivityEvent
@@ -11,7 +12,7 @@ ALLOWED_VERBS = {c[0] for c in ActivityEvent.Verb.choices}
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def instructor_activity(request):
     user = request.user
     if user.role not in ("instructor", "admin") and not user.is_staff:

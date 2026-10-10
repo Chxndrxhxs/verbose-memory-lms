@@ -4,6 +4,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.courses.models import Course, Lesson
+from apps.users.permissions import RequireCompleteProfile
 from core.pagination import paginate_queryset_view
 
 from .models import ActivityEvent, Certificate, Enrollment
@@ -18,7 +19,7 @@ from .services import (
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def enroll_view(request, course_id: int):
     try:
         course = Course.objects.get(id=course_id, status=Course.Status.PUBLISHED)
@@ -32,7 +33,7 @@ def enroll_view(request, course_id: int):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def my_courses(request):
     qs = (
         Enrollment.objects.filter(learner=request.user)
@@ -46,7 +47,7 @@ def my_courses(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def complete_lesson(request, course_id: int):
     lesson_id = request.data.get("lesson_id")
     try:
@@ -86,7 +87,7 @@ def complete_lesson(request, course_id: int):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def quiz_attempt(request, course_id: int):
     lesson_id = request.data.get("lesson_id")
     answers = request.data.get("answers")
@@ -148,13 +149,13 @@ def quiz_attempt(request, course_id: int):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def my_activity(request):
     return Response({"data": activity_last_six_months(request.user), "error": None})
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def my_certificates(request):
     qs = (
         Certificate.objects.filter(learner=request.user)
@@ -168,7 +169,7 @@ def my_certificates(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def generate_certificate(request, course_id: int):
     try:
         enrollment = Enrollment.objects.get(learner=request.user, course_id=course_id)
@@ -219,7 +220,7 @@ def certificate_share(request, certificate_id: str):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def my_timeline(request):
     qs = (
         ActivityEvent.objects.filter(learner=request.user)

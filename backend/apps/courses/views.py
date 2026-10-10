@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import ValidationError
 
 from apps.enrollments.models import Enrollment
+from apps.users.permissions import RequireCompleteProfile
 
 from .models import Course, WishlistItem
 from .serializers import (
@@ -47,7 +48,7 @@ class IsInstructorOrReadOnly(IsAuthenticatedOrReadOnly):
 
 
 class CourseViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsInstructorOrReadOnly]
+    permission_classes = [IsInstructorOrReadOnly, RequireCompleteProfile]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["category", "status"]
     search_fields = ["title", "subtitle"]
@@ -238,7 +239,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def instructor_overview(request):
     from apps.enrollments.models import Enrollment
     from apps.payments.models import Payment

@@ -8,6 +8,7 @@ from apps.users.models import User
 @pytest.fixture
 def instructor(db):
     return User.objects.create_user(
+        first_name="Test", email="test@example.com", age=25, city="Test",
         username="u1",
         mobile="9000000099",
         role="instructor",

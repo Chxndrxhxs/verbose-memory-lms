@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Activity from "./pages/Activity";
 import Analytics from "./pages/Analytics";
@@ -25,41 +25,61 @@ import { RouteError } from "./components/RouteError";
 import { useAuth } from "./hooks/useAuth";
 
 const qc = new QueryClient();
-const router = createBrowserRouter([
-  { path: "/", element: <InstructorLanding /> },
-  { path: "/login", element: <Login /> },
-  { path: "/complete-profile", element: <CompleteProfile /> },
-  { path: "/dashboard", element: <Protected><Dashboard /></Protected> },
-  { path: "/courses",
-    children: [
-      { index: true, element: <Protected><Courses /></Protected> },
-      // single creation flow — /new redirects to canonical /create
-      { path: "new", element: <Navigate to="/courses/create" replace /> },
-      { path: "create", element: <Protected><CourseCreate /></Protected> },
-      { path: ":id", element: <Protected><CourseEdit /></Protected> },
-    ],
-  },
-  { path: "/activity", element: <Protected><Activity /></Protected> },
-  { path: "/leaderboard", element: <Protected><Leaderboard /></Protected> },
-  { path: "/analytics", element: <Protected><Analytics /></Protected> },
-  { path: "/assignments",
-    errorElement: <RouteError />,
-    children: [
-      { index: true, element: <Protected><Assignments /></Protected> },
-      { path: "new", element: <Protected><AssignmentCreate /></Protected> },
-      { path: ":id/edit", element: <Protected><AssignmentEdit /></Protected> },
-      { path: ":id/preview", element: <Protected><AssignmentPreviewPage /></Protected> },
-    ],
-  },
-  { path: "/packs",
-    children: [
-      { index: true, element: <Protected><Packs /></Protected> },
-      { path: "new", element: <Protected><PackCreate /></Protected> },
-      { path: ":id/edit", element: <Protected><PackEdit /></Protected> },
-    ],
-  },
-  { path: "/profile", element: <Protected><Profile /></Protected> },
-], { basename: "/teach" });
+/* The server locks incomplete profiles out of every
+   protected endpoint; mirror that here so they land on
+   the complete-profile step instead of a broken page. */
+function ProfileGate() {
+  const user = useAuth((s) => s.user);
+  const { pathname } = useLocation();
+  if (user?.profile_complete === false && pathname !== "/complete-profile") {
+    return <Navigate to="/complete-profile" replace />;
+  }
+  return <Outlet />;
+}
+
+const router = createBrowserRouter(
+  [
+    {
+      element: <ProfileGate />,
+      children: [
+        { path: "/", element: <InstructorLanding /> },
+        { path: "/login", element: <Login /> },
+        { path: "/complete-profile", element: <CompleteProfile /> },
+        { path: "/dashboard", element: <Protected><Dashboard /></Protected> },
+        { path: "/courses",
+          children: [
+            { index: true, element: <Protected><Courses /></Protected> },
+            // single creation flow — /new redirects to canonical /create
+            { path: "new", element: <Navigate to="/courses/create" replace /> },
+            { path: "create", element: <Protected><CourseCreate /></Protected> },
+            { path: ":id", element: <Protected><CourseEdit /></Protected> },
+          ],
+        },
+        { path: "/activity", element: <Protected><Activity /></Protected> },
+        { path: "/leaderboard", element: <Protected><Leaderboard /></Protected> },
+        { path: "/analytics", element: <Protected><Analytics /></Protected> },
+        { path: "/assignments",
+          errorElement: <RouteError />,
+          children: [
+            { index: true, element: <Protected><Assignments /></Protected> },
+            { path: "new", element: <Protected><AssignmentCreate /></Protected> },
+            { path: ":id/edit", element: <Protected><AssignmentEdit /></Protected> },
+            { path: ":id/preview", element: <Protected><AssignmentPreviewPage /></Protected> },
+          ],
+        },
+        { path: "/packs",
+          children: [
+            { index: true, element: <Protected><Packs /></Protected> },
+            { path: "new", element: <Protected><PackCreate /></Protected> },
+            { path: ":id/edit", element: <Protected><PackEdit /></Protected> },
+          ],
+        },
+        { path: "/profile", element: <Protected><Profile /></Protected> },
+      ],
+    },
+  ],
+  { basename: "/teach" },
+);
 
 export default function App() {
   const fetchMe = useAuth((s) => s.fetchMe);

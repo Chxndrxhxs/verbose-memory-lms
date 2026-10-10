@@ -60,6 +60,10 @@ class VerifyOTPView(APIView):
 
 
 class MeView(APIView):
+    # The frontends read /users/me on load to learn profile state
+    # (and account deletion must stay reachable).
+    complete_profile_exempt = True
+
     def get(self, request):
         return Response({"data": UserSerializer(request.user).data, "error": None})
 
@@ -70,12 +74,19 @@ class MeView(APIView):
 
 
 class LogoutView(APIView):
+    # Incomplete profiles must still be able to log out.
+    complete_profile_exempt = True
+
     def post(self, request):
         res = Response({"data": {"message": "Logged out"}, "error": None})
         return clear_auth_cookies(res, auth_app(request))
 
 
 class CompleteProfileView(APIView):
+    # The endpoint that makes the profile complete — blocking it
+    # would lock incomplete users out permanently.
+    complete_profile_exempt = True
+
     def patch(self, request):
         s = CompleteProfileSerializer(request.user, data=request.data, partial=True)
         s.is_valid(raise_exception=True)
@@ -84,6 +95,9 @@ class CompleteProfileView(APIView):
 
 
 class BecomeInstructorView(APIView):
+    # Role change is part of onboarding, not gated content.
+    complete_profile_exempt = True
+
     def post(self, request):
         if request.user.role != "learner":
             return Response(
@@ -96,6 +110,10 @@ class BecomeInstructorView(APIView):
 
 
 class CookieRefreshView(APIView):
+    # Token refresh must keep working for incomplete profiles,
+    # or they'd be logged out mid-onboarding.
+    complete_profile_exempt = True
+
     permission_classes = [AllowAny]
 
     def post(self, request):

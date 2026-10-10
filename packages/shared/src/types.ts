@@ -4,7 +4,7 @@ export type Role = 'learner' | 'instructor' | 'admin';
 export interface Paginated<T> { data: T[]; error: null; meta: { page: number; total: number } }
 export interface SharedUser {
   id?: number; mobile: string; email: string; name: string; role?: Role;
-  age?: number; avatar?: string;
+  age?: number; avatar?: string; city?: string; profile_complete?: boolean;
 }
 export interface SharedApiCourse {
   id: number; title: string; subtitle: string; description: string;

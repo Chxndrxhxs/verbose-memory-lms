@@ -134,6 +134,7 @@ def test_save_answers_rejected_for_other_learner(learner_client, assignment_fact
     )
     attempt_id = start.json()["data"]["attempt"]["id"]
     intruder = User.objects.create_user(
+        first_name="Test", email="test@example.com", age=25, city="Test",
         username="as_intruder",
         mobile="9600000002",
         role="learner",

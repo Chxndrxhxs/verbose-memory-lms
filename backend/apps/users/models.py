@@ -23,6 +23,18 @@ class User(AbstractUser):
         return f"{self.username} ({self.mobile})"
 
     @property
+    def profile_complete(self) -> bool:
+        """True once the user has set a name, email, age and city.
+
+        Incomplete profiles are locked out of protected endpoints
+        (see apps.users.permissions.RequireCompleteProfile) until the
+        /auth/complete-profile step is done.
+        """
+        return bool(
+            self.first_name and self.email and self.age is not None and self.city
+        )
+
+    @property
     def display_name(self) -> str:
         """Public-facing name. The username is the raw mobile number,
         so it must never surface as a display name on leaderboards,

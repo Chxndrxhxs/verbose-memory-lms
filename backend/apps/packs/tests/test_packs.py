@@ -10,6 +10,7 @@ from apps.users.models import User
 @pytest.fixture
 def learner(db):
     return User.objects.create_user(
+        first_name="Test", email="test@example.com", age=25, city="Test",
         username="pack_learner",
         mobile="9611111111",
         role="learner",
@@ -20,6 +21,7 @@ def learner(db):
 @pytest.fixture
 def instructor(db):
     return User.objects.create_user(
+        first_name="Test", email="test@example.com", age=25, city="Test",
         username="pack_instructor",
         mobile="9622222222",
         role="instructor",

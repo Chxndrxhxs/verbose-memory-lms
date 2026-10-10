@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { createBrowserRouter, Outlet, RouterProvider, useLocation } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import About from "./pages/About";
@@ -55,11 +55,23 @@ function DocumentTitle() {
   return null;
 }
 
+/* The server locks incomplete profiles out of every
+   protected endpoint; mirror that here so they land on
+   the complete-profile step instead of a broken page. */
+function ProfileGate() {
+  const user = useAuth((s) => s.user);
+  const { pathname } = useLocation();
+  if (user?.profile_complete === false && pathname !== "/complete-profile") {
+    return <Navigate to="/complete-profile" replace />;
+  }
+  return <Outlet />;
+}
+
 function RootLayout() {
   return (
     <>
       <DocumentTitle />
-      <Outlet />
+      <ProfileGate />
     </>
   );
 }

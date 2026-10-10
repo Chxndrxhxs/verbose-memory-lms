@@ -264,6 +264,7 @@ def test_save_assignment_fields_derives_file_id(db):
     from apps.users.models import User
 
     instructor = User.objects.create_user(
+        first_name="Test", email="test@example.com", age=25, city="Test",
         username="file_id_probe", mobile="9811111111", role="instructor"
     )
     cat = Category.objects.create(name="FileIdCat", created_by=instructor)

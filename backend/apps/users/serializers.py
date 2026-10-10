@@ -25,6 +25,7 @@ class UserSerializer(serializers.ModelSerializer):
             "city",
             "avatar",
             "is_mobile_verified",
+            "profile_complete",
         )
         read_only_fields = ("id", "role", "is_mobile_verified")
 

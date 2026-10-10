@@ -14,6 +14,7 @@ import {
   MIN_AGE,
   nameField,
   User,
+  type AuthUser,
 } from "@masterlms/shared";
 import { useAuth } from "../hooks/useAuth";
 import { api, absoluteMediaUrl, uploadFile } from "../lib/api";
@@ -88,14 +89,7 @@ export default function CompleteProfile() {
         const uploaded = await uploadFile(avatarFile, "avatar");
         avatarUrl = absoluteMediaUrl(uploaded.url) ?? "";
       }
-      const updated = await api<{
-        name: string;
-        email: string;
-        mobile: string;
-        age: number;
-        city: string;
-        avatar: string;
-      }>("/auth/complete-profile", {
+      const updated = await api<AuthUser>("/auth/complete-profile", {
         method: "PATCH",
         body: JSON.stringify({
           name: data.name,
@@ -105,13 +99,7 @@ export default function CompleteProfile() {
           avatar: avatarUrl,
         }),
       });
-      setUser({
-        name: updated.name || data.name,
-        email: updated.email,
-        mobile: updated.mobile,
-        age: updated.age,
-        avatar: avatarUrl || undefined,
-      });
+      setUser(updated);
       setToast("Profile saved. Opening your studio.");
       setTimeout(() => nav("/dashboard"), 800);
     } catch (e) {

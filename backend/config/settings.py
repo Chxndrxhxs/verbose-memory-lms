@@ -106,7 +106,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("apps.users.authentication.CookieJWTAuthentication",),
-    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+        # Learners/instructors must complete their profile before
+        # any protected endpoint serves them.
+        "apps.users.permissions.RequireCompleteProfile",
+    ),
     "DEFAULT_PAGINATION_CLASS": "core.pagination.EnvelopePagination",
     "PAGE_SIZE": 12,
     "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),

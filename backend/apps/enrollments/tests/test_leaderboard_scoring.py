@@ -8,6 +8,7 @@ from apps.users.models import User
 @pytest.fixture
 def instructor(db):
     return User.objects.create_user(
+        first_name="Test", email="test@example.com", age=25, city="Test",
         username="lb_instructor",
         mobile="9000000051",
         role="instructor",
@@ -18,6 +19,7 @@ def instructor(db):
 @pytest.fixture
 def learner(db):
     return User.objects.create_user(
+        first_name="Test", email="test@example.com", age=25, city="Test",
         username="lb_learner",
         mobile="9000000061",
         role="learner",
@@ -129,6 +131,7 @@ def test_ordering_by_quiz_accuracy(instructor, learner, course):
     )
 
     second = User.objects.create_user(
+        first_name="Test", email="test@example.com", age=25, city="Test",
         username="lb_learner2", mobile="9000000062", role="learner", is_mobile_verified=True
     )
     c2 = APIClient()

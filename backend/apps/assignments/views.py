@@ -9,6 +9,7 @@ from rest_framework.response import Response
 
 from apps.enrollments.models import ActivityEvent
 from apps.enrollments.services import log_event
+from apps.users.permissions import RequireCompleteProfile
 from core.pagination import EnvelopePagination, paginate_queryset_view
 from core.validators import (
     MAX_TOTAL_MARKS,
@@ -74,19 +75,19 @@ def paginate_data_list(request, data):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def catalog_tree(request):
     return ok(category_tree_payload())
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def boards(request):
     return ok(boards_payload())
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def published_list(request):
     qs = Assignment.objects.filter(
         status=Assignment.Status.PUBLISHED, pack__isnull=True
@@ -118,7 +119,7 @@ def published_list(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def detail(request, assignment_id: int):
     try:
         assignment = Assignment.objects.select_related(
@@ -149,7 +150,7 @@ def detail(request, assignment_id: int):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def model_choices(request, assignment_id: int):
     try:
         assignment = Assignment.objects.get(id=assignment_id, status=Assignment.Status.PUBLISHED)
@@ -170,7 +171,7 @@ def model_choices(request, assignment_id: int):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def start(request, assignment_id: int):
     model_id = request.data.get("model_id")
     try:
@@ -216,7 +217,7 @@ def start(request, assignment_id: int):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def submit(request, assignment_id: int):
     attempt_id = request.data.get("attempt_id")
     try:
@@ -249,7 +250,7 @@ def submit(request, assignment_id: int):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def my_attempts(request):
     qs = (
         AssignmentAttempt.objects.filter(learner=request.user)
@@ -263,7 +264,7 @@ def my_attempts(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def save_answer(request, attempt_id: int):
     try:
         attempt = AssignmentAttempt.objects.get(
@@ -288,7 +289,7 @@ def save_answer(request, attempt_id: int):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def attempt_detail(request, attempt_id: int):
     try:
         attempt = AssignmentAttempt.objects.select_related("assignment", "model").get(id=attempt_id)
@@ -319,7 +320,7 @@ def attempt_detail(request, attempt_id: int):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, RequireCompleteProfile])
 def transcript(request, assignment_id: int):
     qs = AssignmentAttempt.objects.filter(
         learner=request.user,
@@ -428,7 +429,7 @@ def _can_manage(user) -> bool:
 
 
 @api_view(["GET", "POST"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def admin_list(request):
     if request.method == "POST":
         serializer = AssignmentWriteSerializer(data=request.data)
@@ -454,7 +455,7 @@ def admin_list(request):
 
 
 @api_view(["GET", "PATCH", "DELETE"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def admin_detail(request, assignment_id: int):
     try:
         assignment = Assignment.objects.select_related("created_by", "course").get(id=assignment_id)
@@ -479,7 +480,7 @@ def admin_detail(request, assignment_id: int):
 
 
 @api_view(["PUT"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def admin_structure(request, assignment_id: int):
     try:
         assignment = Assignment.objects.get(id=assignment_id)
@@ -494,7 +495,7 @@ def admin_structure(request, assignment_id: int):
 
 
 @api_view(["POST"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def admin_publish(request, assignment_id: int):
     try:
         assignment = Assignment.objects.get(id=assignment_id)
@@ -544,7 +545,7 @@ def admin_publish(request, assignment_id: int):
 
 
 @api_view(["POST"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def admin_unpublish(request, assignment_id: int):
     try:
         assignment = Assignment.objects.get(id=assignment_id)
@@ -558,7 +559,7 @@ def admin_unpublish(request, assignment_id: int):
 
 
 @api_view(["POST"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def admin_duplicate(request, assignment_id: int):
     try:
         assignment = Assignment.objects.select_related("created_by").get(id=assignment_id)
@@ -595,7 +596,7 @@ def admin_duplicate(request, assignment_id: int):
 
 
 @api_view(["POST", "PUT"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def admin_generate_questions(request):
     try:
         return ok(generate_questions_from_document(request.data))
@@ -604,7 +605,7 @@ def admin_generate_questions(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def admin_extract_questions(request):
     try:
         result = extract_document_questions(request.data)
@@ -620,7 +621,7 @@ def admin_extract_questions(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def admin_extract_job(request, job_id: str):
     from . import extract_jobs
 
@@ -634,21 +635,21 @@ def admin_extract_job(request, job_id: str):
 
 
 @api_view(["POST"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def admin_regenerate_question(request):
     source = request.data.get("question") or request.data
     return ok(regenerate_question(source))
 
 
 @api_view(["POST"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def admin_regenerate_options(request):
     source = request.data.get("question") or request.data
     return ok(regenerate_options(source))
 
 
 @api_view(["GET"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def admin_attempts(request, assignment_id: int):
     qs = (
         AssignmentAttempt.objects.filter(assignment_id=assignment_id)
@@ -673,7 +674,7 @@ def _page_status(data):
 
 
 @api_view(["GET", "POST"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def categories(request):
     if request.method == "POST":
         payload = _page_status(request.data)
@@ -692,7 +693,7 @@ def categories(request):
 
 
 @api_view(["GET", "PATCH", "DELETE"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def category_detail(request, category_id: int):
     try:
         cat = Category.objects.get(id=category_id)
@@ -720,7 +721,7 @@ def category_detail(request, category_id: int):
 
 
 @api_view(["GET", "POST"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def sub_categories(request):
     if request.method == "POST":
         payload = _page_status(request.data)
@@ -753,7 +754,7 @@ def sub_categories(request):
 
 
 @api_view(["GET", "PATCH", "DELETE"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def sub_category_detail(request, sub_category_id: int):
     try:
         sub = SubCategory.objects.select_related("category").get(id=sub_category_id)
@@ -800,7 +801,7 @@ def sub_category_detail(request, sub_category_id: int):
 
 
 @api_view(["GET", "POST"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def inter_categories(request):
     if request.method == "POST":
         payload = _page_status(request.data)
@@ -836,7 +837,7 @@ def inter_categories(request):
 
 
 @api_view(["GET", "PATCH", "DELETE"])
-@permission_classes([IsInstructor])
+@permission_classes([IsInstructor, RequireCompleteProfile])
 def inter_category_detail(request, inter_category_id: int):
     try:
         inter = InterCategory.objects.select_related("sub_category__category").get(
