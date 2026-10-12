@@ -94,6 +94,17 @@ export function tierFromRR(rr: number): string {
   return "Iron";
 }
 
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+// ISO timestamp -> value for a <input type="datetime-local">, in the
+// browser's local timezone; null/blank maps to "" so "empty = no bound".
+export function toLocalInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
 export function toEmbed(input: string | null | undefined): string | null {
   if (!input) return null;
   const trimmed = input.trim();

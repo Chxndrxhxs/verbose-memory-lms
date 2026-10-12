@@ -52,6 +52,51 @@ export interface SharedWishlistItem {
   created_at: string;
 }
 
+export type CouponDiscountType = "percent" | "flat";
+export type CouponScope = "all" | "course" | "pack";
+
+export interface SharedCoupon {
+  id: number;
+  code: string;
+  discount_type: CouponDiscountType;
+  discount_value: number;
+  max_discount_paise: number | null;
+  min_order_paise: number;
+  usage_limit: number | null;
+  usage_count: number;
+  per_user_limit: number;
+  applies_to: CouponScope;
+  course: number | null;
+  pack: number | null;
+  valid_from: string | null;
+  valid_to: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SharedCouponWrite {
+  code: string;
+  discount_type: CouponDiscountType;
+  discount_value: number;
+  max_discount_paise?: number | null;
+  min_order_paise?: number;
+  usage_limit?: number | null;
+  per_user_limit?: number;
+  applies_to: CouponScope;
+  course?: number | null;
+  pack?: number | null;
+  valid_from?: string | null;
+  valid_to?: string | null;
+  is_active?: boolean;
+}
+
+export interface SharedPaged<T> {
+  data: T[];
+  error: null;
+  meta: { page: number; total: number; pages: number };
+}
+
 export type AssignmentStatus = "draft" | "published" | "archived";
 export type AssignmentDifficulty = "easy" | "medium" | "hard";
 export type AssignmentExecutionMode = "sequential" | "parallel";

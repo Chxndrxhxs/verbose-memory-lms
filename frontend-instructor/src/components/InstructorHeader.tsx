@@ -11,6 +11,7 @@ const LINKS = [
   { to: "/courses", label: "Courses" },
   { to: "/assignments", label: "Assignments" },
   { to: "/packs", label: "Packs" },
+  { to: "/coupons", label: "Coupons" },
   { to: "/analytics", label: "Analytics" },
   { to: "/activity", label: "Activity" },
   { to: "/leaderboard", label: "Leaderboard" },

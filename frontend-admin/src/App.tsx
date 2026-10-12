@@ -14,6 +14,9 @@ import Payments from "./pages/Payments";
 import Login from "./pages/Login";
 import Assignments from "./pages/Assignments";
 import Categories from "./pages/Categories";
+import Coupons from "./pages/Coupons";
+import CouponNew from "./pages/CouponNew";
+import CouponDetail from "./pages/CouponDetail";
 import { useAuth } from "./hooks/useAuth";
 
 const qc = new QueryClient();
@@ -37,6 +40,9 @@ const router = createBrowserRouter([
       { path: "payments", element: <Payments /> },
       { path: "assignments", element: <Assignments /> },
       { path: "categories", element: <Categories /> },
+      { path: "coupons", element: <Coupons /> },
+      { path: "coupons/new", element: <CouponNew /> },
+      { path: "coupons/:id", element: <CouponDetail /> },
     ],
   },
 ], { basename: "/admin" });

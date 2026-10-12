@@ -6,6 +6,7 @@ import {
   LogOut,
   Network,
   Receipt,
+  Ticket,
   UserPlus,
   Users,
   type LucideIcon,
@@ -21,6 +22,7 @@ const NAV: { to: string; label: string; icon: LucideIcon; end?: boolean; count?:
   { to: "/payments", label: "Payments", icon: Receipt, count: "Ledger" },
   { to: "/assignments", label: "Assignments", icon: ListChecks, count: "Assessments" },
   { to: "/categories", label: "Categories", icon: Network, count: "Taxonomy" },
+  { to: "/coupons", label: "Coupons", icon: Ticket, count: "Promotions" },
 ];
 
 export function AdminLayout() {

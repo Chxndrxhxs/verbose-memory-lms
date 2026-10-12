@@ -6,12 +6,13 @@ import {
   FileText,
   Layers,
   LayoutGrid,
+  Ticket,
   Trophy,
 } from "@masterlms/shared";
 import { cn } from "../lib/utils";
 
 /*
- * Seven destinations, matching the desktop nav. Packs and Leaderboard
+ * Eight destinations, matching the desktop nav. Packs and Leaderboard
  * were desktop-only, so both were unreachable on a phone.
  */
 const TABS = [
@@ -19,6 +20,7 @@ const TABS = [
   { to: "/courses", label: "Courses", Icon: BookOpen },
   { to: "/assignments", label: "Tests", Icon: FileText },
   { to: "/packs", label: "Packs", Icon: Layers },
+  { to: "/coupons", label: "Coupons", Icon: Ticket },
   { to: "/analytics", label: "Stats", Icon: BarChart3 },
   { to: "/activity", label: "Activity", Icon: Activity },
   { to: "/leaderboard", label: "Ranks", Icon: Trophy },
@@ -30,7 +32,7 @@ export function MobileTabBar() {
       aria-label="Primary"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-slate-panel/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
     >
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-8">
         {TABS.map(({ to, label, Icon }) => (
           <NavLink
             key={to}

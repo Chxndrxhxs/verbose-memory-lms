@@ -55,6 +55,7 @@ export {
   Calendar,
   Clock,
   Timer,
+  Ticket,
   Filter,
   SlidersHorizontal,
   Settings,

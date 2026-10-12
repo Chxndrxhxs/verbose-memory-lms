@@ -17,6 +17,9 @@ import InstructorLanding from "./pages/InstructorLanding";
 import Packs from "./pages/Packs";
 import PackCreate from "./pages/PackCreate";
 import PackEdit from "./pages/PackEdit";
+import Coupons from "./pages/Coupons";
+import CouponNew from "./pages/CouponNew";
+import CouponEdit from "./pages/CouponEdit";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import { Protected } from "./components/Protected";
@@ -72,6 +75,13 @@ const router = createBrowserRouter(
             { index: true, element: <Protected><Packs /></Protected> },
             { path: "new", element: <Protected><PackCreate /></Protected> },
             { path: ":id/edit", element: <Protected><PackEdit /></Protected> },
+          ],
+        },
+        { path: "/coupons",
+          children: [
+            { index: true, element: <Protected><Coupons /></Protected> },
+            { path: "new", element: <Protected><CouponNew /></Protected> },
+            { path: ":id/edit", element: <Protected><CouponEdit /></Protected> },
           ],
         },
         { path: "/profile", element: <Protected><Profile /></Protected> },

@@ -1,4 +1,14 @@
+import type {
+  CouponScope,
+  SharedCoupon,
+  SharedCouponWrite,
+} from "@masterlms/shared";
+
 export type AdminRole = "learner" | "instructor" | "admin";
+
+export type { CouponScope };
+export type AdminCoupon = SharedCoupon;
+export type AdminCouponWrite = SharedCouponWrite;
 
 export interface AdminUser {
   id: number;
