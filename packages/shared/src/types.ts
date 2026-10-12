@@ -9,7 +9,7 @@ export interface SharedUser {
 export interface SharedApiCourse {
   id: number; title: string; subtitle: string; description: string;
   category: string; price: string; cover_image: string; level: string;
-  average_rating: string; instructor_name: string;
+  average_rating: string; instructor_name: string; slug?: string;
 }
 export interface LessonKinds { kind: string }
 export type QuizOptionKind = "text" | "image" | "video";
@@ -40,7 +40,7 @@ export interface SharedApiCourseDetail {
   price: string; cover_image?: string; level?: string; average_rating?: string;
   what_you_will_learn?: string[]; instructor_name?: string; instructor_avatar?: string;
   instructor_role?: string; student_count?: number; sections?: SharedSection[];
-  section_count?: number; lesson_count?: number;
+  section_count?: number; lesson_count?: number; slug?: string;
 }
 export interface SharedInstructorCourse {
   id: number; title: string; status: string; student_count: number; price: string;

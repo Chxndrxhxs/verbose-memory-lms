@@ -18,6 +18,7 @@ function mapApi(c: SharedApiCourseDetail): Course {
   const priceNum = Number(c.price);
   return {
     id: String(c.id),
+    slug: c.slug ?? "",
     title: c.title,
     subtitle: c.subtitle ?? "",
     meta: c.average_rating ? Number(c.average_rating).toFixed(1) : "New",

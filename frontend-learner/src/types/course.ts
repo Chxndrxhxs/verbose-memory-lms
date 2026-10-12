@@ -2,6 +2,7 @@ import type { LessonKind, LucideIcon } from "@masterlms/shared";
 
 export type Course = {
   id: string;
+  slug?: string;
   title: string;
   subtitle?: string;
   meta: string;
@@ -29,6 +30,7 @@ export type Course = {
 
 export type CourseDetail = {
   id: string;
+  slug?: string;
   title: string;
   subtitle: string;
   instructor: string;

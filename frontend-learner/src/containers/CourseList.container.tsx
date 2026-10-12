@@ -51,6 +51,7 @@ function mapApi(c: ApiCourse, idx: number): Course {
   const origNum = Number(c.original_price);
   return {
     id: String(c.id),
+    slug: c.slug ?? "",
     title: c.title,
     subtitle: c.subtitle,
     meta: c.meta || `${c.average_rating ? `${Number(c.average_rating).toFixed(1)} • ` : ""}${c.level}`,
@@ -256,7 +257,7 @@ export function CourseListContainer() {
             const disc = c.originalPrice && c.originalPrice > c.rawPrice ? Math.round(((c.originalPrice - c.rawPrice) / c.originalPrice) * 100) : 0;
             const enrolled = enrolledIds.has(c.id);
             const pct = progressById.get(c.id) ?? 0;
-            const to = enrolled ? `/learn/${c.id}` : `/courses/${c.id}`;
+            const to = enrolled ? `/learn/${c.id}` : `/courses/${c.id}${c.slug ? `/${c.slug}` : ""}`;
             const label = pct >= 100 ? "Review" : pct > 0 ? `Continue ${pct}%` : "Start course";
             return (
               <Link key={c.id} to={to} className="flex items-center gap-3 border border-rule bg-room-raised p-3 transition-colors hover:bg-room-sunk">

@@ -8,6 +8,7 @@ import type { Course } from "../types/course";
 
 type ApiCourse = {
   id: number;
+  slug?: string;
   title: string;
   subtitle: string;
   category: string;
@@ -35,6 +36,7 @@ function mapApi(c: ApiCourse): Course {
   const origNum = Number(c.original_price);
   return {
     id: String(c.id),
+    slug: c.slug ?? "",
     title: c.title,
     subtitle: c.subtitle,
     meta: `${c.average_rating ? `${Number(c.average_rating).toFixed(1)} • ` : ""}${c.level ?? ""}`,

@@ -5,6 +5,7 @@ export type MyEnrollment = {
   id: number;
   course: {
     id: number;
+    slug?: string;
     title: string;
     cover_image: string;
     instructor_name: string;

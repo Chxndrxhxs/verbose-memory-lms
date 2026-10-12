@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { SharedApiCourseDetail } from "@masterlms/shared";
@@ -25,6 +25,7 @@ async function fetchCourse(id: string): Promise<Detail> {
   const sections = c.sections ?? [];
   return {
     id: String(c.id),
+    slug: c.slug ?? "",
     title: c.title,
     subtitle: c.subtitle ?? "",
     instructor: c.instructor_name ?? "Instructor",
@@ -49,11 +50,17 @@ async function fetchCourse(id: string): Promise<Detail> {
 }
 
 export function CourseDetailContainer() {
-  const { id } = useParams<{ id: string }>();
+  const { id, slug } = useParams<{ id: string; slug?: string }>();
   const queryClient = useQueryClient();
   const nav = useNavigate();
   const location = useLocation();
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["course", id], queryFn: () => fetchCourse(id!), enabled: !!id });
+  // Canonical URL is /courses/:id/:slug; id-only and stale-slug links redirect here.
+  useEffect(() => {
+    if (data?.slug && slug !== data.slug) {
+      nav(`/courses/${id}/${data.slug}`, { replace: true });
+    }
+  }, [data?.slug, slug, id, nav]);
   const [open, setOpen] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [coupon, setCoupon] = useState<CouponQuote | null>(null);

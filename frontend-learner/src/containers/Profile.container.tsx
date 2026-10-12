@@ -16,7 +16,7 @@ import { Toast } from "../components/Toast";
 
 type Enrollment = {
   id: number;
-  course: { id: number; title: string; cover_image: string; instructor_name: string; price: string };
+  course: { id: number; slug?: string; title: string; cover_image: string; instructor_name: string; price: string };
   progress: number;
   enrolled_at: string;
 };
@@ -335,7 +335,7 @@ export function ProfileContainer() {
             ) : (
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 {enrollments.map((e) => (
-                  <Link key={e.id} to={`/courses/${e.course.id}`} className="flex gap-3 border border-rule bg-room-sunk p-3 transition-colors hover:bg-rule/40">
+                  <Link key={e.id} to={`/courses/${e.course.id}${e.course.slug ? `/${e.course.slug}` : ""}`} className="flex gap-3 border border-rule bg-room-sunk p-3 transition-colors hover:bg-rule/40">
                     <img src={e.course.cover_image || "https://images.unsplash.com/photo-1558655146-d09347e92766?w=200&auto=format&fit=crop&q=80"} alt="" className="h-16 w-20 border border-rule object-cover" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold leading-tight text-ink">{e.course.title}</p>

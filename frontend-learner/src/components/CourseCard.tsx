@@ -5,6 +5,7 @@ import { cn } from "../lib/utils";
 
 type Props = {
   id: string;
+  slug?: string;
   title: string;
   subtitle?: string;
   meta: string;
@@ -34,6 +35,7 @@ type Props = {
  */
 export function CourseCard({
   id,
+  slug,
   title,
   subtitle,
   instructor,
@@ -58,7 +60,7 @@ export function CourseCard({
   return (
     <article className="flex h-full flex-col border border-rule bg-room-raised transition-colors hover:border-rule-strong">
       <Link
-        to={`/courses/${id}`}
+        to={`/courses/${id}${slug ? `/${slug}` : ""}`}
         className="relative flex aspect-[16/9] items-center justify-center overflow-hidden bg-room-sunk"
       >
         {img ? (
@@ -87,7 +89,7 @@ export function CourseCard({
       </Link>
 
       <div className="flex flex-1 flex-col p-4">
-        <Link to={`/courses/${id}`} className="min-w-0">
+        <Link to={`/courses/${id}${slug ? `/${slug}` : ""}`} className="min-w-0">
           <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-ink hover:underline">
             {title}
           </h3>
